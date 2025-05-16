@@ -1,0 +1,24 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# Django stuff
+*.log
+local_settings.py
+db.sqlite3
+
+# Environment
+.env
+venv/
+
+# VS Code
+.vscode/
+
+# Migrations (but keep __init__.py)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# OS files
+.DS_Store
+Thumbs.db
