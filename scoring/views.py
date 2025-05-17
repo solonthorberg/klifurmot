@@ -2,7 +2,6 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from scoring.models import RoundResult, ClimberRoundScore
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny, SAFE_METHODS
@@ -22,10 +21,17 @@ class RoundResultViewSet(viewsets.ModelViewSet):
     permission_classes = [ReadOnlyOrIsAuthenticated]
 
     def get_queryset(self):
+        qs = RoundResult.objects.all()
         user = self.request.user
         if user.is_authenticated and not user.is_staff and hasattr(user, 'profile'):
-            return RoundResult.objects.filter(climber__user=user.profile)
-        return RoundResult.objects.all()
+            qs = qs.filter(climber__user=user.profile)
+        climber_id = self.request.query_params.get("climber_id")
+        if climber_id:
+            qs = qs.filter(climber_id=climber_id)
+        round_id = self.request.query_params.get("round_id")
+        if round_id:
+            qs = qs.filter(round_id=round_id)
+        return qs
 
 class ClimbViewSet(viewsets.ModelViewSet):
     queryset = Climb.objects.all()
@@ -40,6 +46,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
             qs = qs.filter(boulder__round_id=round_id)
         if boulder_id:
             qs = qs.filter(boulder_id=boulder_id)
+
         if self.request.user.is_staff:
             return qs
         elif hasattr(self.request.user, 'profile'):

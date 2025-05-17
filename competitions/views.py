@@ -32,11 +32,18 @@ class CompetitionViewSet(viewsets.ModelViewSet):
     permission_classes = [ReadOnlyOrAdmin]
 
     def get_queryset(self):
+        qs = Competition.objects.all()
+
+        year = self.request.query_params.get("year")
+        if year and year.isdigit():
+            qs = qs.filter(start_date__year=int(year))
+
         if not hasattr(self.request.user, 'profile'):
             return Competition.objects.none()
+
         user_roles = CompetitionRole.objects.filter(user=self.request.user.profile)
         competition_ids = user_roles.values_list('competition_id', flat=True)
-        return Competition.objects.filter(id__in=competition_ids)
+        return qs.filter(id__in=competition_ids)
 
     def perform_create(self, serializer):
         competition = serializer.save(created_by=self.request.user, last_modified_by=self.request.user)
