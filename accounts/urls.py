@@ -1,13 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CustomAuthToken, CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet, JudgeLinkViewSet
+from .views import CustomAuthToken, CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet
 from .views import me, register, logout, UserViewSet, SendJudgeLinkView
 
 router = DefaultRouter()
 router.register(r'countries', CountryViewSet)
 router.register(r'users', UserAccountViewSet)
 router.register(r'roles', CompetitionRoleViewSet)
-router.register(r'judge-links', JudgeLinkViewSet)
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
