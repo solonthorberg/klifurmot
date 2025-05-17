@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from .serializers import UserSerializer
 from rest_framework.views import APIView
 from competitions.models import Competition
+from django.shortcuts import get_object_or_404
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
 from .serializers import CountrySerializer, UserAccountSerializer, CompetitionRoleSerializer, JudgeLinkSerializer
@@ -26,11 +27,6 @@ class UserAccountViewSet(viewsets.ModelViewSet):
     serializer_class = UserAccountSerializer
     permission_classes = [IsAuthenticated]
 
-
-class JudgeLinkViewSet(viewsets.ModelViewSet):
-    queryset = JudgeLink.objects.all()
-    serializer_class = JudgeLinkSerializer
-    permission_classes = [IsAuthenticated]
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
