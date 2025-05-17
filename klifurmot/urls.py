@@ -1,3 +1,8 @@
+from django.urls import path, include
+from rest_framework.authtoken.views import obtain_auth_token
+from django.conf import settings
+from django.conf.urls.static import static
+
 """
 URL configuration for klifurmot project.
 
@@ -19,4 +24,12 @@ from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/accounts/', include('accounts.urls')),
+    path('api/athletes/', include('athletes.urls')),
+    path('api/scoring/', include('scoring.urls')),
+    path('api/competitions/', include('competitions.urls')),
+    path('api/token/', obtain_auth_token),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -11,7 +11,7 @@ class Competition(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     location = models.TextField()
-    image_url = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='competitions/', blank=True, null=True)
     visible = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='competitions_created')
     created_at = models.DateTimeField(default=timezone.now)

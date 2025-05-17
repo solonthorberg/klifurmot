@@ -11,8 +11,12 @@ class BoulderInline(admin.TabularInline):
     model = Boulder
     extra = 1
 
+class CompetitionCategoryInline(admin.TabularInline):
+    model = CompetitionCategory
+    extra = 1    
+
 class CompetitionAdmin(admin.ModelAdmin):
-    inlines = [RoundInline]
+    inlines = [CompetitionCategoryInline]
     list_display = ('title', 'start_date', 'end_date', 'location', 'visible')
     search_fields = ('title', 'location')
     list_filter = ('visible',)

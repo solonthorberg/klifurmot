@@ -42,7 +42,7 @@ class Climb(models.Model):
 
     class Meta:
         unique_together = ('climber', 'boulder')
-        ordering = ['round', 'rank']
+        ordering = ['boulder__round', 'climber']
 
     def __str__(self):
         return f"{self.climber} on {self.boulder}"
