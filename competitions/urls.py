@@ -7,7 +7,7 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'competitions', CompetitionViewSet)
+router.register(r'competitions', CompetitionViewSet, basename='competition')
 router.register(r'category-groups', CategoryGroupViewSet)
 router.register(r'competition-categories', CompetitionCategoryViewSet)
 router.register(r'rounds', RoundViewSet, basename='round')

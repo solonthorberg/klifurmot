@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
 
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
@@ -29,21 +31,19 @@ class ReadOnlyOrAdmin(IsAuthenticated):
 class CompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [ReadOnlyOrAdmin]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         qs = Competition.objects.all()
+        print("Initial queryset:", qs)
 
         year = self.request.query_params.get("year")
         if year and year.isdigit():
             qs = qs.filter(start_date__year=int(year))
+            print("Filtered by year:", qs)
 
-        if not hasattr(self.request.user, 'profile'):
-            return Competition.objects.none()
 
-        user_roles = CompetitionRole.objects.filter(user=self.request.user.profile)
-        competition_ids = user_roles.values_list('competition_id', flat=True)
-        return qs.filter(id__in=competition_ids)
+        return qs
 
     def perform_create(self, serializer):
         competition = serializer.save(created_by=self.request.user, last_modified_by=self.request.user)

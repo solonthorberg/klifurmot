@@ -15,5 +15,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('register/', register, name='register'),
     path('logout/', logout, name='logout'),
-    path('judge-link/<int:competition_id>/', SendJudgeLinkView.as_view(), name='send-judge-link'),
+    path('judge-links/<int:competition_id>/', SendJudgeLinkView.as_view(), name='send-judge-link'),
 ]

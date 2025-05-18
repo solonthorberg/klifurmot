@@ -12,6 +12,9 @@ from .serializers import UserSerializer
 from rest_framework.views import APIView
 from competitions.models import Competition
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import timedelta
+
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
 from .serializers import CountrySerializer, UserAccountSerializer, CompetitionRoleSerializer, JudgeLinkSerializer
@@ -181,7 +184,15 @@ class SendJudgeLinkView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, competition_id):
-        if not hasattr(request.user, 'profile') or not CompetitionRole.objects.filter(user=request.user.profile, competition_id=competition_id, role='admin').exists():
+        user_account = getattr(request.user, 'profile', None)
+        if not user_account:
+            return Response({"detail": "No user profile found."}, status=403)
+
+        if not CompetitionRole.objects.filter(
+            user=user_account,
+            competition_id=competition_id,
+            role='admin'
+        ).exists():
             return Response({"detail": "Only competition admins can send judge links."}, status=403)
 
         user_id = request.data.get("user_id")
@@ -189,14 +200,18 @@ class SendJudgeLinkView(APIView):
             return Response({"detail": "User ID required."}, status=400)
 
         try:
-            user = UserAccount.objects.get(id=user_id)
+            judge_user = UserAccount.objects.get(id=user_id)
             competition = Competition.objects.get(id=competition_id)
         except (UserAccount.DoesNotExist, Competition.DoesNotExist):
             return Response({"detail": "Invalid user or competition."}, status=404)
 
         link, _ = JudgeLink.objects.get_or_create(
-            user=user,
+            user=judge_user.user,
             competition=competition,
+            defaults={
+                "created_by": request.user,
+                "expires_at": timezone.now() + timedelta(days=1)
+            }
         )
 
         return Response({
@@ -204,3 +219,4 @@ class SendJudgeLinkView(APIView):
             "expires_at": link.expires_at,
             "is_used": link.is_used
         })
+
