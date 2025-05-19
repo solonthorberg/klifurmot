@@ -11,6 +11,7 @@ from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration
 from collections import defaultdict
 from scoring.models import ClimberRoundScore
+from competitions.models import Round
 
 
 

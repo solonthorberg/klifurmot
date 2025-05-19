@@ -1,5 +1,5 @@
-from rest_framework.routers import DefaultRouter
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     ClimberViewSet, CompetitionRegistrationViewSet, AthleteDetail
 )
@@ -10,5 +10,5 @@ router.register(r'registrations', CompetitionRegistrationViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path("<int:pk>/", AthleteDetail, name="athlete-detail"),
+    path('<int:pk>/', AthleteDetail, name='athlete-detail'),
 ]

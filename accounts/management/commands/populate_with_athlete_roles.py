@@ -43,9 +43,8 @@ class Command(BaseCommand):
         )
 
         group_names = ["U15", "U17", "Opinn"]
-        category_structure = {}  # category_structure["U15"]["KK"] = CompetitionCategory
+        category_structure = {}
 
-        # Create all category groups and gender categories
         for group_name in group_names:
             group = CategoryGroup.objects.create(name=group_name)
             category_structure[group_name] = {}
@@ -59,7 +58,6 @@ class Command(BaseCommand):
                 )
                 category_structure[group_name][gender] = cat
 
-        # Create rounds and boulders for every category
         rounds_by_category = {}
         for group in group_names:
             for gender in ["KK", "KVK"]:
@@ -141,7 +139,6 @@ class Command(BaseCommand):
 
         self.stdout.write(f"✅ Created {sum(len(lst) for lst in climbers_by_category.values())} climbers")
 
-        # Generate results and scores
         for (group, gender), climber_list in climbers_by_category.items():
             for rnd in rounds_by_category[(group, gender)]:
                 for i, climber in enumerate(climber_list[:20]):

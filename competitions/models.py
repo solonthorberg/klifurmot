@@ -20,6 +20,7 @@ class Competition(models.Model):
     deleted = models.BooleanField(default=False)
     def __str__(self):
         return self.title
+    
 
 class CategoryGroup(models.Model):
     name = models.CharField(max_length=50)
@@ -92,3 +93,4 @@ class JudgeBoulderAssignment(models.Model):
         
     def __str__(self):
         return f"{self.judge} - {self.boulder}"
+    

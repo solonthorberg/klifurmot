@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api";
 
-function AthleteDetail() {
-  const { id } = useParams();
+function AthletesDetails() {
+  const { id } = useParams(); // Get athlete's user_account ID from the URL
   const [athlete, setAthlete] = useState(null);
   const [error, setError] = useState("");
 
@@ -14,48 +14,49 @@ function AthleteDetail() {
         setAthlete(res.data);
       } catch (err) {
         console.error("Error fetching athlete:", err);
-        setError("Ekki tókst að sækja upplýsingar um keppanda.");
+        setError("Ekki tókst að sækja keppandann.");
       }
     };
 
-    fetchAthlete();
+    if (id) {
+      fetchAthlete();
+    }
   }, [id]);
 
   if (error) return <p>{error}</p>;
-  if (!athlete) return <p>Sæki upplýsingar...</p>;
-
-  const calculateAge = (dob) => {
-    const birth = new Date(dob);
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    if (
-      now.getMonth() < birth.getMonth() ||
-      (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
-    ) {
-      age--;
-    }
-    return age;
-  };
+  if (!athlete) return <p>Hleð inn gögnum...</p>;
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div>
       <h2>{athlete.full_name}</h2>
-      <p><strong>Aldur:</strong> {calculateAge(athlete.date_of_birth)} ára</p>
-      <p><strong>Hæð:</strong> {athlete.height_cm || "–"} cm</p>
-      <p><strong>Vænghaf:</strong> {athlete.wingspan_cm || "–"} cm</p>
+
+      <p><strong>Aldur:</strong> {athlete.date_of_birth}</p>
       <p><strong>Kyn:</strong> {athlete.gender}</p>
       <p><strong>Þjóðerni:</strong> {athlete.nationality}</p>
+      <p><strong>Hæð:</strong> {athlete.height_cm} cm</p>
+      <p><strong>Vænghaf:</strong> {athlete.wingspan_cm} cm</p>
       <p><strong>Flokkur:</strong> {athlete.category}</p>
-      <p><strong>Mótaþáttaka:</strong> {athlete.competitions_count}</p>
+      <p><strong>Þátttaka í mótum:</strong> {athlete.competitions_count}</p>
       <p><strong>Sigrar:</strong> {athlete.wins_count}</p>
 
-      {athlete.competitions?.length > 0 && (
-        <div style={{ marginTop: "2rem" }}>
-          <h4>Mót sem keppandi hefur tekið þátt í:</h4>
+      {athlete.competitions.length > 0 && (
+        <div>
+          <h3>Mót sem viðkomandi hefur tekið þátt í:</h3>
           <ul>
             {athlete.competitions.map((comp) => (
               <li key={comp.id}>
-                {comp.title} – {comp.category} – {new Date(comp.start_date).toLocaleDateString()}
+                <strong>{comp.title}</strong> – {comp.category} – {new Date(comp.start_date).toLocaleDateString()}
+                <div>
+                  <h4>Results:</h4>
+                  <ul>
+                    {comp.results.map((result, index) => (
+                      <li key={index}>
+                        Round: {result.round_name} - Rank: {result.rank} - Tops: {result.tops} - Zones: {result.zones} 
+                        - Attempts Top: {result.attempts_top} - Attempts Zone: {result.attempts_zone}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </li>
             ))}
           </ul>
@@ -65,4 +66,4 @@ function AthleteDetail() {
   );
 }
 
-export default AthleteDetail;
+export default AthletesDetails;
