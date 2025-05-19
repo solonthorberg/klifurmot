@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "bootstrap": "^5.3.6"
+    "@react-oauth/google": "^0.12.2",
+    "bootstrap": "^5.3.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }

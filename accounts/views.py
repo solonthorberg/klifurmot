@@ -14,6 +14,9 @@ from competitions.models import Competition
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from django.conf import settings
 
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
@@ -158,6 +161,50 @@ def login(request):
         })
     else:
         return Response({"detail": "Invalid credentials"}, status=401)
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def google_login(request):
+    token_from_client = request.data.get("token")
+
+    if not token_from_client:
+        return Response({"detail": "Missing token"}, status=400)
+
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            token_from_client,
+            requests.Request(),
+            settings.GOOGLE_CLIENT_ID
+        )
+
+        email = idinfo["email"]
+        full_name = idinfo.get("name", "")
+        first_name, *last_parts = full_name.strip().split(" ", 1)
+        last_name = last_parts[0] if last_parts else ""
+
+        User = get_user_model()
+        user, created = User.objects.get_or_create(email=email, defaults={
+            "username": email.split("@")[0],
+            "first_name": first_name,
+            "last_name": last_name,
+        })
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response({
+            "token": token.key,
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "full_name": user.get_full_name(),
+                "is_staff": user.is_staff
+            }
+        })
+
+    except ValueError:
+        return Response({"detail": "Invalid Google token"}, status=401)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
