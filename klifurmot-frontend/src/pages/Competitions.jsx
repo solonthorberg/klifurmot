@@ -30,7 +30,7 @@ function Competitions() {
     }, []);
 
     const filteredCompetitions = competitions
-        .sort((a, b) => new Date(b.start_date) - new Date(a.start_date)) // Sort by newest first
+        .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
         .filter(comp => {
             const matchesYear = year ? new Date(comp.start_date).getFullYear() === parseInt(year) : true;
             const matchesSearch = comp.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -62,9 +62,11 @@ function Competitions() {
                 <div>
                     {filteredCompetitions.map(comp => (
                         <div key={comp.id}>
-                            {comp.image && (
-                                <img src={comp.image} alt={comp.title} />
-                            )}
+                            <div>
+                                {comp.image && (
+                                    <img src={comp.image} alt={comp.title} style={{height: "200px", objectFit: "cover", borderRadius: "8px"}} />
+                                )}
+                            </div>
                             <div>
                                 <h5>{comp.title}</h5>
                                 <p>{new Date(comp.start_date).toLocaleDateString()}</p>

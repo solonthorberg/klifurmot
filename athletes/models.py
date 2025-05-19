@@ -4,12 +4,13 @@ from django.db import models
 from django.conf import settings
 
 from competitions.models import Competition, CompetitionCategory
+from accounts.models import UserAccount
 
 # Create your models here.
 
 class Climber(models.Model):
     GENDER_CHOICES = [('KK', 'Male'), ('KVK', 'Female')]
-
+    user_account = models.OneToOneField(UserAccount, on_delete=models.CASCADE, null=True, blank=True)
     full_name = models.CharField(max_length=100)
     date_of_birth = models.DateField()
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)

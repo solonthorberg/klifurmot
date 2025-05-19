@@ -13,4 +13,4 @@ urlpatterns = [
     path('', include(router.urls)),
     path('startlist/', StartListView.as_view(), name='startlist'),
     path('results/', ResultsView.as_view(), name='results'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]

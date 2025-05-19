@@ -3,7 +3,7 @@ function About() {
         <>
             <p>Um okkur</p>
         </>
-    )
+    );
 }
 
 export default About

@@ -4,6 +4,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from accounts.models import UserAccount
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
+from accounts.models import CompetitionRole
+from athletes.models import CompetitionRegistration
+from collections import defaultdict
+from scoring.models import ClimberRoundScore
+
+
 
 
 from .models import (
@@ -17,6 +26,7 @@ from .serializers import (
 
 from accounts.permissions import IsAdminForCompetition
 from accounts.models import CompetitionRole, UserAccount
+from scoring.models import Climb
 
 
 
@@ -118,3 +128,210 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
+from athletes.models import CompetitionRegistration
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def CompetitionAthletes(request, pk):
+    try:
+        competition = Competition.objects.get(pk=pk)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+
+    athlete_roles = CompetitionRole.objects.filter(
+        competition=competition,
+        role="athlete"
+    ).select_related("user__user", "user__nationality")
+
+    data = []
+    for a in athlete_roles:
+        user_account = a.user
+        django_user = user_account.user
+
+        full_name = f"{django_user.first_name} {django_user.last_name}".strip()
+        gender = user_account.gender or "–"
+        nationality = user_account.nationality.name_local if user_account.nationality else "–"
+
+        try:
+            registration = CompetitionRegistration.objects.get(
+                competition=competition,
+                climber__user_account=user_account
+            )
+            group_name = registration.competition_category.category_group.name
+            gender_suffix = "Male" if gender == "KK" else "Female" if gender == "KVK" else ""
+            category = f"{group_name} {gender_suffix}".strip()
+        except CompetitionRegistration.DoesNotExist:
+            category = "Óskilgreint"
+
+        data.append({
+            "id": django_user.id,
+            "full_name": full_name,
+            "gender": gender,
+            "category": category,
+            "nationality": nationality
+        })
+
+    return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def CompetitionBoulders(request, pk):
+    try:
+        competition = Competition.objects.get(pk=pk)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+
+    categories = CompetitionCategory.objects.filter(competition_id=pk)\
+        .select_related("category_group")\
+        .prefetch_related("round_set__boulder_set")
+
+    response_data = []
+
+    for cat in categories:
+        category_label = f"{cat.category_group.name} {cat.gender}"
+
+        rounds_data = []
+
+        for rnd in cat.round_set.all():
+            boulders_data = []
+            for boulder in rnd.boulder_set.all():
+                climbs = Climb.objects.filter(boulder=boulder)
+                tops = climbs.filter(top_reached=True).count()
+                zones = climbs.filter(zone_reached=True).count()
+
+                boulders_data.append({
+                    "number": boulder.boulder_number,
+                    "tops": tops,
+                    "zones": zones
+                })
+
+            rounds_data.append({
+                "round_name": rnd.get_round_type_display(),
+                "boulders": boulders_data
+            })
+
+        response_data.append({
+            "category": category_label,
+            "rounds": rounds_data
+        })
+
+    return Response(response_data)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def CompetitionStartlist(request, pk):
+    try:
+        competition = Competition.objects.get(pk=pk)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+
+    grouped_data = defaultdict(lambda: defaultdict(list))
+
+    rounds = Round.objects.filter(
+        competition_category__competition_id=pk
+    ).select_related(
+        "competition_category__category_group",
+        "competition_category"
+    ).prefetch_related("roundresult_set__climber__user_account__user")
+
+    for rnd in rounds:
+        category_obj = rnd.competition_category
+        group_name = category_obj.category_group.name
+        gender = category_obj.gender
+        category_key = f"{group_name} {gender}"
+
+        results = rnd.roundresult_set.order_by("start_order")
+
+        athletes = []
+        for result in results:
+            climber = result.climber
+            ua = climber.user_account
+            user = ua.user
+            full_name = user.get_full_name() or user.username
+
+            athletes.append({
+                "start_order": result.start_order,
+                "full_name": full_name,
+                "gender": ua.gender or "–",
+                "category": group_name
+            })
+
+        grouped_data[category_key][rnd.get_round_type_display()].extend(athletes)
+
+    response = []
+    for category_name, rounds_dict in grouped_data.items():
+        response.append({
+            "category": category_name,
+            "rounds": [
+                {
+                    "round_name": round_name,
+                    "athletes": athlete_list
+                }
+                for round_name, athlete_list in rounds_dict.items()
+            ]
+        })
+
+    return Response(response)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def CompetitionResults(request, pk):
+    try:
+        competition = Competition.objects.get(pk=pk)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+
+    grouped_data = defaultdict(lambda: defaultdict(list))
+
+    rounds = Round.objects.filter(
+        competition_category__competition_id=pk
+    ).select_related(
+        "competition_category__category_group",
+        "competition_category"
+    ).prefetch_related(
+        "climberroundscore_set__climber__user_account__user"
+    )
+
+    for rnd in rounds:
+        category = rnd.competition_category
+        group_name = category.category_group.name
+        gender = category.gender
+        category_label = f"{group_name} {gender}"
+
+        scores = ClimberRoundScore.objects.filter(round=rnd).select_related("climber__user_account__user").order_by("-total_score")
+
+        for rank, score in enumerate(scores, start=1):
+            climber = score.climber
+            user = climber.user_account.user
+            full_name = user.get_full_name() or user.username
+
+            # sum attempts from Climb model
+            climbs = Climb.objects.filter(climber=climber, boulder__round=rnd)
+            total_top_attempts = sum(c.attempts_top for c in climbs if c.top_reached)
+            total_zone_attempts = sum(c.attempts_zone for c in climbs if c.zone_reached)
+
+            grouped_data[category_label][rnd.get_round_type_display()].append({
+                "rank": rank,
+                "full_name": full_name,
+                "tops": score.tops,
+                "zones": score.zones,
+                "attempts_top": total_top_attempts,
+                "attempts_zone": total_zone_attempts
+            })
+
+
+    result = []
+    for category_name, rounds_dict in grouped_data.items():
+        result.append({
+            "category": category_name,
+            "rounds": [
+                {
+                    "round_name": round_name,
+                    "results": athlete_list
+                }
+                for round_name, athlete_list in rounds_dict.items()
+            ]
+        })
+
+    return Response(result)

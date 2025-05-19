@@ -1,7 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CustomAuthToken, CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet
-from .views import me, login, google_login, register, logout, UserViewSet, SendJudgeLinkView
+from .views import (
+    CustomAuthToken, CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet, 
+    me, login, google_login, register, logout, UserViewSet, SendJudgeLinkView
+)
 
 router = DefaultRouter()
 router.register(r'countries', CountryViewSet)

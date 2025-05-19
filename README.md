@@ -22,7 +22,10 @@ Uppsetning:
    Settu upp öll þau Python-bókasöfn sem verkefnið þarfnast með:
    pip install -r requirements.txt
 
-4. Keyra verkefnið
+4. Gera migrations
+   Í rótinni þarf að keyra python manage.py makemigrations og síðan python manage.py migrate
+
+5. Keyra verkefnið
    Þegar allt er tilbúið geturðu keyrt Django serverinn með (Activate venv: .\venv\Scripts\activate):
    python manage.py runserver
 
