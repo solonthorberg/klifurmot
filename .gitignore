@@ -1,21 +1,27 @@
 # Byte-compiled / cache files
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+
+# SQLite (optional if not using PostgreSQL)
 *.sqlite3
+db.sqlite3
 
 # Django stuff
 *.log
 local_settings.py
-db.sqlite3
 
 # Environment
 .env
-venv/
+.venv/
+venv/k
 
 # VS Code
 .vscode/
 
-# Migrations (but keep __init__.py)
+# Django migrations (but keep __init__.py)
 **/migrations/*.py
 !**/migrations/__init__.py
 
@@ -36,7 +42,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Frontend specific (assuming folder is klifurhus-frontend)
+# Frontend-specific (adjust path if needed)
 klifurhus-frontend/node_modules/
 klifurhus-frontend/dist/
 klifurhus-frontend/build/

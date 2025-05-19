@@ -1,0 +1,31 @@
+div {
+    border: solid 1px red;
+}
+
+.navbars {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem;
+    background-color: #60B5FF;
+}
+
+.navbars ul {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    gap: 1rem;
+}
+
+.navbars a {
+    color: inherit;
+}
+
+.navbars a {
+    text-decoration: none;
+}

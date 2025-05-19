@@ -24,6 +24,7 @@ from .serializers import CountrySerializer, UserAccountSerializer, CompetitionRo
 class CountryViewSet(viewsets.ModelViewSet):
     queryset = Country.objects.all()
     serializer_class = CountrySerializer
+    permission_classes = [AllowAny]
 
 class UserAccountViewSet(viewsets.ModelViewSet):
     queryset = UserAccount.objects.all()
@@ -115,12 +116,58 @@ def me(request):
     })
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
+def login(request):
+    data = request.data
+    identifier = data.get("username")
+    password = data.get("password")
+
+    if not identifier or not password:
+        return Response({"detail": "Missing credentials"}, status=400)
+
+    user = authenticate(username=identifier, password=password)
+
+    if user is None:
+        try:
+            UserModel = get_user_model()
+            user_obj = UserModel.objects.get(email=identifier)
+            user = authenticate(username=user_obj.username, password=password)
+        except UserModel.DoesNotExist:
+            user = None
+
+    if user is not None:
+        token, _ = Token.objects.get_or_create(user=user)
+        profile = getattr(user, 'profile', None)
+
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username,
+                'full_name': user.get_full_name(),
+                'is_staff': user.is_staff
+            },
+            'profile': {
+                'gender': profile.gender if profile else None,
+                'nationality': profile.nationality_id if profile else None,
+                'is_admin': profile.is_admin if profile else False,
+                'height_cm': profile.height_cm if profile else None,
+                'wingspan_cm': profile.wingspan_cm if profile else None,
+            } if profile else None
+        })
+    else:
+        return Response({"detail": "Invalid credentials"}, status=401)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def register(request):
     data = request.data
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
     password2 = data.get('password2')
+    permission_classes = [AllowAny]
 
     if not username or not email or not password:
         return Response({"detail": "Username, email, and password are required."}, status=400)
@@ -142,7 +189,24 @@ def register(request):
     if User.objects.filter(email=email).exists():
         return Response({"detail": "Email already exists."}, status=400)
 
-    user = User.objects.create_user(username=username, email=email, password=password)
+    full_name = data.get('full_name', '')
+
+    if not username or not email or not password:
+        return Response({"detail": "Username, email, and password are required."}, status=400)
+
+    if not full_name.strip():
+        return Response({"detail": "Full name is required."}, status=400)
+    
+    first_name, *last_parts = full_name.strip().split(' ', 1)
+    last_name = last_parts[0] if last_parts else ''
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=password,
+        first_name=first_name,
+        last_name=last_name
+)
 
     profile = user.profile
     profile.gender = data.get('gender')

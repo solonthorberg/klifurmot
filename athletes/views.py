@@ -2,23 +2,15 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from .models import Climber, CompetitionRegistration
 from .serializers import ClimberSerializer, CompetitionRegistrationSerializer
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-class ReadOnlyOrIsAuthenticated(IsAuthenticated):
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        return super().has_permission(request, view)
 
 class ClimberViewSet(viewsets.ModelViewSet):
     queryset = Climber.objects.all()
     serializer_class = ClimberSerializer
-    permission_classes = [ReadOnlyOrIsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        if self.request.user.is_staff:
-            return Climber.objects.all()
-        elif hasattr(self.request.user, 'profile'):
-            return Climber.objects.filter(user=self.request.user.profile)
         return Climber.objects.all()
 
 class CompetitionRegistrationViewSet(viewsets.ModelViewSet):

@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
+import api, { setAuthToken } from "../services/api";
 
-export default function Profile() {
+function Profile() {
   const [me, setMe] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setAuthToken(token);
+    }
     api
       .get("accounts/me/")
       .then((res) => setMe(res.data))
-      .catch(() => setMe(null));
+      .catch((err) => {
+        console.error("Error fetching profile:", err.response?.data || err.message);
+        setMe(null);
+      });
   }, []);
 
-  if (!me) return <p>Loading...</p>;
+  if (!me) return <p>Hleður inn...</p>;
 
   return (
     <div>
@@ -28,3 +35,5 @@ export default function Profile() {
     </div>
   );
 }
+
+export default Profile;
