@@ -210,17 +210,22 @@ def google_login(request):
 @permission_classes([AllowAny])
 def register(request):
     data = request.data
+
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
     password2 = data.get('password2')
-    permission_classes = [AllowAny]
+    full_name = data.get('full_name', '').strip()
 
+    # Basic validation
     if not username or not email or not password:
         return Response({"detail": "Username, email, and password are required."}, status=400)
 
     if password != password2:
         return Response({"detail": "Passwords do not match."}, status=400)
+
+    if not full_name:
+        return Response({"detail": "Full name is required."}, status=400)
 
     try:
         validate_email(email)
@@ -236,26 +241,18 @@ def register(request):
     if User.objects.filter(email=email).exists():
         return Response({"detail": "Email already exists."}, status=400)
 
-    full_name = data.get('full_name', '')
-
-    if not username or not email or not password:
-        return Response({"detail": "Username, email, and password are required."}, status=400)
-
-    if not full_name.strip():
-        return Response({"detail": "Full name is required."}, status=400)
-    
-    first_name, *last_parts = full_name.strip().split(' ', 1)
-    last_name = last_parts[0] if last_parts else ''
-
+    # Create the User
     user = User.objects.create_user(
         username=username,
         email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name
-)
+        password=password
+    )
 
-    profile = user.profile
+    # Get or create the UserAccount (in case it's auto-created via signal)
+    profile, _ = UserAccount.objects.get_or_create(user=user)
+
+    # Update profile fields
+    profile.full_name = full_name
     profile.gender = data.get('gender')
     profile.date_of_birth = data.get('date_of_birth')
     profile.nationality_id = data.get('nationality')
@@ -263,6 +260,7 @@ def register(request):
     profile.wingspan_cm = data.get('wingspan_cm')
     profile.save()
 
+    # Create auth token
     token, _ = Token.objects.get_or_create(user=user)
 
     return Response({
@@ -271,10 +269,10 @@ def register(request):
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            "full_name": user.get_full_name(),
             "is_staff": user.is_staff
         },
         "profile": {
+            "full_name": profile.full_name,
             "gender": profile.gender,
             "nationality": profile.nationality_id,
             "is_admin": profile.is_admin,

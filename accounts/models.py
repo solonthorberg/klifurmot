@@ -19,13 +19,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
-from .models import Country  # or wherever Country is defined
+from .models import Country  
 
 class UserAccount(models.Model):
     GENDER_CHOICES = [('KK', 'KK'), ('KVK', 'KVK')]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-
+    full_name = models.CharField(max_length=100)
     is_admin = models.BooleanField(default=False)
     google_id = models.CharField(max_length=32, blank=True, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -74,11 +74,7 @@ class JudgeLink(models.Model):
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='judge_links_created'
-    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='judge_links_created')
+    
     def __str__(self):
         return f"Judge Link for {self.user} in {self.competition}"

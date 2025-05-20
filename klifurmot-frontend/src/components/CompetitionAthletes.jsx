@@ -12,7 +12,12 @@ function CompetitionAthletes({ competitionId }) {
   useEffect(() => {
     const fetchAthletes = async () => {
       try {
-        const res = await api.get(`/competitions/competitions/${competitionId}/athletes/`);
+        // Fetch athletes from the API
+        const res = await api.get(`/athletes/registrations/?competition=${competitionId}`);
+
+        console.log("Fetched athletes data:", res.data);
+        
+        // Assuming the response data includes a 'climber' field with user account details
         setAthletes(res.data);
         setFiltered(res.data);
       } catch (err) {
@@ -26,24 +31,29 @@ function CompetitionAthletes({ competitionId }) {
   useEffect(() => {
     let result = athletes;
 
+    // Filter by search
     if (search.trim() !== "") {
       result = result.filter(a =>
-        a.full_name.toLowerCase().includes(search.toLowerCase())
+        a.climber.user_account.full_name.toLowerCase().includes(search.toLowerCase())
       );
     }
 
+    // Filter by gender
     if (genderFilter !== "") {
-      result = result.filter(a => a.gender === genderFilter);
+      result = result.filter(a => a.climber.user_account.gender === genderFilter);
     }
 
+    // Filter by category
     if (categoryFilter !== "") {
-      result = result.filter(a => a.category.includes(categoryFilter));
+      result = result.filter(a => 
+        a.competition_category?.category_group?.name?.includes(categoryFilter)
+      );
     }
 
     setFiltered(result);
   }, [search, genderFilter, categoryFilter, athletes]);
 
-  const uniqueCategories = [...new Set(athletes.map(a => a.category))];
+  const uniqueCategories = [...new Set(athletes.map(a => a.competition_category?.category_group?.name))];
 
   if (error) return <p>{error}</p>;
   if (!athletes.length) return <p>Engir keppendur skráðir í þetta mót.</p>;
@@ -66,6 +76,7 @@ function CompetitionAthletes({ competitionId }) {
           <option value="KVK">KVK</option>
         </select>
 
+
         <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
           <option value="">Allir flokkar</option>
           {uniqueCategories.map((cat, idx) => (
@@ -84,10 +95,10 @@ function CompetitionAthletes({ competitionId }) {
       <ul>
         {filtered.map((a) => (
           <li key={a.id}>
-            <span>{a.full_name}</span>
-            <span>{a.category}</span>
-            <span>{a.gender}</span>
-            <span>{a.nationality}</span>
+            <span>{a.climber.user_account.full_name}</span>
+            <span>{a.competition_category.category_group.name}</span>
+            <span>{a.climber.user_account.gender}</span>
+            <span>{a.climber.user_account.nationality.name_en}</span>
           </li>
         ))}
       </ul>

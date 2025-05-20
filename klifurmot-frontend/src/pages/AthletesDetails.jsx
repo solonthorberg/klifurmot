@@ -51,8 +51,7 @@ function AthletesDetails() {
                   <ul>
                     {comp.results.map((result, index) => (
                       <li key={index}>
-                        Round: {result.round_name} - Rank: {result.rank} - Tops: {result.tops} - Zones: {result.zones} 
-                        - Attempts Top: {result.attempts_top} - Attempts Zone: {result.attempts_zone}
+                        Round: {result.round_name} - Rank: {result.rank}
                       </li>
                     ))}
                   </ul>

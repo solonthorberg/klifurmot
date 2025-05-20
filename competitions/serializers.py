@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Competition, CategoryGroup, CompetitionCategory, Round, Boulder, JudgeBoulderAssignment
+from .models import Competition, CategoryGroup, CompetitionCategory, CompetitionRound, Boulder, JudgeBoulderAssignment, RoundGroup
 
 class CompetitionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,14 +12,22 @@ class CategoryGroupSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CompetitionCategorySerializer(serializers.ModelSerializer):
+    category_group = CategoryGroupSerializer()
     class Meta:
         model = CompetitionCategory
         fields = '__all__'
 
-class RoundSerializer(serializers.ModelSerializer):
+class RoundGroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Round
+        model = RoundGroup
         fields = '__all__'
+
+class RoundSerializer(serializers.ModelSerializer):
+    round_group = RoundGroupSerializer()
+    class Meta:
+        model = CompetitionRound
+        fields = '__all__'
+
 
 class BoulderSerializer(serializers.ModelSerializer):
     class Meta:

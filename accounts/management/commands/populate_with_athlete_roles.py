@@ -1,11 +1,9 @@
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.utils import timezone  # Fix the timezone import
 from django.contrib.auth.models import User
 from accounts.models import Country, UserAccount, CompetitionRole
 from athletes.models import Climber, CompetitionRegistration
-from competitions.models import (
-    Competition, CategoryGroup, CompetitionCategory, Round, Boulder
-)
+from competitions.models import Competition, CategoryGroup, CompetitionCategory, Round, Boulder
 from scoring.models import RoundResult, Climb, ClimberRoundScore
 from faker import Faker
 from random import randint, choice
@@ -16,15 +14,18 @@ class Command(BaseCommand):
     help = 'Populate sample data with many climbers, rounds, and boulders'
 
     def handle(self, *args, **kwargs):
+        # Create a default country (Iceland)
         country, _ = Country.objects.get_or_create(
             country_code='IS', defaults={"name_en": "Iceland", "name_local": "Ísland"}
         )
 
+        # Create an admin user
         admin, _ = User.objects.get_or_create(username="admin")
         admin.set_password("adminpass")
         admin.is_staff = True
         admin.save()
 
+        # Create a user account for the admin
         profile, _ = UserAccount.objects.get_or_create(user=admin, defaults={
             "is_admin": True,
             "gender": "KK",
@@ -32,16 +33,18 @@ class Command(BaseCommand):
             "nationality": country
         })
 
+        # Create a competition
         comp = Competition.objects.create(
             title="Mega Comp",
             description="Multiple categories and genders",
-            start_date=timezone.now(),
+            start_date=timezone.now(),  # Now works due to timezone import
             end_date=timezone.now(),
             location="Main Hall",
             created_by=admin,
             last_modified_by=admin
         )
 
+        # Create categories and rounds
         group_names = ["U15", "U17", "Opinn"]
         category_structure = {}
 
@@ -58,7 +61,9 @@ class Command(BaseCommand):
                 )
                 category_structure[group_name][gender] = cat
 
-        rounds_by_category = {}
+        # Create rounds and boulders for each category
+        rounds_by_category = {}  # Fix: Define rounds_by_category
+
         for group in group_names:
             for gender in ["KK", "KVK"]:
                 cat = category_structure[group][gender]
@@ -81,7 +86,7 @@ class Command(BaseCommand):
                             created_by=admin,
                             last_modified_by=admin
                         )
-                rounds_by_category[(group, gender)] = rounds
+                rounds_by_category[(group, gender)] = rounds  # Fix: Add rounds to the dictionary
 
         self.stdout.write("✅ Created categories, rounds, and boulders")
 
@@ -94,6 +99,7 @@ class Command(BaseCommand):
             last_name = fake.last_name()
             username = f"climber{i}"
 
+            # Create a new User for each climber
             user, created = User.objects.get_or_create(username=username, defaults={
                 "email": f"{username}@example.com",
                 "first_name": first_name,
@@ -103,21 +109,25 @@ class Command(BaseCommand):
                 user.set_password("pass1234")
                 user.save()
 
+            # Create a UserAccount for the climber and set the gender, nationality, etc.
             user_account, _ = UserAccount.objects.get_or_create(user=user)
             user_account.gender = gender
             user_account.date_of_birth = fake.date_of_birth(minimum_age=13, maximum_age=25)
             user_account.nationality = country
             user_account.save()
 
+            # Create the Climber and assign it to the UserAccount and the User
             climber = Climber.objects.create(
                 full_name=f"{first_name} {last_name}",
                 gender=gender,
                 date_of_birth=user_account.date_of_birth,
-                user_account=user_account,
+                user_account=user_account,  # Link Climber to the UserAccount
+                user=user,  # Link Climber directly to the User
                 created_by=admin,
                 last_modified_by=admin
             )
 
+            # Register the climber in the competition category
             category = category_structure[group][gender]
             CompetitionRegistration.objects.create(
                 competition=comp,
@@ -127,6 +137,7 @@ class Command(BaseCommand):
                 last_modified_by=admin
             )
 
+            # Assign role to the user for the competition
             CompetitionRole.objects.create(
                 user=user_account,
                 competition=comp,
@@ -139,6 +150,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"✅ Created {sum(len(lst) for lst in climbers_by_category.values())} climbers")
 
+        # Create results for each climber in rounds
         for (group, gender), climber_list in climbers_by_category.items():
             for rnd in rounds_by_category[(group, gender)]:
                 for i, climber in enumerate(climber_list[:20]):

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useNavigate } from "react-router-dom";
 
 function Register() {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     full_name: '',
@@ -19,6 +18,8 @@ function Register() {
 
   const [countries, setCountries] = useState([]);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -46,19 +47,21 @@ function Register() {
 
     if (!formData.full_name.trim()) {
       setError('Full name is required.');
+      setSuccess('');
       return;
     }
 
     if (formData.password !== formData.password2) {
       setError('Passwords do not match.');
+      setSuccess('');
       return;
     }
-
-    console.log('Payload being sent:', formData);
 
     try {
       await api.post('accounts/register/', formData);
       navigate('/login');
+      setSuccess('Skráning tókst! Vinsamlegast skráðu þig inn.');
+      setError('');
     } catch (err) {
       const msg =
         err.response?.data?.detail ||
@@ -66,6 +69,7 @@ function Register() {
         'Registration failed.';
       console.error('Registration failed:', msg);
       setError(msg);
+      setSuccess('');
     }
   };
 
@@ -73,6 +77,7 @@ function Register() {
     <div className="register-container">
       <h2>Nýskráning</h2>
       <form onSubmit={handleSubmit} className="register-form">
+        {success && <p style={{ color: 'green' }}>{success}</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
 
         <div className="form-group">
@@ -138,7 +143,7 @@ function Register() {
             onChange={handleChange}
             required
           >
-            <option value="">Select gender</option>
+            <option value="">Veldu kyn</option>
             <option value="KK">KK</option>
             <option value="KVK">KVK</option>
           </select>
@@ -162,14 +167,14 @@ function Register() {
             value={formData.nationality}
             onChange={handleChange}
             required
-            >
-            <option value="">Select country</option>
+          >
+            <option value="">Veldu þjóð</option>
             {countries.map((country) => (
-                <option key={country.country_code} value={country.country_code}>
+              <option key={country.country_code} value={country.country_code}>
                 {country.name_en}
-                </option>
+              </option>
             ))}
-            </select>
+          </select>
         </div>
 
         <div className="form-group">
@@ -193,7 +198,7 @@ function Register() {
         </div>
 
         <div className="form-group">
-          <button type="submit">Register</button>
+          <button type="submit">Skrá</button>
         </div>
       </form>
     </div>

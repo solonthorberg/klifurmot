@@ -23,8 +23,8 @@ function Athletes() {
   }, []);
 
   const filteredAthletes = athletes.filter(climber => {
-    const matchesSearch = climber.full_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    const fullName = climber.user_account?.full_name || '';
+    return fullName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
@@ -44,19 +44,15 @@ function Athletes() {
         <p>Engir keppendur fundust.</p>
       ) : (
         <div>
-          {filteredAthletes.map(climber => {
-            console.log("Climber object:", climber);
-            return (
-                <div key={climber.id}>
-                <div>
-                    <h5>{climber.full_name}</h5>
-                    <p>{climber.date_of_birth}</p>
-                    <Link to={`/athletes/${climber.user_account}`}>Skoða nánar</Link>
-                </div>
-                </div>
-            );
-            })}
-
+          {filteredAthletes.map(climber => (
+            <div key={climber.id}>
+              <div>
+                <h5>{climber.user_account.full_name}</h5>
+                <p>{climber.user_account.date_of_birth}</p>
+                <Link to={`/athletes/${climber.id}`}>Skoða nánar</Link>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </>

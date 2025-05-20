@@ -12,6 +12,8 @@ function CompetitionBoulders({ competitionId }) {
       try {
         const res = await api.get(`/competitions/competitions/${competitionId}/boulders/`);
         setCategories(res.data);
+
+        console.log("Fetched athletes data:", res.data);
       } catch (err) {
         console.error("Error loading boulders:", err);
         setError("Ekki tókst að sækja leiðirnar.");

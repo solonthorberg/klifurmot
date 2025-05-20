@@ -3,12 +3,12 @@ from django.db import models
 
 from django.conf import settings
 from athletes.models import Climber
-from competitions.models import Boulder, Round
+from competitions.models import Boulder, CompetitionRound
 
 # Create your models here.
 
 class RoundResult(models.Model):
-    round = models.ForeignKey(Round, on_delete=models.CASCADE)
+    round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     climber = models.ForeignKey(Climber, on_delete=models.CASCADE)
     rank = models.IntegerField(null=True, blank=True)
     start_order = models.IntegerField(null=True, blank=True)
@@ -48,7 +48,7 @@ class Climb(models.Model):
         return f"{self.climber} on {self.boulder}"
 
 class ClimberRoundScore(models.Model):
-    round = models.ForeignKey(Round, on_delete=models.CASCADE)
+    round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     climber = models.ForeignKey(Climber, on_delete=models.CASCADE)
     total_score = models.DecimalField(max_digits=5, decimal_places=2)
     tops = models.IntegerField()

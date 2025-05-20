@@ -7,6 +7,7 @@ class CountrySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UserAccountSerializer(serializers.ModelSerializer):
+    nationality = CountrySerializer()
     class Meta:
         model = UserAccount
         fields = '__all__'

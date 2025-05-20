@@ -13,33 +13,6 @@ from datetime import date
 from accounts.models import UserAccount
 from athletes.models import CompetitionRegistration
 from scoring.models import RoundResult, Climb
-
-
-
-
-class ClimberViewSet(viewsets.ModelViewSet):
-    queryset = Climber.objects.all()
-    serializer_class = ClimberSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get_queryset(self):
-        return Climber.objects.all()
-
-class CompetitionRegistrationViewSet(viewsets.ModelViewSet):
-    queryset = CompetitionRegistration.objects.all()
-    serializer_class = CompetitionRegistrationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = CompetitionRegistration.objects.all()
-        competition = self.request.query_params.get("competition")
-        climber = self.request.query_params.get("climber")
-        if competition:
-            qs = qs.filter(competition_id=competition)
-        if climber:
-            qs = qs.filter(climber_id=climber)
-        return qs
-    
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
@@ -48,10 +21,29 @@ from django.shortcuts import get_object_or_404
 from datetime import date
 from .models import Climber, CompetitionRegistration
 from scoring.models import RoundResult, Climb
-from competitions.models import Round
+from competitions.models import CompetitionRound
 from accounts.models import UserAccount
+from rest_framework import viewsets
+from rest_framework.response import Response
+from .models import CompetitionRegistration
+from .serializers import CompetitionRegistrationSerializer
 
-# Helper function to calculate age
+
+
+
+class GetClimberViewSet(viewsets.ModelViewSet):
+    queryset = Climber.objects.all()
+    serializer_class = ClimberSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class CompetitionRegistrationViewSet(viewsets.ModelViewSet):
+    serializer_class = CompetitionRegistrationSerializer
+    queryset = CompetitionRegistration.objects.all()
+    permission_classes = [AllowAny]
+
+    
+
 def calculate_age(birth_date):
     today = date.today()
     age = today.year - birth_date.year
@@ -59,7 +51,6 @@ def calculate_age(birth_date):
         age -= 1
     return age
 
-# Helper function to determine the category based on age
 def get_age_based_category(age):
     if age <= 11:
         return "U11"
@@ -74,7 +65,7 @@ def get_age_based_category(age):
     elif age <= 21:
         return "U21"
     else:
-        return "Opinn"  # Open category
+        return "Opinn"
 
 CATEGORY_LABELS = {
     "U11": "U11",
@@ -91,57 +82,58 @@ GENDER_LABELS = {
     "KVK": "KVK"
 }
 
-# This function fetches results for a particular competition, ordered by rounds
-def get_results_for_competition(competition):
-    # Fetch rounds for the competition, ordered by round order
-    rounds = Round.objects.filter(competition_category__competition=competition).order_by('-round_order')
+def GetResultsForClimbers(competition, climber):
+    rounds = CompetitionRound.objects.filter(
+        competition_category__competition=competition
+    ).select_related("round_group").order_by('-round_order')
 
-    results = []
-    
-    # Iterate through the rounds and get round results
+    climber_results = []
+    latest_rank = None
+
     for round in rounds:
-        round_result = RoundResult.objects.filter(round=round).first()  # Get the first result for this round
-        if round_result:
-            rank = round_result.rank  # Get the rank for the current round
-            
-            results.append({
-                "round_name": round.get_round_type_display(),  # Round name (e.g., Final, Semifinal)
-                "rank": rank  # Just include the rank
-            })
-    
-    return results
+        round_result = RoundResult.objects.filter(round=round, climber=climber).first()
 
-# API View to get details of an athlete
+        if round_result:
+            if latest_rank is None:
+                latest_rank = round_result.rank
+
+            climber_results.append({
+                "round_name": round.round_group.name,
+                "rank": latest_rank,
+            })
+
+    return climber_results
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def AthleteDetail(request, pk):
+def GetAthleteDetail(request, pk):
     athlete = get_object_or_404(UserAccount, pk=pk)
 
-    # Calculate age and category logic
+    climber = getattr(athlete, "climber", None)
+    if not climber:
+        return Response({"detail": "Climber profile not found."}, status=404)
+
     age = calculate_age(athlete.date_of_birth)
     group_name = get_age_based_category(age)
     gender = athlete.gender
-    category = f"{CATEGORY_LABELS[group_name]} {GENDER_LABELS.get(gender, gender)}"
+    category = f"{CATEGORY_LABELS.get(group_name, group_name)} {GENDER_LABELS.get(gender, gender)}"
 
-    # Fetch competition registrations
-    registrations = CompetitionRegistration.objects.filter(climber__user_account=athlete).select_related(
-        "competition", "competition_category__category_group"
-    )
+    registrations = CompetitionRegistration.objects.filter(climber=climber)\
+        .select_related("competition", "competition_category__category_group")
 
-    # Fetch the competition details, including results
-    competitions = [
-        {
+    competitions = []
+    for reg in registrations:
+        results = GetResultsForClimbers(reg.competition, climber)
+        competitions.append({
             "id": reg.competition.id,
             "title": reg.competition.title,
-            "category": f"{CATEGORY_LABELS.get(reg.competition_category.category_group.name)} {GENDER_LABELS.get(reg.competition_category.gender)}",
+            "category": f"{CATEGORY_LABELS.get(reg.competition_category.category_group.name, reg.competition_category.category_group.name)} {GENDER_LABELS.get(reg.competition_category.gender, reg.competition_category.gender)}",
             "start_date": reg.competition.start_date,
-            "results": get_results_for_competition(reg.competition)  # Fetch results for the competition
-        }
-        for reg in registrations
-    ]
+            "results": results
+        })
 
-    # Count wins (where rank = 1)
-    wins = RoundResult.objects.filter(climber__user_account=athlete, rank=1).count()
+    wins = RoundResult.objects.filter(climber=climber, rank=1).count()
 
     return Response({
         "id": athlete.id,

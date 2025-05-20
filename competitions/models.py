@@ -29,7 +29,7 @@ class CategoryGroup(models.Model):
         return self.name
 
 class CompetitionCategory(models.Model):
-    GENDER_CHOICES = [('KK', 'Male'), ('KVK', 'Female')]
+    GENDER_CHOICES = [('KK', 'KK'), ('KVK', 'KVK')]
 
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     category_group = models.ForeignKey(CategoryGroup, on_delete=models.CASCADE)
@@ -42,11 +42,15 @@ class CompetitionCategory(models.Model):
     def __str__(self):
         return f"{self.category_group.name} {self.get_gender_display()}"
 
-class Round(models.Model):
-    ROUND_TYPES = [('qualification', 'Qualification'), ('semifinal', 'Semifinal'), ('final', 'Final'), ('extra', 'Extra')]
+class RoundGroup(models.Model):
+    name = models.CharField(max_length=50)
+    is_default = models.BooleanField(default=False)
+    def __str__(self):
+        return self.name
 
+class CompetitionRound(models.Model):
     competition_category = models.ForeignKey(CompetitionCategory, on_delete=models.CASCADE)
-    round_type = models.CharField(max_length=20, choices=ROUND_TYPES)
+    round_group = models.ForeignKey(RoundGroup, on_delete=models.CASCADE)
     round_order = models.IntegerField()
     climbers_advance = models.IntegerField(default=0)
     boulder_count = models.IntegerField(default=0)
@@ -61,14 +65,14 @@ class Round(models.Model):
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.get_round_type_display()} - {self.competition_category}"
+        return f"Round {self.round_order} - {self.competition_category}"
     
     class Meta:
         ordering = ['round_order']
 
 
 class Boulder(models.Model):
-    round = models.ForeignKey(Round, on_delete=models.CASCADE)
+    round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     section_style = models.CharField(max_length=50)
     boulder_number = models.IntegerField()
