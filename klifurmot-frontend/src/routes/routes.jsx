@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useParams } from 'react-router-dom';
 import Home from '../pages/Home';
 import Competitions from '../pages/Competitions';
 import CompetitionDetails from "../pages/CompetitionDetails";
@@ -8,6 +8,13 @@ import About from '../pages/About';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Profile from '../pages/Profile';
+import JudgeLoginPage from '../pages/JudgeLoginPage';
+import JudgeDashboardPage from '../pages/JudgeDashboardPage';
+
+function JudgeDashboardPageWrapper() {
+  const { competitionId } = useParams();
+  return <JudgeDashboardPage competitionId={competitionId} />;
+}
 
 function AppRoutes() {
   return (
@@ -19,8 +26,10 @@ function AppRoutes() {
       <Route path="/athletes/:id" element={<AthletesDetails />} />
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/Register" element={<Register />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/judge/login/:token" element={<JudgeLoginPage />} />
+      <Route path="/judge/competition/:competitionId/judge-dashboard" element={<JudgeDashboardPageWrapper />} />
     </Routes>
   );
 }

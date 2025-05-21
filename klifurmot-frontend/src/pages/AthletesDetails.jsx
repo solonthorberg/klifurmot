@@ -12,6 +12,7 @@ function AthletesDetails() {
       try {
         const res = await api.get(`/athletes/${id}/`);
         setAthlete(res.data);
+        console.log(res)
       } catch (err) {
         console.error("Error fetching athlete:", err);
         setError("Ekki tókst að sækja keppandann.");

@@ -137,7 +137,7 @@ def GetAthleteDetail(request, pk):
 
     return Response({
         "id": athlete.id,
-        "full_name": athlete.user.get_full_name(),
+        "full_name": athlete.full_name,
         "date_of_birth": athlete.date_of_birth,
         "height_cm": athlete.height_cm,
         "wingspan_cm": athlete.wingspan_cm,

@@ -17,6 +17,7 @@ from datetime import timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.conf import settings
+from django.utils.dateparse import parse_date
 
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
@@ -83,60 +84,65 @@ class CustomAuthToken(ObtainAuthToken):
             } if profile else None
         }, status=status.HTTP_200_OK)
     
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me(request):
     user = request.user
     profile = getattr(user, 'profile', None)
 
-    roles = []
-    if profile:
-        roles = [
-            {
-                "competition_id": r.competition.id,
-                "title": r.competition.title,
-                "role": r.role
-            }
-            for r in CompetitionRole.objects.filter(user=profile)
-        ]
+    if request.method == 'PATCH':
+        data = request.data
+
+        if profile:
+            profile.full_name = data.get('full_name', profile.full_name)
+            profile.gender = data.get('gender', profile.gender)
+
+            dob = data.get('date_of_birth')
+            profile.date_of_birth = parse_date(dob) if dob else None  # ✅ Safe parsing
+
+            profile.nationality_id = data.get('nationality', profile.nationality_id)
+            profile.height_cm = data.get('height_cm', profile.height_cm)
+            profile.wingspan_cm = data.get('wingspan_cm', profile.wingspan_cm)
+            profile.save()
+
+        user.email = data.get('email', user.email)
+        user.save()
 
     return Response({
         "user": {
             "id": user.id,
             "username": user.username,
             "email": user.email,
-            "full_name": user.get_full_name(),
+            "full_name": profile.full_name if profile else None,
             "is_staff": user.is_staff,
         },
         "profile": {
             "gender": profile.gender if profile else None,
+            "date_of_birth": profile.date_of_birth if profile else None,
             "nationality": profile.nationality_id if profile else None,
             "is_admin": profile.is_admin if profile else False,
             "height_cm": profile.height_cm if profile else None,
             "wingspan_cm": profile.wingspan_cm if profile else None,
-        } if profile else None,
-        "roles": roles
-    })
+        } if profile else None
+    }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
     data = request.data
-    identifier = data.get("username")
+    email = data.get("email")
     password = data.get("password")
 
-    if not identifier or not password:
+    if not email or not password:
         return Response({"detail": "Missing credentials"}, status=400)
 
-    user = authenticate(username=identifier, password=password)
-
-    if user is None:
-        try:
-            UserModel = get_user_model()
-            user_obj = UserModel.objects.get(email=identifier)
-            user = authenticate(username=user_obj.username, password=password)
-        except UserModel.DoesNotExist:
-            user = None
+    user = None
+    try:
+        UserModel = get_user_model()
+        user_obj = UserModel.objects.get(email=email)
+        user = authenticate(username=user_obj.username, password=password)
+    except UserModel.DoesNotExist:
+        return Response({"detail": "Invalid credentials"}, status=401)
 
     if user is not None:
         token, _ = Token.objects.get_or_create(user=user)
@@ -329,3 +335,22 @@ class SendJudgeLinkView(APIView):
             "is_used": link.is_used
         })
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def validate_judge_token(request, token):
+    try:
+        link = JudgeLink.objects.get(token=token)
+
+        if link.expires_at < timezone.now():
+            return Response({"detail": "Link expired."}, status=400)
+
+        return Response({
+            "competition_id": link.competition.id,
+            "competition_title": link.competition.title,
+            "user_id": link.user.id,
+            "user_email": link.user.email,
+            "token": str(link.token),
+            "is_used": link.is_used,
+        })
+    except JudgeLink.DoesNotExist:
+        return Response({"detail": "Invalid token."}, status=404)

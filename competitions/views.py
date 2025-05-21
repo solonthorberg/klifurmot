@@ -80,7 +80,7 @@ class CompetitionCategoryViewSet(viewsets.ModelViewSet):
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [IsAuthenticated, IsAdminForCompetition]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         competition_id = self.request.query_params.get('competition_id')

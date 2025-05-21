@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     CustomAuthToken, CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet, 
-    me, login, google_login, register, logout, UserViewSet, SendJudgeLinkView
+    me, login, google_login, register, logout, UserViewSet, SendJudgeLinkView, validate_judge_token
 )
 
 router = DefaultRouter()
@@ -19,4 +19,5 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('logout/', logout, name='logout'),
     path('judge-links/<int:competition_id>/', SendJudgeLinkView.as_view(), name='send-judge-link'),
+    path('judge-links/<uuid:token>/', validate_judge_token, name='validate-judge-link'),
 ]
