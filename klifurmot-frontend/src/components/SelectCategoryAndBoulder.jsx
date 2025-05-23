@@ -31,6 +31,7 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
       try {
         const startlistRes = await api.get(`/scoring/startlist/?competition_id=${competitionId}&category_id=${selectedCategoryId}&round_group_id=${roundGroupId}`);
         const selectedBoulder = boulders.find(b => b.id === parseInt(selectedBoulderId));
+
         const baseAthletes = startlistRes.data.map(a => ({
           ...a,
           round_id: roundGroupId,
@@ -42,29 +43,36 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
           score: { top: false, topAttempts: 0, zone: false, zoneAttempts: 0 }
         }));
 
-        // Fetch climbs for this boulder/category/round
-        const climbRes = await api.get(`/scoring/climbs/`, {
-          params: {
-            round_order: roundOrder,
-            boulder_number: selectedBoulder?.boulder_number,
-            competition_id: competitionId,
-            category_id: selectedCategoryId
-          }
-        });
+        const enriched = await Promise.all(
+          baseAthletes.map(async athlete => {
+            try {
+              const res = await api.get(`/scoring/climbs/`, {
+                params: {
+                  round_order: roundOrder,
+                  boulder_number: selectedBoulder?.boulder_number,
+                  competition_id: competitionId,
+                  climber_id: athlete.climber_id,
+                  category_id: selectedCategoryId
+                }
+              });
 
-        // Merge scores into athletes
-        const enriched = baseAthletes.map(athlete => {
-          const climb = climbRes.data.find(c => c.climber === athlete.climber_id);
-          return {
-            ...athlete,
-            score: climb ? {
-              top: climb.top_reached,
-              topAttempts: climb.attempts_top || 0,
-              zone: climb.zone_reached,
-              zoneAttempts: climb.attempts_zone || 0
-            } : athlete.score
-          };
-        });
+              const climb = res.data.find(c => c.climber === athlete.climber_id);
+              return {
+                ...athlete,
+                score: climb
+                  ? {
+                      top: climb.top_reached,
+                      topAttempts: climb.attempts_top || 0,
+                      zone: climb.zone_reached,
+                      zoneAttempts: climb.attempts_zone || 0
+                    }
+                  : athlete.score
+              };
+            } catch {
+              return athlete;
+            }
+          })
+        );
 
         setAthletes(enriched);
       } catch (err) {
@@ -78,6 +86,7 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
 
     fetchData();
   }, [selectedBoulderId, selectedCategoryId, competitionId, roundGroupId, roundOrder, boulders]);
+
 
   return (
     <div>

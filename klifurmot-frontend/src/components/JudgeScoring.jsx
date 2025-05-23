@@ -90,13 +90,11 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
 
       if (field === "zoneAttempts") {
         newZone = Math.max(0, newZone + delta);
-        // Prevent zone from exceeding top
         if (newZone > newTop) newZone = newTop;
       }
 
       if (field === "topAttempts") {
         newTop = Math.max(0, newTop + delta);
-        // If top decreases below zone, reduce zone too
         if (newZone > newTop) newZone = newTop;
       }
 
@@ -108,7 +106,6 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
         gotTop: prev.gotTop && newTop > 0
       };
 
-      // Ensure if reached flags are true, attempts are at least 1
       if (updated.gotZone && updated.zoneAttempts === 0) updated.zoneAttempts = 1;
       if (updated.gotTop && updated.topAttempts === 0) updated.topAttempts = 1;
 

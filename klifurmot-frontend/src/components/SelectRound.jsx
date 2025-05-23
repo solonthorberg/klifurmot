@@ -27,7 +27,7 @@ function SelectRound({ competitionId, onContinue }) {
             uniqueGroups.push({
               id: group.id,
               name: group.name,
-              round_order: round.round_order // ✅ Important
+              round_order: round.round_order
             });
           }
         });
@@ -44,7 +44,7 @@ function SelectRound({ competitionId, onContinue }) {
   }, [competitionId]);
 
   const handleClick = (roundGroupId, roundOrder) => {
-    onContinue(roundGroupId, roundOrder); // ✅ Pass both values
+    onContinue(roundGroupId, roundOrder);
   };
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;

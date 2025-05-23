@@ -11,7 +11,7 @@ function CompetitionResults({ competitionId }) {
     const fetchResults = async () => {
       try {
         const res = await api.get(`/competitions/competitions/${competitionId}/results/`);
-        setResults(res.data); // Expected: [{ category, rounds: [{ round_name, results: [...] }] }]
+        setResults(res.data);
       } catch (err) {
         console.error("Error fetching results:", err);
         setError("Ekki tókst að sækja niðurstöður.");
