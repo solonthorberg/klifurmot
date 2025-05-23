@@ -1,8 +1,7 @@
-// JudgeScoring.jsx
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
 
-function JudgeScoring({ athlete, boulderNumber, onNext, onPrevious }) {
+function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNext, onPrevious }) {
   const [score, setScore] = useState({
     zoneAttempts: 0,
     topAttempts: 0,
@@ -19,16 +18,23 @@ function JudgeScoring({ athlete, boulderNumber, onNext, onPrevious }) {
 
     const fetchScore = async () => {
       try {
-        const res = await api.get(`/scoring/climbs/?round_id=${athlete.round_id}&boulder_id=${athlete.boulder_id}`);
+        const res = await api.get(`/scoring/climbs/`, {
+          params: {
+            round_order: roundOrder,
+            boulder_number: boulderNumber,
+            competition_id: competitionId,
+            climber_id: athlete.climber_id,
+            category_id: athlete.category_id
+          }
+        });
         const current = res.data.find(item => item.climber === athlete.climber_id);
         if (current) {
-          const fetchedScore = {
+          setScore({
             zoneAttempts: current.attempts_zone || 0,
             topAttempts: current.attempts_top || 0,
             gotZone: current.zone_reached || false,
             gotTop: current.top_reached || false,
-          };
-          setScore(fetchedScore);
+          });
         }
       } catch (err) {
         console.error("Failed to fetch current score", err);
@@ -36,18 +42,18 @@ function JudgeScoring({ athlete, boulderNumber, onNext, onPrevious }) {
     };
 
     fetchScore();
-  }, [athlete]);
+  }, [athlete, boulderNumber, roundOrder, competitionId]);
 
   const updateBackend = async (newScore) => {
     try {
-      console.log("Sending updated score to backend:", newScore);
       await api.post(`/scoring/climbs/record_attempt/`, {
         climber: athlete.climber_id,
         boulder: athlete.boulder_id,
+        competition: competitionId,
         attempts_zone: newScore.zoneAttempts,
         attempts_top: newScore.topAttempts,
         zone_reached: newScore.gotZone,
-        top_reached: newScore.gotTop
+        top_reached: newScore.gotTop,
       });
     } catch (err) {
       console.error("Failed to update score", err);
@@ -56,44 +62,85 @@ function JudgeScoring({ athlete, boulderNumber, onNext, onPrevious }) {
 
   const handleScore = (type) => {
     if (editMode || score.gotTop) return;
+
     const newScore = { ...score };
-    if (type === "zone") {
-      if (!score.gotZone) {
-        newScore.zoneAttempts += 1;
-        newScore.topAttempts += 1;
-        newScore.gotZone = true;
-      }
-    } else if (type === "top") {
-      if (!score.gotTop) {
-        newScore.topAttempts += 1;
-        newScore.zoneAttempts += score.gotZone ? 0 : 1;
-        newScore.gotTop = true;
-        newScore.gotZone = true;
-      }
+
+    if (type === "zone" && !score.gotZone) {
+      newScore.zoneAttempts += 1;
+      newScore.topAttempts += 1;
+      newScore.gotZone = true;
+    } else if (type === "top" && !score.gotTop) {
+      newScore.topAttempts += 1;
+      if (!score.gotZone) newScore.zoneAttempts += 1;
+      newScore.gotZone = true;
+      newScore.gotTop = true;
     } else if (type === "attempt") {
-      if (!score.gotZone) {
-        newScore.zoneAttempts += 1;
-      }
-      if (!score.gotTop) {
-        newScore.topAttempts += 1;
-      }
+      if (!score.gotZone) newScore.zoneAttempts += 1;
+      if (!score.gotTop) newScore.topAttempts += 1;
     }
+
     setScore(newScore);
     updateBackend(newScore);
   };
 
   const handleEditChange = (field, delta) => {
     setTempScore(prev => {
-      const newValue = Math.max((prev[field] || 0) + delta, 0);
-      const updated = { ...prev, [field]: newValue };
-      if (field === "zoneAttempts" && newValue === 0) updated.gotZone = false;
-      if (field === "topAttempts" && newValue === 0) updated.gotTop = false;
+      let newZone = prev.zoneAttempts;
+      let newTop = prev.topAttempts;
+
+      if (field === "zoneAttempts") {
+        newZone = Math.max(0, newZone + delta);
+        // Prevent zone from exceeding top
+        if (newZone > newTop) newZone = newTop;
+      }
+
+      if (field === "topAttempts") {
+        newTop = Math.max(0, newTop + delta);
+        // If top decreases below zone, reduce zone too
+        if (newZone > newTop) newZone = newTop;
+      }
+
+      const updated = {
+        ...prev,
+        zoneAttempts: newZone,
+        topAttempts: newTop,
+        gotZone: prev.gotZone && newZone > 0,
+        gotTop: prev.gotTop && newTop > 0
+      };
+
+      // Ensure if reached flags are true, attempts are at least 1
+      if (updated.gotZone && updated.zoneAttempts === 0) updated.zoneAttempts = 1;
+      if (updated.gotTop && updated.topAttempts === 0) updated.topAttempts = 1;
+
       return updated;
     });
   };
 
+
   const toggleBooleanField = (field) => {
-    setTempScore(prev => ({ ...prev, [field]: !prev[field] }));
+    setTempScore(prev => {
+      const updated = { ...prev };
+
+      if (field === "gotZone") {
+        if (!prev.gotZone) {
+          updated.gotZone = true;
+          if (updated.zoneAttempts < 1) updated.zoneAttempts = 1;
+        } else if (!prev.gotTop) {
+          updated.gotZone = false;
+        }
+      } else if (field === "gotTop") {
+        if (!prev.gotTop) {
+          updated.gotTop = true;
+          if (!updated.gotZone) updated.gotZone = true;
+          if (updated.zoneAttempts < 1) updated.zoneAttempts = 1;
+          if (updated.topAttempts < 1) updated.topAttempts = 1;
+        } else {
+          updated.gotTop = false;
+        }
+      }
+
+      return updated;
+    });
   };
 
   const handleEditConfirm = () => {
@@ -154,14 +201,29 @@ function JudgeScoring({ athlete, boulderNumber, onNext, onPrevious }) {
               <button onClick={() => handleEditChange("zoneAttempts", 1)}>▲</button>
               <div className="score-display">{tempScore.zoneAttempts}</div>
               <button onClick={() => handleEditChange("zoneAttempts", -1)}>▼</button>
-              <p>Zone náð: <input type="checkbox" checked={tempScore.gotZone} onChange={() => toggleBooleanField("gotZone")} /></p>
+              <p>
+                Zone náð:{" "}
+                <input
+                  type="checkbox"
+                  checked={tempScore.gotZone}
+                  onChange={() => toggleBooleanField("gotZone")}
+                  disabled={tempScore.gotTop}
+                />
+              </p>
             </div>
             <div>
               <p>Tilraunir Topp</p>
               <button onClick={() => handleEditChange("topAttempts", 1)}>▲</button>
               <div className="score-display">{tempScore.topAttempts}</div>
               <button onClick={() => handleEditChange("topAttempts", -1)}>▼</button>
-              <p>Topp náð: <input type="checkbox" checked={tempScore.gotTop} onChange={() => toggleBooleanField("gotTop")} /></p>
+              <p>
+                Topp náð:{" "}
+                <input
+                  type="checkbox"
+                  checked={tempScore.gotTop}
+                  onChange={() => toggleBooleanField("gotTop")}
+                />
+              </p>
             </div>
           </div>
           <div className="edit-buttons">

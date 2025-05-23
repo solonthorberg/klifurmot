@@ -5,10 +5,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework import status
 
-from competitions.models import CompetitionRound
+from competitions.models import Boulder, CompetitionRound
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
+from accounts.models import CompetitionRole
 
 class ReadOnlyOrIsAuthenticated(IsAuthenticated):
     def has_permission(self, request, view):
@@ -43,47 +44,79 @@ class ClimbViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Climb.objects.all()
-        round_id = self.request.query_params.get('round_id')
-        boulder_id = self.request.query_params.get('boulder_id')
+        round_order = self.request.query_params.get('round_order')
+        boulder_number = self.request.query_params.get('boulder_number')
+        competition_id = self.request.query_params.get('competition_id')
+        climber_id = self.request.query_params.get('climber_id')
+        category_id = self.request.query_params.get('category_id')  # corrected param name
 
-        print(f"CLIMB GET: round_id={round_id}, boulder_id={boulder_id}, user={self.request.user}")
+        print(f">> DEBUG GET_CLIMBS")
+        print(f"Authenticated: {self.request.user.is_authenticated}")
+        print(f"User ID: {getattr(self.request.user, 'id', 'Anonymous')}")
+        print(f"Filtering for round_order: {round_order}")
+        print(f"Filtering for boulder_number: {boulder_number}")
+        print(f"Filtering for competition_id: {competition_id}")
+        print(f"Filtering for climber_id: {climber_id}")
+        print(f"Filtering for category_id: {category_id}")
 
-        if round_id:
-            qs = qs.filter(boulder__round_id=round_id)
-        if boulder_id:
-            qs = qs.filter(boulder_id=boulder_id)
+        try:
+            if round_order and boulder_number and competition_id:
+                qs = qs.filter(
+                    boulder__boulder_number=int(boulder_number),
+                    boulder__round__round_order=int(round_order),
+                    boulder__round__competition_category__competition_id=int(competition_id)
+                )
+            if climber_id:
+                qs = qs.filter(climber_id=int(climber_id))
+            if category_id:
+                qs = qs.filter(boulder__round__competition_category_id=int(category_id))
+        except ValueError:
+            return Climb.objects.none()
 
         if self.request.method in SAFE_METHODS:
-            # No judge restriction for safe methods
             return qs
+
         if self.request.user.is_staff:
             return qs
-        return qs.filter(judge=self.request.user)
+        elif hasattr(self.request.user, 'profile'):
+            return qs.filter(judge=self.request.user)
 
+        return Climb.objects.none()
 
     @action(detail=False, methods=["post"], url_path="record_attempt", permission_classes=[IsAuthenticated])
     def record_attempt(self, request):
         data = request.data
-
         print("RECEIVED POST DATA:", data)
 
         try:
             climber_id = int(data["climber"])
             boulder_id = int(data["boulder"])
+            competition_id = int(data["competition"])
         except (KeyError, ValueError):
-            return Response({"detail": "climber and boulder must be valid integers"}, status=400)
+            return Response({"detail": "climber, boulder, and competition must be valid integers"}, status=400)
+
+        user = request.user
+
+        if not CompetitionRole.objects.filter(
+            user__user=user,  # assumes user is linked via UserAccount.profile
+            competition_id=competition_id,
+            role="judge"
+        ).exists():
+            return Response({"detail": "You are not authorized to judge in this competition."}, status=403)
 
         try:
-            judge_user = request.user
-        except AttributeError:
-            return Response({"detail": "User is not authenticated properly"}, status=400)
+            boulder = Boulder.objects.select_related("round__competition_category__competition").get(id=boulder_id)
+            if boulder.round.competition_category.competition_id != competition_id:
+                return Response({"detail": "Boulder does not belong to specified competition"}, status=400)
+        except Boulder.DoesNotExist:
+            return Response({"detail": "Boulder not found"}, status=404)
 
         try:
             climb, _ = Climb.objects.update_or_create(
                 climber_id=climber_id,
-                boulder_id=boulder_id,
-                judge=judge_user,
+                boulder=boulder,
                 defaults={
+                    "judge": user,
                     "attempts_top": int(data.get("attempts_top", 0)),
                     "attempts_zone": int(data.get("attempts_zone", 0)),
                     "top_reached": data.get("top_reached", False),
@@ -93,6 +126,10 @@ class ClimbViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Climb recorded"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"detail": str(e)}, status=400)
+
+
+
+
 
 class ClimberRoundScoreViewSet(viewsets.ModelViewSet):
     queryset = ClimberRoundScore.objects.all()

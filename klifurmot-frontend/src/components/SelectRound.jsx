@@ -1,4 +1,3 @@
-// SelectRound.jsx
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
 
@@ -20,16 +19,23 @@ function SelectRound({ competitionId, onContinue }) {
 
         const uniqueGroups = [];
         const seen = new Set();
+
         roundRes.data.forEach(round => {
-          if (round.round_group && !seen.has(round.round_group.id)) {
-            seen.add(round.round_group.id);
-            uniqueGroups.push({ id: round.round_group.id, name: round.round_group.name });
+          const group = round.round_group;
+          if (group && !seen.has(group.id)) {
+            seen.add(group.id);
+            uniqueGroups.push({
+              id: group.id,
+              name: group.name,
+              round_order: round.round_order // ✅ Important
+            });
           }
         });
 
         setRoundGroups(uniqueGroups);
         setCompetitionTitle(compRes.data.title);
       } catch (err) {
+        console.error(err);
         setError("Ekki tókst að sækja umferðir eða mótsupplýsingar.");
       }
     };
@@ -37,9 +43,8 @@ function SelectRound({ competitionId, onContinue }) {
     fetchData();
   }, [competitionId]);
 
-  const handleClick = (roundGroupId) => {
-    console.log("Selected round group ID:", roundGroupId);
-    onContinue(roundGroupId);
+  const handleClick = (roundGroupId, roundOrder) => {
+    onContinue(roundGroupId, roundOrder); // ✅ Pass both values
   };
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
@@ -60,7 +65,7 @@ function SelectRound({ competitionId, onContinue }) {
           >
             <h4>{group.name}</h4>
             <button
-              onClick={() => handleClick(group.id)}
+              onClick={() => handleClick(group.id, group.round_order)}
               style={{ padding: "0.5rem 1rem", background: "#ddd", border: "none", cursor: "pointer" }}
             >
               Dæma

@@ -330,7 +330,7 @@ class SendJudgeLinkView(APIView):
         )
 
         return Response({
-            "judge_link": f"http://localhost:3000/judge/login/{link.token}/",
+            "judge_link": f"http://localhost:5173/judge/login/{link.token}/",
             "expires_at": link.expires_at,
             "is_used": link.is_used
         })

@@ -1,4 +1,3 @@
-// JudgeLoginPage.jsx
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api, { setAuthToken } from '../services/api';
@@ -29,9 +28,9 @@ function JudgeLoginPage() {
   }, [token]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setAuthToken(token);
+    const localToken = localStorage.getItem("token");
+    if (localToken) {
+      setAuthToken(localToken);
       api.get("accounts/me/")
         .then(res => {
           setLoggedInUserId(res.data.user.id);
@@ -74,24 +73,21 @@ function JudgeLoginPage() {
     }
   };
 
-
   const handleAccept = () => {
-    // Save judgeInfo to localStorage for later verification
     localStorage.setItem("judgeInfo", JSON.stringify(judgeInfo));
-
-    navigate(`/judge/competition/${judgeInfo.competition_id}/judge-dashboard`);
+    navigate(`/judge/competition/${judgeInfo?.competition_id}/judge-dashboard`);
   };
 
   if (loading || checkingAuth) return <p>Hleður...</p>;
   if (error && !isAuthenticated) return <div><p style={{ color: 'red' }}>{error}</p>{renderLoginForm()}</div>;
 
-  const isCorrectJudge = isAuthenticated && loggedInUserId === judgeInfo.user_id;
+  const isCorrectJudge = isAuthenticated && judgeInfo && loggedInUserId === judgeInfo.user_id;
 
   function renderLoginForm() {
     return (
       <div>
         <h2>Innskráning fyrir dómara</h2>
-        <p>Þú hefur verið boðin(n) sem dómari á "{judgeInfo.competition_title}".</p>
+        <p>Þú hefur verið boðin(n) sem dómari á "{judgeInfo?.competition_title || 'óþekkt mót'}".</p>
 
         <form onSubmit={handleLogin}>
           <label>Netfang:
@@ -116,7 +112,7 @@ function JudgeLoginPage() {
     <div>
       <h2>Þú ert skráð(ur) inn sem {judgeEmail}</h2>
       <p>
-        Þú hefur verið boðin(n) sem dómari á <strong>{judgeInfo.competition_title}</strong>.
+        Þú hefur verið boðin(n) sem dómari á <strong>{judgeInfo?.competition_title}</strong>.
       </p>
       <button onClick={handleAccept}>Samþykkja</button>
     </div>

@@ -1,4 +1,3 @@
-// JudgeDashboardPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import SelectRound from "../components/SelectRound";
@@ -12,6 +11,7 @@ function JudgeDashboardPage() {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedRoundGroupId, setSelectedRoundGroupId] = useState(null);
+  const [selectedRoundOrder, setSelectedRoundOrder] = useState(null);
   const [selectedBoulderNumber, setSelectedBoulderNumber] = useState(null);
   const [athletes, setAthletes] = useState([]);
   const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0);
@@ -38,7 +38,10 @@ function JudgeDashboardPage() {
 
     api.get("accounts/me/")
       .then((res) => {
-        if (res.data.user.id === expectedJudge.user_id && expectedJudge.competition_id === parseInt(competitionId)) {
+        if (
+          res.data.user.id === expectedJudge.user_id &&
+          expectedJudge.competition_id === parseInt(competitionId)
+        ) {
           setAuthorized(true);
         } else {
           navigate("/");
@@ -74,8 +77,9 @@ function JudgeDashboardPage() {
         return (
           <SelectRound
             competitionId={competitionId}
-            onContinue={(id) => {
-              setSelectedRoundGroupId(id);
+            onContinue={(roundGroupId, roundOrder) => {
+              setSelectedRoundGroupId(roundGroupId);
+              setSelectedRoundOrder(roundOrder);
               setStep("select-category-boulder");
             }}
           />
@@ -84,11 +88,14 @@ function JudgeDashboardPage() {
         return (
           <SelectCategoryAndBoulder
             roundGroupId={selectedRoundGroupId}
+            roundOrder={selectedRoundOrder}
             competitionId={competitionId}
             onSelectAthlete={(athlete, boulderNumber, fullList) => {
               setSelectedBoulderNumber(boulderNumber);
               setAthletes(fullList);
-              const index = fullList.findIndex(a => a.start_order === athlete.start_order);
+              const index = fullList.findIndex(
+                (a) => a.start_order === athlete.start_order
+              );
               setCurrentAthleteIndex(index);
               setStep("judge-scoring");
             }}
@@ -100,6 +107,8 @@ function JudgeDashboardPage() {
           <JudgeScoring
             athlete={athletes[currentAthleteIndex]}
             boulderNumber={selectedBoulderNumber}
+            roundOrder={selectedRoundOrder}
+            competitionId={competitionId}
             onNext={handleNext}
             onPrevious={handlePrevious}
           />

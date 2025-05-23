@@ -24,12 +24,14 @@ class RoundGroupSerializer(serializers.ModelSerializer):
 
 class RoundSerializer(serializers.ModelSerializer):
     round_group = RoundGroupSerializer()
+    competition_category = CompetitionCategorySerializer()
     class Meta:
         model = CompetitionRound
         fields = '__all__'
 
 
 class BoulderSerializer(serializers.ModelSerializer):
+    round = RoundSerializer()
     class Meta:
         model = Boulder
         fields = '__all__'
