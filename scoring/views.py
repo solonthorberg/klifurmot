@@ -10,6 +10,8 @@ from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from accounts.models import CompetitionRole
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 class ReadOnlyOrIsAuthenticated(IsAuthenticated):
     def has_permission(self, request, view):
@@ -48,7 +50,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
         boulder_number = self.request.query_params.get('boulder_number')
         competition_id = self.request.query_params.get('competition_id')
         climber_id = self.request.query_params.get('climber_id')
-        category_id = self.request.query_params.get('category_id')  # corrected param name
+        category_id = self.request.query_params.get('category_id')
 
         print(f">> DEBUG GET_CLIMBS")
         print(f"Authenticated: {self.request.user.is_authenticated}")
@@ -126,6 +128,26 @@ class ClimbViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Climb recorded"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"detail": str(e)}, status=400)
+        
+    @action(detail=False, methods=["get"], url_path="bulk-scores", permission_classes=[ReadOnlyOrIsAuthenticated])
+    def bulk_scores(self, request):
+        round_order = request.query_params.get("round_order")
+        boulder_number = request.query_params.get("boulder_number")
+        competition_id = request.query_params.get("competition_id")
+        category_id = request.query_params.get("category_id")
+
+        if not (round_order and boulder_number and competition_id and category_id):
+            return Response({"detail": "Missing required filters."}, status=400)
+
+        climbs = Climb.objects.filter(
+            boulder__boulder_number=boulder_number,
+            boulder__round__round_order=round_order,
+            boulder__round__competition_category__competition_id=competition_id,
+            boulder__round__competition_category_id=category_id
+        )
+
+        serializer = ClimbSerializer(climbs, many=True)
+        return Response(serializer.data)
 
 
 

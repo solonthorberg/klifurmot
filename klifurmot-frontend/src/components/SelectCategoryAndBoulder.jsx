@@ -43,36 +43,28 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
           score: { top: false, topAttempts: 0, zone: false, zoneAttempts: 0 }
         }));
 
-        const enriched = await Promise.all(
-          baseAthletes.map(async athlete => {
-            try {
-              const res = await api.get(`/scoring/climbs/`, {
-                params: {
-                  round_order: roundOrder,
-                  boulder_number: selectedBoulder?.boulder_number,
-                  competition_id: competitionId,
-                  climber_id: athlete.climber_id,
-                  category_id: selectedCategoryId
-                }
-              });
+        // ✅ Use batch endpoint to get all climbs for this boulder/category/round
+        const climbRes = await api.get(`/scoring/climbs/bulk-scores/`, {
+          params: {
+            round_order: roundOrder,
+            boulder_number: selectedBoulder?.boulder_number,
+            competition_id: competitionId,
+            category_id: selectedCategoryId
+          }
+        });
 
-              const climb = res.data.find(c => c.climber === athlete.climber_id);
-              return {
-                ...athlete,
-                score: climb
-                  ? {
-                      top: climb.top_reached,
-                      topAttempts: climb.attempts_top || 0,
-                      zone: climb.zone_reached,
-                      zoneAttempts: climb.attempts_zone || 0
-                    }
-                  : athlete.score
-              };
-            } catch {
-              return athlete;
-            }
-          })
-        );
+        const enriched = baseAthletes.map(athlete => {
+          const climb = climbRes.data.find(c => c.climber === athlete.climber_id);
+          return {
+            ...athlete,
+            score: climb ? {
+              top: climb.top_reached,
+              topAttempts: climb.attempts_top || 0,
+              zone: climb.zone_reached,
+              zoneAttempts: climb.attempts_zone || 0
+            } : athlete.score
+          };
+        });
 
         setAthletes(enriched);
       } catch (err) {
@@ -86,7 +78,6 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
 
     fetchData();
   }, [selectedBoulderId, selectedCategoryId, competitionId, roundGroupId, roundOrder, boulders]);
-
 
   return (
     <div>
