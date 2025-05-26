@@ -90,8 +90,23 @@ class RoundViewSet(viewsets.ModelViewSet):
 
 
 class BoulderViewSet(viewsets.ModelViewSet):
-    queryset = Boulder.objects.all()
+    queryset = Boulder.objects.all()  # ✅ Required for DRF routers
     serializer_class = BoulderSerializer
+
+    def get_queryset(self):
+        queryset = Boulder.objects.all()
+        competition_id = self.request.query_params.get("competition_id")
+        category_id = self.request.query_params.get("category_id")
+        round_group_id = self.request.query_params.get("round_group_id")
+
+        if competition_id and category_id and round_group_id:
+            return queryset.filter(
+                round__competition_category__competition_id=competition_id,
+                round__competition_category_id=category_id,
+                round__round_group_id=round_group_id
+            )
+        return queryset.none()
+
 
 
 class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
@@ -252,7 +267,7 @@ def GetCompetitionStartlist(request, pk):
             climber = result.climber
             ua = climber.user_account
             user = ua.user
-            full_name = user.get_full_name() or user.username
+            full_name = ua.full_name or user.username
 
             athletes.append({
                 "start_order": result.start_order,

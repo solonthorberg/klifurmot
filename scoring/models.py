@@ -53,6 +53,8 @@ class ClimberRoundScore(models.Model):
     total_score = models.DecimalField(max_digits=5, decimal_places=2)
     tops = models.IntegerField()
     zones = models.IntegerField()
+    attempts_tops = models.IntegerField()
+    attempts_zones = models.IntegerField()
 
     class Meta:
         unique_together = ('round', 'climber')

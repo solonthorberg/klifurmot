@@ -6,3 +6,4 @@ from .models import *
 admin.site.register(RoundResult)
 admin.site.register(Climb)
 admin.site.register(ClimberRoundScore)
+

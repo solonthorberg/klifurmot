@@ -12,6 +12,7 @@ function JudgeDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedRoundGroupId, setSelectedRoundGroupId] = useState(null);
   const [selectedRoundOrder, setSelectedRoundOrder] = useState(null);
+  const [selectedRoundName, setSelectedRoundName] = useState("");
   const [selectedBoulderNumber, setSelectedBoulderNumber] = useState(null);
   const [athletes, setAthletes] = useState([]);
   const [currentAthleteIndex, setCurrentAthleteIndex] = useState(0);
@@ -77,9 +78,10 @@ function JudgeDashboardPage() {
         return (
           <SelectRound
             competitionId={competitionId}
-            onContinue={(roundGroupId, roundOrder) => {
+            onContinue={(roundGroupId, roundOrder, roundName) => {
               setSelectedRoundGroupId(roundGroupId);
               setSelectedRoundOrder(roundOrder);
+              setSelectedRoundName(roundName);
               setStep("select-category-boulder");
             }}
           />
@@ -89,6 +91,7 @@ function JudgeDashboardPage() {
           <SelectCategoryAndBoulder
             roundGroupId={selectedRoundGroupId}
             roundOrder={selectedRoundOrder}
+            roundName={selectedRoundName}
             competitionId={competitionId}
             onSelectAthlete={(athlete, boulderNumber, fullList) => {
               setSelectedBoulderNumber(boulderNumber);

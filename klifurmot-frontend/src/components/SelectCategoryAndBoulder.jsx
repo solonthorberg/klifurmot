@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
 
-function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onSelectAthlete, onBack }) {
+function SelectCategoryAndBoulder({ roundGroupId, roundOrder, roundName, competitionId, onSelectAthlete, onBack }) {
   const [categories, setCategories] = useState([]);
   const [boulders, setBoulders] = useState([]);
   const [athletes, setAthletes] = useState([]);
@@ -81,7 +81,7 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, competitionId, onS
 
   return (
     <div>
-      <h3>Undanúrslit</h3>
+      <h3>{roundName}</h3>
 
       <select value={selectedCategoryId} onChange={e => setSelectedCategoryId(e.target.value)}>
         <option value="">Flokkur</option>

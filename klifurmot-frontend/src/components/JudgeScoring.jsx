@@ -35,6 +35,13 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
             gotZone: current.zone_reached || false,
             gotTop: current.top_reached || false,
           });
+        } else {
+          setScore({
+            zoneAttempts: 0,
+            topAttempts: 0,
+            gotZone: false,
+            gotTop: false,
+          });
         }
       } catch (err) {
         console.error("Failed to fetch current score", err);
@@ -65,23 +72,35 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
 
     const newScore = { ...score };
 
-    if (type === "zone" && !score.gotZone) {
+    if (type === "attempt") {
       newScore.zoneAttempts += 1;
       newScore.topAttempts += 1;
-      newScore.gotZone = true;
-    } else if (type === "top" && !score.gotTop) {
+    }
+
+    else if (type === "zone") {
+      if (score.gotZone) {
+        newScore.topAttempts += 1;
+      } else {
+        newScore.zoneAttempts += 1;
+        newScore.topAttempts += 1;
+        newScore.gotZone = true;
+      }
+    }
+
+    else if (type === "top") {
       newScore.topAttempts += 1;
-      if (!score.gotZone) newScore.zoneAttempts += 1;
-      newScore.gotZone = true;
       newScore.gotTop = true;
-    } else if (type === "attempt") {
-      if (!score.gotZone) newScore.zoneAttempts += 1;
-      if (!score.gotTop) newScore.topAttempts += 1;
+
+      if (!score.gotZone) {
+        newScore.zoneAttempts += 1;
+        newScore.gotZone = true;
+      }
     }
 
     setScore(newScore);
     updateBackend(newScore);
   };
+
 
   const handleEditChange = (field, delta) => {
     setTempScore(prev => {
@@ -181,7 +200,7 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
 
       <div className="actions">
         <button onClick={() => handleScore("top")} disabled={editMode || score.gotTop}>Toppur</button>
-        <button onClick={() => handleScore("zone")} disabled={editMode || score.gotTop || score.gotZone}>Zone</button>
+        <button onClick={() => handleScore("zone")} disabled={editMode || score.gotTop}>Zone</button>
         <button onClick={() => handleScore("attempt")} disabled={editMode || score.gotTop}>Tilraun</button>
       </div>
 

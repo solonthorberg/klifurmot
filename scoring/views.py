@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework import status
-
+from .utils import format_competition_results
 from competitions.models import Boulder, CompetitionRound
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
@@ -12,6 +12,11 @@ from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from accounts.models import CompetitionRole
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .utils import auto_advance_climbers
+from competitions.models import CompetitionRound
 
 class ReadOnlyOrIsAuthenticated(IsAuthenticated):
     def has_permission(self, request, view):
@@ -217,3 +222,23 @@ class ResultsView(APIView):
             for idx, result in enumerate(results)
         ]
         return Response(data)
+
+
+class FullCompetitionResultsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, competition_id):
+        data = format_competition_results(competition_id)
+        return Response(data)
+    
+class AdvanceClimbersView(APIView):
+    permission_classes = [IsAuthenticated]  # or IsAdminUser
+
+    def post(self, request, round_id):
+        try:
+            current_round = CompetitionRound.objects.get(id=round_id)
+        except CompetitionRound.DoesNotExist:
+            return Response({"detail": "Invalid round ID."}, status=404)
+
+        result = auto_advance_climbers(current_round)
+        return Response(result)

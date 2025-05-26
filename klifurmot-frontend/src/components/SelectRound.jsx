@@ -43,8 +43,8 @@ function SelectRound({ competitionId, onContinue }) {
     fetchData();
   }, [competitionId]);
 
-  const handleClick = (roundGroupId, roundOrder) => {
-    onContinue(roundGroupId, roundOrder);
+  const handleClick = (roundGroupId, roundOrder, roundName) => {
+    onContinue(roundGroupId, roundOrder, roundName);
   };
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
@@ -65,9 +65,8 @@ function SelectRound({ competitionId, onContinue }) {
           >
             <h4>{group.name}</h4>
             <button
-              onClick={() => handleClick(group.id, group.round_order)}
-              style={{ padding: "0.5rem 1rem", background: "#ddd", border: "none", cursor: "pointer" }}
-            >
+              onClick={() => handleClick(group.id, group.round_order, group.name)}
+              style={{ padding: "0.5rem 1rem", background: "#ddd", border: "none", cursor: "pointer" }}>
               Dæma
             </button>
           </div>
