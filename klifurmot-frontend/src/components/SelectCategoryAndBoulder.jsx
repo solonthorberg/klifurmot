@@ -43,7 +43,6 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, roundName, competi
           score: { top: false, topAttempts: 0, zone: false, zoneAttempts: 0 }
         }));
 
-        // ✅ Use batch endpoint to get all climbs for this boulder/category/round
         const climbRes = await api.get(`/scoring/climbs/bulk-scores/`, {
           params: {
             round_order: roundOrder,
@@ -115,9 +114,9 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, roundName, competi
             </tr>
           </thead>
           <tbody>
-            {athletes.map((athlete, idx) => (
+            {athletes.map((athlete) => (
               <tr
-                key={idx}
+                key={athlete.climber_id}
                 style={{ cursor: "pointer" }}
                 onClick={() =>
                   onSelectAthlete(
@@ -130,7 +129,7 @@ function SelectCategoryAndBoulder({ roundGroupId, roundOrder, roundName, competi
                 <td>{athlete.start_order}</td>
                 <td>{athlete.climber}</td>
                 <td>
-                  {athlete.score.top ? `1T(${athlete.score.topAttempts})` : `0T(${athlete.score.topAttempts})`}{" "}
+                  {athlete.score.top ? `1T(${athlete.score.topAttempts})` : `0T(${athlete.score.topAttempts})`} {" "}
                   {athlete.score.zone ? `1Z(${athlete.score.zoneAttempts})` : `0Z(${athlete.score.zoneAttempts})`}
                 </td>
               </tr>

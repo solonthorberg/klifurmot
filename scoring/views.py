@@ -4,19 +4,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework import status
-from .utils import format_competition_results
+from .utils import format_competition_results, auto_advance_climbers, update_round_score_for_climb
 from competitions.models import Boulder, CompetitionRound
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
 from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from accounts.models import CompetitionRole
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .utils import auto_advance_climbers
-from competitions.models import CompetitionRound
+from django.utils import timezone
+from collections import defaultdict
+from .utils import broadcast_score_update
 
 class ReadOnlyOrIsAuthenticated(IsAuthenticated):
     def has_permission(self, request, view):
@@ -43,6 +39,8 @@ class RoundResultViewSet(viewsets.ModelViewSet):
         if round_id:
             qs = qs.filter(round_id=round_id)
         return qs
+    
+    
 
 class ClimbViewSet(viewsets.ModelViewSet):
     queryset = Climb.objects.all()
@@ -56,15 +54,6 @@ class ClimbViewSet(viewsets.ModelViewSet):
         competition_id = self.request.query_params.get('competition_id')
         climber_id = self.request.query_params.get('climber_id')
         category_id = self.request.query_params.get('category_id')
-
-        print(f">> DEBUG GET_CLIMBS")
-        print(f"Authenticated: {self.request.user.is_authenticated}")
-        print(f"User ID: {getattr(self.request.user, 'id', 'Anonymous')}")
-        print(f"Filtering for round_order: {round_order}")
-        print(f"Filtering for boulder_number: {boulder_number}")
-        print(f"Filtering for competition_id: {competition_id}")
-        print(f"Filtering for climber_id: {climber_id}")
-        print(f"Filtering for category_id: {category_id}")
 
         try:
             if round_order and boulder_number and competition_id:
@@ -93,8 +82,6 @@ class ClimbViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="record_attempt", permission_classes=[IsAuthenticated])
     def record_attempt(self, request):
         data = request.data
-        print("RECEIVED POST DATA:", data)
-
         try:
             climber_id = int(data["climber"])
             boulder_id = int(data["boulder"])
@@ -105,7 +92,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if not CompetitionRole.objects.filter(
-            user__user=user,  # assumes user is linked via UserAccount.profile
+            user__user=user,
             competition_id=competition_id,
             role="judge"
         ).exists():
@@ -119,21 +106,30 @@ class ClimbViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Boulder not found"}, status=404)
 
         try:
-            climb, _ = Climb.objects.update_or_create(
-                climber_id=climber_id,
-                boulder=boulder,
-                defaults={
-                    "judge": user,
-                    "attempts_top": int(data.get("attempts_top", 0)),
-                    "attempts_zone": int(data.get("attempts_zone", 0)),
-                    "top_reached": data.get("top_reached", False),
-                    "zone_reached": data.get("zone_reached", False),
-                }
-            )
-            return Response({"detail": "Climb recorded"}, status=status.HTTP_200_OK)
+            climb = Climb.objects.filter(climber_id=climber_id, boulder=boulder).first()
+            if climb:
+                climb.judge = user
+                climb.attempts_top = int(data.get("attempts_top", 0))
+                climb.attempts_zone = int(data.get("attempts_zone", 0))
+                climb.top_reached = data.get("top_reached", False)
+                climb.zone_reached = data.get("zone_reached", False)
+                climb.save()
+            else:
+                climb = Climb.objects.create(
+                    climber_id=climber_id,
+                    boulder=boulder,
+                    judge=user,
+                    attempts_top=int(data.get("attempts_top", 0)),
+                    attempts_zone=int(data.get("attempts_zone", 0)),
+                    top_reached=data.get("top_reached", False),
+                    zone_reached=data.get("zone_reached", False),
+                )
+            update_round_score_for_climb(climb)
+            update_round_results(climb.boulder.round)
+            return Response({"status": "success", "climb_id": climb.id}, status=200)
         except Exception as e:
             return Response({"detail": str(e)}, status=400)
-        
+
     @action(detail=False, methods=["get"], url_path="bulk-scores", permission_classes=[ReadOnlyOrIsAuthenticated])
     def bulk_scores(self, request):
         round_order = request.query_params.get("round_order")
@@ -153,10 +149,6 @@ class ClimbViewSet(viewsets.ModelViewSet):
 
         serializer = ClimbSerializer(climbs, many=True)
         return Response(serializer.data)
-
-
-
-
 
 class ClimberRoundScoreViewSet(viewsets.ModelViewSet):
     queryset = ClimberRoundScore.objects.all()
@@ -242,3 +234,63 @@ class AdvanceClimbersView(APIView):
 
         result = auto_advance_climbers(current_round)
         return Response(result)
+    
+def update_round_results(round_obj):
+    """
+    Recalculates and updates ranks in RoundResult based on ClimberRoundScores
+    for the given round.
+    """
+    scores = list(
+        ClimberRoundScore.objects
+        .filter(round=round_obj)
+        .select_related('climber')
+    )
+
+    # Sort climbers by total_score descending, then by previous round rank
+    all_rounds = list(
+        CompetitionRound.objects
+        .filter(competition_category=round_obj.competition_category)
+        .order_by('round_order')
+    )
+    try:
+        current_index = all_rounds.index(round_obj)
+        previous_round = all_rounds[current_index - 1] if current_index > 0 else None
+    except ValueError:
+        previous_round = None
+
+    prev_rank_map = {}
+    if previous_round:
+        prev_results = RoundResult.objects.filter(round=previous_round).select_related('climber')
+        prev_rank_map = {res.climber.id: res.rank for res in prev_results}
+
+    scores.sort(key=lambda s: (-s.total_score, prev_rank_map.get(s.climber.id, 9999)))
+
+    actual_rank = 1
+    tie_count = 0
+    previous_score = None
+    previous_rank = None
+
+    for i, score in enumerate(scores):
+        if previous_score is not None and score.total_score == previous_score:
+            assigned_rank = previous_rank
+            tie_count += 1
+        else:
+            if previous_score is not None:
+                actual_rank += tie_count  # shift for previous tie group
+            assigned_rank = actual_rank
+            previous_rank = assigned_rank
+            tie_count = 1  # start new tie count
+
+        RoundResult.objects.update_or_create(
+            round=round_obj,
+            climber=score.climber,
+            defaults={
+                'rank': assigned_rank,
+                'last_modified_at': timezone.now(),
+            }
+        )
+
+        previous_score = score.total_score
+
+
+    broadcast_score_update(round_obj.competition_category.competition_id)

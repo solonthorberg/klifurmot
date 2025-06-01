@@ -73,7 +73,6 @@ class CompetitionRound(models.Model):
 
 class Boulder(models.Model):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
-    judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     section_style = models.CharField(max_length=50)
     boulder_number = models.IntegerField()
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')

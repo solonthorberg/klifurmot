@@ -49,7 +49,7 @@ function Athletes() {
               <div>
                 <h5>{climber.user_account.full_name}</h5>
                 <p>{climber.user_account.date_of_birth}</p>
-                <Link to={`/athletes/${climber.id}`}>Skoða nánar</Link>
+                <Link to={`/athletes/${climber.user_account.id}`}>Skoða nánar</Link>
               </div>
             </div>
           ))}

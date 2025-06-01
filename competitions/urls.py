@@ -15,11 +15,10 @@ router.register(r'boulders', BoulderViewSet)
 router.register(r'judge-assignments', JudgeBoulderAssignmentViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
-    path('<int:competition_id>/assign-role/', AssignRoleView.as_view(), name='assign-role'),
     path('competitions/<int:pk>/athletes/', GetCompetitionAthletes, name='competition-athletes'),
     path('competitions/<int:pk>/boulders/', GetCompetitionBoulders, name='competition-boulders'),
     path('competitions/<int:pk>/startlist/', GetCompetitionStartlist, name='competition-startlist'),
     path('competitions/<int:pk>/results/', GetCompetitionResults, name='competition-results'),
-
+    path('<int:competition_id>/assign-role/', AssignRoleView.as_view(), name='assign-role'),
+    path('', include(router.urls)),
 ]

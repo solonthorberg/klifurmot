@@ -2,24 +2,16 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 
 function CompetitionAthletes({ competitionId }) {
-  const [athletes, setAthletes] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+  const [groupedAthletes, setGroupedAthletes] = useState({});
   const [search, setSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchAthletes = async () => {
       try {
-        // Fetch athletes from the API
-        const res = await api.get(`/athletes/registrations/?competition=${competitionId}`);
-
-        console.log("Fetched athletes data:", res.data);
-        
-        // Assuming the response data includes a 'climber' field with user account details
-        setAthletes(res.data);
-        setFiltered(res.data);
+        const res = await api.get(`/competitions/competitions/${competitionId}/athletes/`);
+        setGroupedAthletes(res.data);
       } catch (err) {
         console.error("Error fetching athletes:", err);
         setError("Ekki tókst að sækja keppendur.");
@@ -28,41 +20,22 @@ function CompetitionAthletes({ competitionId }) {
     fetchAthletes();
   }, [competitionId]);
 
-  useEffect(() => {
-    let result = athletes;
-
-    // Filter by search
-    if (search.trim() !== "") {
-      result = result.filter(a =>
-        a.climber.user_account.full_name.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    // Filter by gender
-    if (genderFilter !== "") {
-      result = result.filter(a => a.climber.user_account.gender === genderFilter);
-    }
-
-    // Filter by category
-    if (categoryFilter !== "") {
-      result = result.filter(a => 
-        a.competition_category?.category_group?.name?.includes(categoryFilter)
-      );
-    }
-
-    setFiltered(result);
-  }, [search, genderFilter, categoryFilter, athletes]);
-
-  const uniqueCategories = [...new Set(athletes.map(a => a.competition_category?.category_group?.name))];
+  const filterAthletes = (athletes) => {
+    return athletes.filter((a) => {
+      const matchesSearch = a.full_name.toLowerCase().includes(search.toLowerCase());
+      const matchesGender = !genderFilter || a.gender === genderFilter;
+      return matchesSearch && matchesGender;
+    });
+  };
 
   if (error) return <p>{error}</p>;
-  if (!athletes.length) return <p>Engir keppendur skráðir í þetta mót.</p>;
+  if (!Object.keys(groupedAthletes).length) return <p>Engir keppendur skráðir í þetta mót.</p>;
 
   return (
     <div>
-      <h3>Keppendur ({filtered.length})</h3>
+      <h3>Keppendur</h3>
 
-      <div>
+      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}>
         <input
           type="text"
           placeholder="Leita eftir nafni..."
@@ -75,33 +48,43 @@ function CompetitionAthletes({ competitionId }) {
           <option value="KK">KK</option>
           <option value="KVK">KVK</option>
         </select>
-
-
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-          <option value="">Allir flokkar</option>
-          {uniqueCategories.map((cat, idx) => (
-            <option key={idx} value={cat}>{cat}</option>
-          ))}
-        </select>
       </div>
 
-      <div>
-        <span>Nafn</span>
-        <span>Flokkur</span>
-        <span>Kyn</span>
-        <span>Þjóðerni</span>
-      </div>
+      {Object.entries(groupedAthletes).map(([category, athletes]) => {
+        const filtered = filterAthletes(athletes);
+        if (!filtered.length) return null;
 
-      <ul>
-        {filtered.map((a) => (
-          <li key={a.id}>
-            <span>{a.climber.user_account.full_name}</span>
-            <span>{a.competition_category.category_group.name}</span>
-            <span>{a.climber.user_account.gender}</span>
-            <span>{a.climber.user_account.nationality.name_en}</span>
-          </li>
-        ))}
-      </ul>
+        return (
+          <div key={category} style={{ marginBottom: "2rem" }}>
+            <h4>{category}</h4>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              fontWeight: "bold",
+              padding: "0.5rem 0"
+            }}>
+              <span>Nafn</span>
+              <span>Kyn</span>
+              <span>Þjóðerni</span>
+            </div>
+
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {filtered.map((a) => (
+                <li key={a.id} style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  padding: "0.25rem 0"
+                }}>
+                  <span>{a.full_name}</span>
+                  <span>{a.gender}</span>
+                  <span>{a.nationality}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
     </div>
   );
 }

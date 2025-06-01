@@ -54,11 +54,19 @@ def format_competition_results(competition_id):
             })
 
         categories_data.append({
-            "category": str(category),
+            "category": {
+                "id": category.id,
+                "gender": category.gender,
+                "group": {
+                    "id": category.category_group.id,
+                    "name": category.category_group.name
+                }
+            },
             "rounds": rounds_data
         })
 
     return categories_data
+
 
 
 def broadcast_score_update(competition_id):
@@ -75,13 +83,13 @@ def broadcast_score_update(competition_id):
     )
 
 
-from scoring.utils import broadcast_score_update  # ✅ Make sure this is imported
+from scoring.utils import broadcast_score_update 
 
 def auto_advance_climbers(current_round):
-    top_results = (
+    all_results = (
         RoundResult.objects
         .filter(round=current_round, deleted=False)
-        .order_by('rank')[:current_round.climbers_advance]
+        .order_by('rank')
     )
 
     next_round = (
@@ -98,6 +106,33 @@ def auto_advance_climbers(current_round):
         print("⚠️ No next round found.")
         return {"status": "error", "message": "No next round found"}
 
+    # Determine how many climbers to advance based on the NEXT round's climbers_advance value
+    num_to_advance = next_round.climbers_advance
+
+    existing_climber_ids = set(
+        RoundResult.objects
+        .filter(round=next_round)
+        .values_list("climber_id", flat=True)
+    )
+
+    selected = []
+    cutoff_rank = None
+
+    for result in all_results:
+        if result.climber_id in existing_climber_ids:
+            continue  # skip already advanced
+
+        if len(selected) < num_to_advance:
+            selected.append(result)
+            cutoff_rank = result.rank
+        elif result.rank == cutoff_rank:
+            selected.append(result)  # include tie at cutoff
+        else:
+            break
+
+    # Reverse start order so best ranked starts last
+    selected.reverse()
+
     existing_orders = (
         RoundResult.objects
         .filter(round=next_round)
@@ -106,7 +141,7 @@ def auto_advance_climbers(current_round):
     max_order = max(existing_orders, default=0) or 0
 
     added = 0
-    for index, result in enumerate(top_results, start=1):
+    for index, result in enumerate(selected, start=1):
         _, created = RoundResult.objects.get_or_create(
             round=next_round,
             climber=result.climber,
@@ -118,7 +153,44 @@ def auto_advance_climbers(current_round):
         if created:
             added += 1
 
-    # ✅ Trigger live update for results
     broadcast_score_update(current_round.competition_category.competition_id)
 
     return {"status": "ok", "advanced": added, "next_round_id": next_round.id}
+
+
+def update_round_score_for_climb(climb):
+    climber = climb.climber
+    round_obj = climb.boulder.round
+
+    if not climber or not round_obj:
+        return
+
+    climbs = climber.climb_set.filter(boulder__round=round_obj)
+
+    total_tops = sum(1 for c in climbs if c.top_reached)
+    total_zones = sum(1 for c in climbs if c.zone_reached)
+    attempts_tops = sum(c.attempts_top for c in climbs if c.top_reached)
+    attempts_zones = sum(c.attempts_zone for c in climbs if c.zone_reached)
+
+    zone_score = 0
+    top_score = 0
+
+    for c in climbs:
+        if c.top_reached:
+            top_score += 25 - 0.1 * (c.attempts_top - 1)
+        elif c.zone_reached:
+            zone_score += 10 - 0.1 * (c.attempts_zone - 1)
+
+    total_score = round(zone_score + top_score, 1)        
+
+    ClimberRoundScore.objects.update_or_create(
+        climber=climber,
+        round=round_obj,
+        defaults={
+            'total_score': total_score,
+            'tops': total_tops,
+            'zones': total_zones,
+            'attempts_tops': attempts_tops,
+            'attempts_zones': attempts_zones,
+        }
+    )

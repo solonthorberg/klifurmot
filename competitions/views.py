@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration
 from collections import defaultdict
-from scoring.models import ClimberRoundScore
+from scoring.models import ClimberRoundScore, RoundResult
 
 
 
@@ -154,40 +154,39 @@ def GetCompetitionAthletes(request, pk):
     except Competition.DoesNotExist:
         return Response({"detail": "Competition not found."}, status=404)
 
-    athlete_roles = CompetitionRole.objects.filter(
-        competition=competition,
-        role="athlete"
-    ).select_related("user__user", "user__nationality")
+    registrations = (
+        CompetitionRegistration.objects
+        .filter(competition=competition, deleted=False)
+        .select_related(
+            "climber__user_account__nationality",
+            "competition_category__category_group"
+        )
+    )
 
-    data = []
-    for a in athlete_roles:
-        user_account = a.user
-        django_user = user_account.user
+    grouped = {}
+    for reg in registrations:
+        climber = reg.climber
+        user = getattr(climber, "user_account", None)
+        if not user:
+            continue  # Skip if no linked user account
 
-        full_name = f"{django_user.first_name} {django_user.last_name}".strip()
-        gender = user_account.gender or "–"
-        nationality = user_account.nationality.name_local if user_account.nationality else "–"
+        category_name = str(reg.competition_category)
 
-        try:
-            registration = CompetitionRegistration.objects.get(
-                competition=competition,
-                climber__user_account=user_account
-            )
-            group_name = registration.competition_category.category_group.name
-            gender_suffix = "Male" if gender == "KK" else "Female" if gender == "KVK" else ""
-            category = f"{group_name} {gender_suffix}".strip()
-        except CompetitionRegistration.DoesNotExist:
-            category = "Óskilgreint"
+        athlete_data = {
+            "id": climber.id,
+            "full_name": user.full_name,
+            "gender": user.gender or "–",
+            "nationality": user.nationality.name_local if user.nationality else "–",
+        }
 
-        data.append({
-            "id": django_user.id,
-            "full_name": full_name,
-            "gender": gender,
-            "category": category,
-            "nationality": nationality
-        })
+        if category_name not in grouped:
+            grouped[category_name] = []
 
-    return Response(data)
+        grouped[category_name].append(athlete_data)
+
+    return Response(grouped)
+
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -358,3 +357,4 @@ def GetCompetitionResults(request, pk):
         })
 
     return Response(result)
+

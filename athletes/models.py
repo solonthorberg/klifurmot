@@ -15,7 +15,8 @@ class Climber(models.Model):
     last_modified_at = models.DateTimeField(default=timezone.now)
     last_modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     deleted = models.BooleanField(default=False)
-
+    def __str__(self):
+        return self.user_account.full_name
 class CompetitionRegistration(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     competition_category = models.ForeignKey(CompetitionCategory, on_delete=models.CASCADE)

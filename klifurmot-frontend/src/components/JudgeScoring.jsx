@@ -52,16 +52,20 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
   }, [athlete, boulderNumber, roundOrder, competitionId]);
 
   const updateBackend = async (newScore) => {
+    const payload = {
+      climber: athlete.climber_id,
+      boulder: athlete.boulder_id,
+      competition: competitionId,
+      attempts_zone: newScore.zoneAttempts,
+      attempts_top: newScore.topAttempts,
+      zone_reached: newScore.gotZone,
+      top_reached: newScore.gotTop,
+    };
+
+    console.log("Posting to backend with payload:", payload); // 👈 Added log
+
     try {
-      await api.post(`/scoring/climbs/record_attempt/`, {
-        climber: athlete.climber_id,
-        boulder: athlete.boulder_id,
-        competition: competitionId,
-        attempts_zone: newScore.zoneAttempts,
-        attempts_top: newScore.topAttempts,
-        zone_reached: newScore.gotZone,
-        top_reached: newScore.gotTop,
-      });
+      await api.post(`/scoring/climbs/record_attempt/`, payload);
     } catch (err) {
       console.error("Failed to update score", err);
     }
@@ -73,8 +77,12 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
     const newScore = { ...score };
 
     if (type === "attempt") {
+      if (score.gotZone) {
+        newScore.topAttempts += 1;
+      } else {
       newScore.zoneAttempts += 1;
       newScore.topAttempts += 1;
+      }
     }
 
     else if (type === "zone") {

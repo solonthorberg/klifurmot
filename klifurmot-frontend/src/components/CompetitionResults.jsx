@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import api from "../services/api"; // Ensure it points to your backend
+import api from "../services/api";
 
 function CompetitionResults({ competitionId }) {
   const [results, setResults] = useState([]);
@@ -30,7 +30,7 @@ function CompetitionResults({ competitionId }) {
   }, [competitionId]);
 
   useEffect(() => {
-    const socket = new WebSocket(`ws://localhost:8000/ws/results/${competitionId}/`);
+    const socket = new WebSocket(`ws://127.0.0.1:8000/ws/results/${competitionId}/`);
 
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
@@ -64,14 +64,19 @@ function CompetitionResults({ competitionId }) {
       console.warn("⚠️ WebSocket closed:", e);
     };
 
-    return () => socket.close();
+    return () => {
+      console.log("🛑 Cleaning up WebSocket");
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+        socket.close();
+      }
+    };
   }, [competitionId]);
 
   if (error && !results.length) return <p>{error}</p>;
   if (loading) return <p>Sæki niðurstöður...</p>;
   if (!results.length) return <p>Engar niðurstöður skráðar.</p>;
 
-  const allCategories = [...new Set(results.map(r => r.category))];
+  const allCategories = results.map(r => r.category);
   const allRounds = [...new Set(results.flatMap(r => r.rounds.map(ro => ro.round_name)))];
 
   return (
@@ -84,7 +89,7 @@ function CompetitionResults({ competitionId }) {
           <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
             <option value="">Allir flokkar</option>
             {allCategories.map((cat, i) => (
-              <option key={i} value={cat}>{cat}</option>
+              <option key={i} value={cat.id}>{`Group ${cat.group_id} - ${cat.gender}`}</option>
             ))}
           </select>
         </label>
@@ -101,10 +106,10 @@ function CompetitionResults({ competitionId }) {
       </div>
 
       {results
-        .filter(cat => !selectedCategory || cat.category === selectedCategory)
+        .filter(cat => !selectedCategory || cat.category.id === parseInt(selectedCategory))
         .map((cat, idx) => (
           <div key={idx} style={{ marginBottom: "2rem" }}>
-            <h4>{cat.category}</h4>
+            <h4>{`${cat.category.group.name} - ${cat.category.gender}`}</h4>
 
             {(cat.rounds || [])
               .filter(r => !selectedRound || r.round_name === selectedRound)

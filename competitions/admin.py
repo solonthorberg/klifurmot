@@ -1,14 +1,16 @@
 from django.contrib import admin
 from .models import *
 from scoring.utils import auto_advance_climbers  # Make sure this import is valid
+from django.contrib import messages
 
-@admin.action(description="Advance top climbers to next round")
 def advance_top_climbers(modeladmin, request, queryset):
     for round_obj in queryset:
         result = auto_advance_climbers(round_obj)
-        modeladmin.message_user(
-            request, f"{result['advanced']} climbers advanced from round {round_obj}"
-        )
+        if result.get("status") == "ok":
+            messages.success(request, f"{result['advanced']} climbers advanced from round {round_obj}")
+        else:
+            messages.error(request, f"Failed to advance climbers from round {round_obj}: {result.get('message', 'Unknown error')}")
+
 
 @admin.register(CompetitionRound)
 class CompetitionRoundAdmin(admin.ModelAdmin):
