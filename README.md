@@ -29,7 +29,7 @@ Uppsetning:
    daphne -p 8000 klifurmot.asgi:application
 
 6. Install dependencies
-   cd klifur-frontend
+   cd klifurmot-frontend
    npm install
    npm run dev
 

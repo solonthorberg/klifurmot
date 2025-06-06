@@ -10,6 +10,7 @@ import Register from '../pages/Register';
 import Profile from '../pages/Profile';
 import JudgeLoginPage from '../pages/JudgeLoginPage';
 import JudgeDashboardPage from '../pages/JudgeDashboardPage';
+import ControlPanel from '../pages/ControlPanel';
 
 function JudgeDashboardPageWrapper() {
   const { competitionId } = useParams();
@@ -30,6 +31,7 @@ function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/judge/login/:token" element={<JudgeLoginPage />} />
       <Route path="/judge/competition/:competitionId/judge-dashboard" element={<JudgeDashboardPageWrapper />} />
+      <Route path="/controlpanel" element={<ControlPanel />} />
     </Routes>
   );
 }
