@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"; 
 
 function Navbar() {
-  const { isLoggedIn, logout, isAdmin } = useAuth();
+  const { isLoggedIn, logout, isAdmin, username } = useAuth();
 
   return (
     <nav className="navbars">
@@ -26,7 +26,7 @@ function Navbar() {
       {isLoggedIn ? (
         <ul>
           <li><Link to="/" onClick={logout}>Útskrá</Link></li>
-          <li><Link to="/profile">Mín síða</Link></li>
+          <li><Link to="/profile">{username}</Link></li> 
         </ul>
       ) : (
         <Link to="/login">Innskrá</Link>

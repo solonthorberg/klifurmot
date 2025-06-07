@@ -7,14 +7,17 @@ export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
 
   const fetchUserInfo = async () => {
     try {
       const res = await api.get("/accounts/me/");
       setIsAdmin(res.data.profile.is_admin);
+      setUsername(res.data.user.username);
     } catch (err) {
       console.error("Failed to fetch user info:", err);
       setIsAdmin(false);
+      setUsername("");
     } finally {
       setLoading(false);
     }
@@ -42,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, login, logout, loading }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, username, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
