@@ -47,7 +47,7 @@ Uppsetning:
    Ættir að fá "PONG" tilbaka.
 
 9. Ná dummy gögn:
-   psql -U postgres -d klifurmot -f klifurmot.dump
+   pg_restore -U postgres --data-only --disable-triggers -d klifurmot klifurmot.dump
 
    Búa til dummy gögn:
-   pg_dump -U postgres -d klifurmot -f klifurmot.dump
+   psql -U postgres -d klifurmot -f klifurmot.dump
