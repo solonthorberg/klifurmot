@@ -45,3 +45,9 @@ Uppsetning:
    skrifa síðan:
    ping
    Ættir að fá "PONG" tilbaka.
+
+9. Ná dummy gögn:
+   psql -U postgres -d klifurmot -f klifurmot.dump
+
+   Búa til dummy gögn:
+   pg_dump -U postgres -d klifurmot -f klifurmot.dump
