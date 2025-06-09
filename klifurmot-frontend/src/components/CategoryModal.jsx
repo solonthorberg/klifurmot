@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../services/api";
 
 function CategoryModal({ onClose, onSelectCategory }) {
@@ -10,6 +11,7 @@ function CategoryModal({ onClose, onSelectCategory }) {
       try {
         const res = await api.get("/competitions/category-groups/");
         setCategories(res.data);
+        console.log(res.data);
       } catch (err) {
         console.error("Failed to fetch category groups:", err);
       } finally {
@@ -20,9 +22,9 @@ function CategoryModal({ onClose, onSelectCategory }) {
     fetchCategories();
   }, []);
 
-  return (
-    <div className="modal">
-      <div className="modal-content">
+  return createPortal(
+    <div className="custom-modal">
+      <div className="custom-modal-content">
         <h4>Veldu flokk</h4>
         <button onClick={onClose}>Loka</button>
         {loading ? (
@@ -37,7 +39,8 @@ function CategoryModal({ onClose, onSelectCategory }) {
           </ul>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
