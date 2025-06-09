@@ -1,8 +1,8 @@
+import AppRoutes from "./routes/routes";
 import Navbar from "./components/Navbar";
 import "./css/App.css";
 import "./css/Home.css";
 import "./css/Navbar.css";
-import AppRoutes from "./routes/routes";
 
 function App() {
   return (

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api from "../services/api";
+import api, { setAuthToken } from "../services/api";
 
 const AuthContext = createContext();
 
@@ -24,33 +24,41 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (isLoggedIn) {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      setAuthToken(token);
+      setIsLoggedIn(true);
       fetchUserInfo();
     } else {
+      setIsLoggedIn(false);
       setIsAdmin(false);
       setLoading(false);
     }
-  }, [isLoggedIn]);
+  }, []);
 
   const login = (token) => {
     localStorage.setItem("token", token);
+    setAuthToken(token);
     setIsLoggedIn(true);
     fetchUserInfo();
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    setAuthToken(null);
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setUsername("");
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, username, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ isLoggedIn, isAdmin, username, login, logout, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-export default AuthContext;
