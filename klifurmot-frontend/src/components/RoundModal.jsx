@@ -25,7 +25,6 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
   }, []);
 
   useEffect(() => {
-    console.log("RoundModal is open", existingRound);
     if (existingRound) {
       setSelectedRoundId(existingRound.id?.toString() || "");
       setAthletes(existingRound.athlete_count?.toString() || "");
@@ -54,36 +53,28 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
 
     if (existingRound?.index !== undefined) {
       round.index = existingRound.index;
-      round._id = existingRound._id; // keep ID stable when editing
+      round._id = existingRound._id;
     }
 
     if (!round._id) {
       round._id = `${Date.now()}-${Math.random()}`;
     }
 
-    console.log("Confirmed round:", round);
     onSelectRound(round);
   };
 
   return createPortal(
-    <div
-      className="custom-modal d-flex justify-content-center align-items-center position-fixed w-100 h-100 top-0 start-0"
-      style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 9999 }}
-    >
-      <div
-        className="custom-modal-content bg-white p-4 rounded"
-        style={{ maxWidth: "500px", width: "90%" }}
-      >
+    <div className="custom-modal">
+      <div className="custom-modal-content">
         <h4>{existingRound ? "Breyta umferð" : "Bæta við umferð"}</h4>
 
         {loading ? (
           <p>Hleður...</p>
         ) : (
           <>
-            <div className="mb-3">
-              <label className="form-label">Umferð:</label>
+            <label>
+              Umferð:
               <select
-                className="form-select"
                 value={selectedRoundId}
                 onChange={(e) => setSelectedRoundId(e.target.value)}
                 disabled={!!existingRound}
@@ -95,33 +86,34 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            <div className="mb-3">
-              <label className="form-label">Fjöldi keppenda:</label>
+            <label>
+              Fjöldi keppenda:
               <input
                 type="number"
-                className="form-control"
                 value={athletes}
                 onChange={(e) => setAthletes(e.target.value)}
               />
-            </div>
+            </label>
 
-            <div className="mb-3">
-              <label className="form-label">Fjöldi leiða:</label>
+            <label>
+              Fjöldi leiða:
               <input
                 type="number"
-                className="form-control"
                 value={boulders}
                 onChange={(e) => setBoulders(e.target.value)}
               />
-            </div>
+            </label>
 
-            <div className="d-flex gap-2 mt-3">
-              <button className="btn btn-primary" onClick={handleConfirm}>
+            <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+              <button onClick={handleConfirm}>
                 {existingRound ? "Vista breytingar" : "Staðfesta"}
               </button>
-              <button className="btn btn-danger" onClick={onClose}>
+              <button
+                onClick={onClose}
+                style={{ background: "red", color: "white" }}
+              >
                 Hætta við
               </button>
             </div>

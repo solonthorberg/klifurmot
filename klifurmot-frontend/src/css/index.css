@@ -14,15 +14,14 @@ code {
 
 .custom-modal {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex !important;
   align-items: center;
-  z-index: 9999;
+  justify-content: center;
+  z-index: 1050; /* Bootstrap modals use ~1050 */
 }
 
 .custom-modal-content {
@@ -31,7 +30,9 @@ code {
   border-radius: 8px;
   width: 90%;
   max-width: 400px;
+  z-index: 1051;
 }
+
 
 
 

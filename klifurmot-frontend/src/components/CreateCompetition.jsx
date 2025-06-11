@@ -37,49 +37,34 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
       roundsModal: false,
       roundToEdit: null,
     };
+    console.log("➕ Added category", newCategory);
     setCategories((prev) => [...prev, newCategory]);
     setShowCategoryModal(false);
   };
 
-  const handleAddOrUpdateRound = (categoryIndex, round) => {
-    setCategories((prev) => {
-      const updated = [...prev];
-      const editing = updated[categoryIndex].roundToEdit;
+  const handleAddOrUpdateRound = (categoryKey, round) => {
+    console.log("✅ Adding or updating round", round);
+    setCategories((prev) =>
+      prev.map((cat) => {
+        if (cat.key !== categoryKey) return cat;
 
-      if (editing && typeof editing.index === "number") {
-        updated[categoryIndex].rounds[editing.index] = round;
-      } else {
-        if (!round._id) {
-          round._id = `${Date.now()}-${Math.random()}`;
+        const updatedRounds = [...cat.rounds];
+        const editing = cat.roundToEdit;
+        if (editing && typeof editing.index === "number") {
+          updatedRounds[editing.index] = round;
+        } else {
+          if (!round._id) round._id = `${Date.now()}-${Math.random()}`;
+          updatedRounds.push(round);
         }
-        updated[categoryIndex].rounds.push(round);
-      }
 
-      updated[categoryIndex].roundsModal = false;
-      updated[categoryIndex].roundToEdit = null;
-      return updated;
-    });
-  };
-
-  const handleCategoryDrag = (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = categories.findIndex((c) => c.key === active.id);
-    const newIndex = categories.findIndex((c) => c.key === over.id);
-    setCategories(arrayMove(categories, oldIndex, newIndex));
-  };
-
-  const handleRoundDrag = (catIdx) => (event) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setCategories((prev) => {
-      const updated = [...prev];
-      const rounds = updated[catIdx].rounds;
-      const oldIndex = rounds.findIndex((r) => r._id === active.id);
-      const newIndex = rounds.findIndex((r) => r._id === over.id);
-      updated[catIdx].rounds = arrayMove(rounds, oldIndex, newIndex);
-      return updated;
-    });
+        return {
+          ...cat,
+          rounds: updatedRounds,
+          roundsModal: false,
+          roundToEdit: null,
+        };
+      })
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -101,7 +86,7 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
       await refreshCompetitions();
       goBack();
     } catch (err) {
-      console.error("Failed to create competition:", err);
+      console.error("❌ Failed to create competition:", err);
     }
   };
 
@@ -171,22 +156,31 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleCategoryDrag}
+          onDragEnd={(event) => {
+            const { active, over } = event;
+            if (!over || active.id === over.id) return;
+            setCategories((prev) => {
+              const oldIndex = prev.findIndex((c) => c.key === active.id);
+              const newIndex = prev.findIndex((c) => c.key === over.id);
+              return arrayMove(prev, oldIndex, newIndex);
+            });
+          }}
         >
           <SortableContext
             items={categories.map((c) => c.key)}
             strategy={verticalListSortingStrategy}
           >
-            {categories.map((cat, idx) => (
+            {categories.map((cat) => (
               <div key={cat.key}>
                 <SortableItem id={cat.key}>
                   <h4>{cat.name}</h4>
                   <button
                     type="button"
                     onClick={() => {
+                      console.log("🟢 Opening modal for", cat.name);
                       setCategories((prev) =>
-                        prev.map((c, i) =>
-                          i === idx
+                        prev.map((c) =>
+                          c.key === cat.key
                             ? { ...c, roundsModal: true, roundToEdit: null }
                             : c
                         )
@@ -199,14 +193,28 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
-                    onDragEnd={handleRoundDrag(idx)}
+                    onDragEnd={(event) => {
+                      const { active, over } = event;
+                      if (!over || active.id === over.id) return;
+                      setCategories((prev) =>
+                        prev.map((c) => {
+                          if (c.key !== cat.key) return c;
+                          const reordered = arrayMove(
+                            c.rounds,
+                            c.rounds.findIndex((r) => r._id === active.id),
+                            c.rounds.findIndex((r) => r._id === over.id)
+                          );
+                          return { ...c, rounds: reordered };
+                        })
+                      );
+                    }}
                   >
                     <SortableContext
                       items={cat.rounds.map((r) => r._id)}
                       strategy={verticalListSortingStrategy}
                     >
                       <ul>
-                        {cat.rounds.map((round, rIdx) => (
+                        {cat.rounds.map((round, idx) => (
                           <SortableItem key={round._id} id={round._id}>
                             <li
                               style={{
@@ -220,15 +228,16 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
                               </span>
                               <button
                                 onClick={() => {
+                                  console.log("✏️ Editing round:", round.name);
                                   setCategories((prev) =>
-                                    prev.map((c, i) =>
-                                      i === idx
+                                    prev.map((c) =>
+                                      c.key === cat.key
                                         ? {
                                             ...c,
                                             roundsModal: true,
                                             roundToEdit: {
                                               ...round,
-                                              index: rIdx,
+                                              index: idx,
                                             },
                                           }
                                         : c
@@ -246,22 +255,26 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
                   </DndContext>
                 </SortableItem>
 
-                {cat.roundsModal === true && (
-                  <RoundModal
-                    existingRound={cat.roundToEdit}
-                    onClose={() => {
-                      setCategories((prev) =>
-                        prev.map((c, i) =>
-                          i === idx
-                            ? { ...c, roundsModal: false, roundToEdit: null }
-                            : c
-                        )
-                      );
-                    }}
-                    onSelectRound={(round) =>
-                      handleAddOrUpdateRound(idx, round)
-                    }
-                  />
+                {cat.roundsModal && (
+                  <>
+                    {console.log("🧩 Rendering RoundModal for", cat.name)}
+                    <RoundModal
+                      existingRound={cat.roundToEdit}
+                      onClose={() => {
+                        console.log("🔴 Closing RoundModal for", cat.name);
+                        setCategories((prev) =>
+                          prev.map((c) =>
+                            c.key === cat.key
+                              ? { ...c, roundsModal: false, roundToEdit: null }
+                              : c
+                          )
+                        );
+                      }}
+                      onSelectRound={(round) =>
+                        handleAddOrUpdateRound(cat.key, round)
+                      }
+                    />
+                  </>
                 )}
               </div>
             ))}
