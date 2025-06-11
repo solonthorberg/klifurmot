@@ -47,7 +47,6 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.key !== categoryKey) return cat;
-
         const updatedRounds = [...cat.rounds];
         const editing = cat.roundToEdit;
         if (editing && typeof editing.index === "number") {
@@ -56,7 +55,6 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
           if (!round._id) round._id = `${Date.now()}-${Math.random()}`;
           updatedRounds.push(round);
         }
-
         return {
           ...cat,
           rounds: updatedRounds,
@@ -153,6 +151,8 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
           + Flokkur
         </button>
 
+        <pre>{JSON.stringify(categories, null, 2)}</pre>
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -171,7 +171,14 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
             strategy={verticalListSortingStrategy}
           >
             {categories.map((cat) => (
-              <div key={cat.key}>
+              <div
+                key={cat.key}
+                style={{
+                  border: "1px solid #ddd",
+                  padding: "1rem",
+                  margin: "1rem 0",
+                }}
+              >
                 <SortableItem id={cat.key}>
                   <h4>{cat.name}</h4>
                   <button
@@ -190,74 +197,42 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
                     + Umferð
                   </button>
 
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(event) => {
-                      const { active, over } = event;
-                      if (!over || active.id === over.id) return;
-                      setCategories((prev) =>
-                        prev.map((c) => {
-                          if (c.key !== cat.key) return c;
-                          const reordered = arrayMove(
-                            c.rounds,
-                            c.rounds.findIndex((r) => r._id === active.id),
-                            c.rounds.findIndex((r) => r._id === over.id)
-                          );
-                          return { ...c, rounds: reordered };
-                        })
-                      );
-                    }}
-                  >
-                    <SortableContext
-                      items={cat.rounds.map((r) => r._id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <ul>
-                        {cat.rounds.map((round, idx) => (
-                          <SortableItem key={round._id} id={round._id}>
-                            <li
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span>
-                                {round.name} – {round.athlete_count} keppendur –{" "}
-                                {round.boulder_count} leiðir
-                              </span>
-                              <button
-                                onClick={() => {
-                                  console.log("✏️ Editing round:", round.name);
-                                  setCategories((prev) =>
-                                    prev.map((c) =>
-                                      c.key === cat.key
-                                        ? {
-                                            ...c,
-                                            roundsModal: true,
-                                            roundToEdit: {
-                                              ...round,
-                                              index: idx,
-                                            },
-                                          }
-                                        : c
-                                    )
-                                  );
-                                }}
-                              >
-                                Breyta
-                              </button>
-                            </li>
-                          </SortableItem>
-                        ))}
-                      </ul>
-                    </SortableContext>
-                  </DndContext>
-                </SortableItem>
+                  <ul>
+                    {cat.rounds.map((round, idx) => (
+                      <li
+                        key={round._id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span>
+                          {round.name} – {round.athlete_count} keppendur –{" "}
+                          {round.boulder_count} leiðir
+                        </span>
+                        <button
+                          onClick={() => {
+                            console.log("✏️ Editing round:", round.name);
+                            setCategories((prev) =>
+                              prev.map((c) =>
+                                c.key === cat.key
+                                  ? {
+                                      ...c,
+                                      roundsModal: true,
+                                      roundToEdit: { ...round, index: idx },
+                                    }
+                                  : c
+                              )
+                            );
+                          }}
+                        >
+                          Breyta
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
 
-                {cat.roundsModal && (
-                  <>
-                    {console.log("🧩 Rendering RoundModal for", cat.name)}
+                  {cat.roundsModal && (
                     <RoundModal
                       existingRound={cat.roundToEdit}
                       onClose={() => {
@@ -274,8 +249,8 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
                         handleAddOrUpdateRound(cat.key, round)
                       }
                     />
-                  </>
-                )}
+                  )}
+                </SortableItem>
               </div>
             ))}
           </SortableContext>

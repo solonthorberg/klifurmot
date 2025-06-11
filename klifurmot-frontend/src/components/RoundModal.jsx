@@ -15,7 +15,7 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
         const res = await api.get("/competitions/round-groups/");
         setRoundGroups(res.data);
       } catch (err) {
-        console.error("Failed to fetch round groups:", err);
+        console.error("❌ Failed to fetch round groups:", err);
       } finally {
         setLoading(false);
       }
@@ -64,7 +64,7 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
   };
 
   return createPortal(
-    <div className="custom-modal">
+    <div className="custom-modal" role="dialog" aria-modal="true">
       <div className="custom-modal-content">
         <h4>{existingRound ? "Breyta umferð" : "Bæta við umferð"}</h4>
 
@@ -106,13 +106,19 @@ function RoundModal({ onClose, onSelectRound, existingRound = null }) {
               />
             </label>
 
-            <div style={{ marginTop: "1rem", display: "flex", gap: "1rem" }}>
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
               <button onClick={handleConfirm}>
                 {existingRound ? "Vista breytingar" : "Staðfesta"}
               </button>
               <button
                 onClick={onClose}
-                style={{ background: "red", color: "white" }}
+                style={{
+                  backgroundColor: "red",
+                  color: "white",
+                  border: "none",
+                  padding: "0.5rem 1rem",
+                  cursor: "pointer",
+                }}
               >
                 Hætta við
               </button>

@@ -18,7 +18,7 @@ Uppsetning:
    Ef þú ert ekki með venv:
    python -m venv venv
 
-3. Setja upp nauðsynlegar pakkningar
+3. Install dependencies
    Settu upp öll þau Python-bókasöfn sem verkefnið þarfnast með:
    pip install -r requirements.txt
 
@@ -28,7 +28,7 @@ Uppsetning:
 5. Keyra verkefnið
    daphne -p 8000 klifurmot.asgi:application
 
-6. Install dependencies
+6. Install Vite
    cd klifurmot-frontend
    npm install
    npm run dev
