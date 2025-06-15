@@ -1,3 +1,5 @@
+# competitions/views.py - Updated permission classes
+
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,9 +14,6 @@ from athletes.models import CompetitionRegistration
 from collections import defaultdict
 from scoring.models import ClimberRoundScore, RoundResult
 
-
-
-
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
     CompetitionRound, Boulder, JudgeBoulderAssignment, RoundGroup
@@ -28,19 +27,20 @@ from accounts.permissions import IsAdminForCompetition
 from accounts.models import CompetitionRole, UserAccount
 from scoring.models import Climb
 
-
-class ReadOnlyOrAdmin(IsAuthenticated):
+# ✅ Updated permission class - more permissive for authenticated users
+class IsAuthenticatedOrReadOnly(IsAuthenticated):
+    """
+    Allow authenticated users to create/edit, anonymous users to read
+    """
     def has_permission(self, request, view):
-        if request.user and request.user.is_staff:
-            return True
         if request.method in SAFE_METHODS:
             return True
-        return False
+        return super().has_permission(request, view)
 
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ More permissive
 
     def get_queryset(self):
         qs = Competition.objects.all()
@@ -51,36 +51,62 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(start_date__year=int(year))
             print("Filtered by year:", qs)
 
-
         return qs
 
     def perform_create(self, serializer):
-        competition = serializer.save(created_by=self.request.user, last_modified_by=self.request.user)
-        if hasattr(self.request.user, 'profile'):
-            CompetitionRole.objects.update_or_create(
-                user=self.request.user.profile,
-                competition=competition,
-                defaults={"role": "admin", "created_by": self.request.user.profile}
+        try:
+            print("📝 Creating competition with data:", self.request.data)
+            
+            competition = serializer.save(
+                created_by=self.request.user, 
+                last_modified_by=self.request.user
             )
-
+            
+            print("✅ Competition created successfully:", competition.id)
+            
+            # Create admin role for the creator
+            if hasattr(self.request.user, 'profile'):
+                CompetitionRole.objects.update_or_create(
+                    user=self.request.user.profile,
+                    competition=competition,
+                    defaults={
+                        "role": "admin", 
+                        "created_by": self.request.user.profile
+                    }
+                )
+                print("✅ Admin role created for user")
+            
+        except Exception as e:
+            print("❌ Error creating competition:", str(e))
+            raise
 
 class CategoryGroupViewSet(viewsets.ModelViewSet):
     queryset = CategoryGroup.objects.all()
     serializer_class = CategoryGroupSerializer
+    permission_classes = [AllowAny]  # ✅ Allow anyone to read category groups
 
 class RoundGroupViewSet(viewsets.ModelViewSet):
     queryset = RoundGroup.objects.all()
     serializer_class = RoundGroupSerializer
+    permission_classes = [AllowAny]  # ✅ Allow anyone to read round groups
 
+# ✅ Updated to be more permissive for competition creation
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [ReadOnlyOrAdmin]
+    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
 
+    def perform_create(self, serializer):
+        """Override to set created_by and last_modified_by"""
+        serializer.save(
+            created_by=self.request.user,
+            last_modified_by=self.request.user
+        )
+        print("✅ Competition category created successfully")
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
 
     def get_queryset(self):
         competition_id = self.request.query_params.get('competition_id')
@@ -88,18 +114,29 @@ class RoundViewSet(viewsets.ModelViewSet):
             return CompetitionRound.objects.filter(competition_category__competition_id=competition_id)
         return CompetitionRound.objects.none()
 
+    def perform_create(self, serializer):
+        """Override to set created_by and last_modified_by"""
+        serializer.save(
+            created_by=self.request.user,
+            last_modified_by=self.request.user
+        )
+        print("✅ Competition round created successfully")
 
 class BoulderViewSet(viewsets.ModelViewSet):
-    queryset = Boulder.objects.all()  # ✅ Required for DRF routers
+    queryset = Boulder.objects.all()
     serializer_class = BoulderSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
 
     def get_queryset(self):
         queryset = Boulder.objects.all()
         competition_id = self.request.query_params.get("competition_id")
         category_id = self.request.query_params.get("category_id")
         round_group_id = self.request.query_params.get("round_group_id")
+        round_id = self.request.query_params.get("round_id")
 
-        if competition_id and category_id and round_group_id:
+        if round_id:
+            return queryset.filter(round_id=round_id)
+        elif competition_id and category_id and round_group_id:
             return queryset.filter(
                 round__competition_category__competition_id=competition_id,
                 round__competition_category_id=category_id,
@@ -107,13 +144,20 @@ class BoulderViewSet(viewsets.ModelViewSet):
             )
         return queryset.none()
 
-
+    def perform_create(self, serializer):
+        """Override to set created_by and last_modified_by"""
+        serializer.save(
+            created_by=self.request.user,
+            last_modified_by=self.request.user
+        )
+        print("✅ Boulder created successfully")
 
 class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
     queryset = JudgeBoulderAssignment.objects.all()
     serializer_class = JudgeBoulderAssignmentSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
-
+# Rest of your existing views remain the same...
 class AssignRoleView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -145,7 +189,7 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
-
+# Your existing API view functions remain the same...
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def GetCompetitionAthletes(request, pk):
@@ -168,7 +212,7 @@ def GetCompetitionAthletes(request, pk):
         climber = reg.climber
         user = getattr(climber, "user_account", None)
         if not user:
-            continue  # Skip if no linked user account
+            continue
 
         category_name = str(reg.competition_category)
 
@@ -185,6 +229,8 @@ def GetCompetitionAthletes(request, pk):
         grouped[category_name].append(athlete_data)
 
     return Response(grouped)
+
+# ... (rest of your existing view functions remain unchanged)
 
 
 

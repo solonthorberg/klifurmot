@@ -73,8 +73,8 @@ class CompetitionRound(models.Model):
 
 class Boulder(models.Model):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
-    section_style = models.CharField(max_length=50)
     boulder_number = models.IntegerField()
+    section_style = models.CharField(max_length=50, default='general')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
@@ -86,6 +86,7 @@ class Boulder(models.Model):
     
     class Meta:
         ordering = ['boulder_number']
+        unique_together = ['round', 'boulder_number']
 
 class JudgeBoulderAssignment(models.Model):
     judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

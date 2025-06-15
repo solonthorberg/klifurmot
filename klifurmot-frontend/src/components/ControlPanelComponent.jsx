@@ -12,9 +12,12 @@ function ControlPanelComponent({
   onEdit,
 }) {
   const filteredCompetitions = competitions.filter((comp) => {
-    const matchesSearch =
-      comp.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesYear = year ? new Date(comp.start_date).getFullYear() === parseInt(year) : true;
+    const matchesSearch = comp.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesYear = year
+      ? new Date(comp.start_date).getFullYear() === parseInt(year)
+      : true;
     return matchesSearch && matchesYear;
   });
 
@@ -48,7 +51,9 @@ function ControlPanelComponent({
               {new Date(comp.start_date).toLocaleDateString()} –{" "}
               {new Date(comp.end_date).toLocaleDateString()}
               <div style={{ marginTop: "0.5rem" }}>
-                <button onClick={() => onRegister(comp.id)}>Skrá keppendur</button>
+                <button onClick={() => onRegister(comp.id)}>
+                  Skrá keppendur
+                </button>
                 <button onClick={() => onEdit(comp.id)}>Breyta mót</button>
               </div>
             </li>
