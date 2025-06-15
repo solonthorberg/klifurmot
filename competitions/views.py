@@ -27,6 +27,28 @@ from accounts.permissions import IsAdminForCompetition
 from accounts.models import CompetitionRole, UserAccount
 from scoring.models import Climb
 
+class CompetitionAdminOrReadOnly(IsAuthenticated):
+    def has_permission(self, request, view):
+        print(f"🔍 Permission check for {request.method} by user: {request.user}")
+        print(f"   User authenticated: {request.user.is_authenticated}")
+        print(f"   Request data: {request.data}")
+
+        if not request.user.is_authenticated:
+            return False
+
+        if request.method in SAFE_METHODS:
+            return True
+
+        try:
+            if request.user.profile.is_admin:
+                print("✅ Admin permission granted")
+                return True
+        except AttributeError:
+            print("❌ No profile found for user")
+            return False
+
+        return True
+
 # ✅ Updated permission class - more permissive for authenticated users
 class IsAuthenticatedOrReadOnly(IsAuthenticated):
     """
@@ -37,48 +59,60 @@ class IsAuthenticatedOrReadOnly(IsAuthenticated):
             return True
         return super().has_permission(request, view)
 
+# Also update the GetCompetitionViewSet to ensure admin role is created
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ More permissive
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         qs = Competition.objects.all()
-        print("Initial queryset:", qs)
-
         year = self.request.query_params.get("year")
         if year and year.isdigit():
             qs = qs.filter(start_date__year=int(year))
-            print("Filtered by year:", qs)
-
         return qs
 
     def perform_create(self, serializer):
         try:
-            print("📝 Creating competition with data:", self.request.data)
+            print(f"📝 Creating competition by user: {self.request.user.username}")
             
             competition = serializer.save(
                 created_by=self.request.user, 
                 last_modified_by=self.request.user
             )
             
-            print("✅ Competition created successfully:", competition.id)
+            print(f"✅ Competition '{competition.title}' created with ID: {competition.id}")
+            
+            # Ensure user has a profile
+            from accounts.models import UserAccount
+            if hasattr(self.request.user, 'profile'):
+                profile = self.request.user.profile
+            else:
+                # Create profile if it doesn't exist
+                profile = UserAccount.objects.create(
+                    user=self.request.user,
+                    full_name=self.request.user.get_full_name() or self.request.user.username
+                )
+                print(f"📝 Created UserAccount profile for {self.request.user.username}")
             
             # Create admin role for the creator
-            if hasattr(self.request.user, 'profile'):
-                CompetitionRole.objects.update_or_create(
-                    user=self.request.user.profile,
-                    competition=competition,
-                    defaults={
-                        "role": "admin", 
-                        "created_by": self.request.user.profile
-                    }
-                )
-                print("✅ Admin role created for user")
+            role, created = CompetitionRole.objects.update_or_create(
+                user=profile,
+                competition=competition,
+                defaults={
+                    "role": "admin", 
+                    "created_by": profile,
+                    "last_modified_by": profile
+                }
+            )
+            
+            if created:
+                print(f"✅ Created admin role for {self.request.user.username} on competition {competition.title}")
+            else:
+                print(f"✅ Updated admin role for {self.request.user.username} on competition {competition.title}")
             
         except Exception as e:
-            print("❌ Error creating competition:", str(e))
-            raise
+            print(f"❌ Error creating competition: {str(e)}")
 
 class CategoryGroupViewSet(viewsets.ModelViewSet):
     queryset = CategoryGroup.objects.all()
@@ -91,10 +125,11 @@ class RoundGroupViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]  # ✅ Allow anyone to read round groups
 
 # ✅ Updated to be more permissive for competition creation
+# Update the viewsets to use this permission
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
+    permission_classes = [CompetitionAdminOrReadOnly]  # Use the new permission class
 
     def perform_create(self, serializer):
         """Override to set created_by and last_modified_by"""
@@ -102,11 +137,11 @@ class CompetitionCategoryViewSet(viewsets.ModelViewSet):
             created_by=self.request.user,
             last_modified_by=self.request.user
         )
-        print("✅ Competition category created successfully")
+        print(f"✅ Competition category created by {self.request.user.username}")
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
+    permission_classes = [CompetitionAdminOrReadOnly]  # Use the new permission class
 
     def get_queryset(self):
         competition_id = self.request.query_params.get('competition_id')
@@ -120,7 +155,7 @@ class RoundViewSet(viewsets.ModelViewSet):
             created_by=self.request.user,
             last_modified_by=self.request.user
         )
-        print("✅ Competition round created successfully")
+        print(f"✅ Competition round created by {self.request.user.username}")
 
 class BoulderViewSet(viewsets.ModelViewSet):
     queryset = Boulder.objects.all()

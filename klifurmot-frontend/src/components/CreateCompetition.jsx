@@ -97,46 +97,69 @@ function CreateCompetition({ goBack, refreshCompetitions }) {
           // Create competition category
           const categoryData = {
             competition: competitionId,
-            category_group: category.id,
+            category_group: category.id, // Make sure this is just the ID, not an object
             gender: gender,
           };
 
-          console.log("Creating category:", categoryData);
-          const categoryResponse = await api.post(
-            "/competitions/competition-categories/",
-            categoryData
-          );
+          console.log("📤 Creating category with data:", categoryData);
 
-          const createdCategoryId = categoryResponse.data.id;
-          console.log("✅ Created category:", createdCategoryId);
-
-          // Create rounds for this category
-          for (let i = 0; i < category.rounds.length; i++) {
-            const round = category.rounds[i];
-            const roundData = {
-              competition_category: createdCategoryId,
-              round_group: round.round_group_id, // Use the correct field name
-              round_order: i + 1,
-              climbers_advance: parseInt(round.athlete_count) || 0,
-              boulder_count: parseInt(round.boulder_count) || 0,
-            };
-
-            console.log("Creating round:", roundData);
-            const roundResponse = await api.post(
-              "/competitions/rounds/",
-              roundData
+          try {
+            const categoryResponse = await api.post(
+              "/competitions/competition-categories/",
+              categoryData
             );
-            console.log("✅ Created round:", roundResponse.data);
-            console.log("🧗 Boulders will be auto-created by Django signal");
 
-            // 🎉 No need to manually create boulders - Django signal handles it!
+            const createdCategoryId = categoryResponse.data.id;
+            console.log("✅ Created category:", categoryResponse.data);
+
+            // Create rounds for this category
+            for (let i = 0; i < category.rounds.length; i++) {
+              const round = category.rounds[i];
+              const roundData = {
+                competition_category: createdCategoryId,
+                round_group: round.round_group_id, // Use the correct field name
+                round_order: i + 1,
+                climbers_advance: parseInt(round.athlete_count) || 0,
+                boulder_count: parseInt(round.boulder_count) || 0,
+              };
+
+              console.log("📤 Creating round with data:", roundData);
+
+              try {
+                const roundResponse = await api.post(
+                  "/competitions/rounds/",
+                  roundData
+                );
+                console.log("✅ Created round:", roundResponse.data);
+                console.log(
+                  "🪨 Boulders will be auto-created by Django signal"
+                );
+              } catch (roundErr) {
+                console.error("❌ Failed to create round:", roundErr);
+                console.error("Round error response:", roundErr.response?.data);
+                throw new Error(
+                  roundErr.response?.data?.detail ||
+                    JSON.stringify(roundErr.response?.data) ||
+                    "Failed to create round"
+                );
+              }
+            }
+          } catch (catErr) {
+            console.error("❌ Failed to create category:", catErr);
+            console.error("Category error response:", catErr.response?.data);
+            throw new Error(
+              catErr.response?.data?.detail ||
+                JSON.stringify(catErr.response?.data) ||
+                "Failed to create category"
+            );
           }
         }
       }
     } catch (err) {
       console.error("❌ Failed to create categories and rounds:", err);
       throw new Error(
-        "Competition created but failed to create categories/rounds"
+        err.message ||
+          "Competition created but failed to create categories/rounds"
       );
     }
   };
