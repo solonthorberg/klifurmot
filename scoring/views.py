@@ -224,7 +224,7 @@ class FullCompetitionResultsView(APIView):
         return Response(data)
     
 class AdvanceClimbersView(APIView):
-    permission_classes = [IsAuthenticated]  # or IsAdminUser
+    permission_classes = [IsAuthenticated] 
 
     def post(self, request, round_id):
         try:

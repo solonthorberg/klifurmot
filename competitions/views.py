@@ -3,11 +3,10 @@ from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from accounts.models import UserAccount
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration, Climber
@@ -15,6 +14,10 @@ from collections import defaultdict
 from scoring.models import ClimberRoundScore, RoundResult, Climb
 from django.db.models import Max
 from django.db import transaction
+from accounts.permissions import (
+    CompetitionAdminOrReadOnly,
+    IsAuthenticatedOrReadOnly,
+)
 
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
@@ -52,23 +55,6 @@ CATEGORY_LABELS = {
     "U21": "U21",
     "Opinn": "Opinn flokkur"
 }
-
-class CompetitionAdminOrReadOnly(IsAuthenticated):
-    def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        if request.method in SAFE_METHODS:
-            return True
-        try:
-            return request.user.profile.is_admin
-        except AttributeError:
-            return False
-
-class IsAuthenticatedOrReadOnly(IsAuthenticated):
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-        return super().has_permission(request, view)
 
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()

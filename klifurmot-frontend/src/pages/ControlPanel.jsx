@@ -34,6 +34,11 @@ function ControlPanel() {
     fetchCompetitions();
   }, []);
 
+  const resetView = () => {
+    setView("competitions");
+    setSelectedCompetitionId(null);
+  };
+
   return (
     <div>
       <h2>Stjórnborð</h2>
@@ -54,15 +59,14 @@ function ControlPanel() {
           setYear={setYear}
           availableYears={availableYears}
           onRegister={(compId) => {
-            console.log("Setting competition ID:", compId); // Debug log
+            console.log("Setting competition ID for registration:", compId);
             setSelectedCompetitionId(compId);
             setView("register");
           }}
           onEdit={(compId) => {
-            console.log("✏️ Edit not implemented yet for ID:", compId);
-            // TODO: Implement edit functionality
-            // setSelectedCompetitionId(compId);
-            // setView("edit");
+            console.log("Setting competition ID for editing:", compId);
+            setSelectedCompetitionId(compId);
+            setView("edit");
           }}
         />
       )}
@@ -70,17 +74,22 @@ function ControlPanel() {
       {view === "register" && selectedCompetitionId && (
         <RegisterAthletes
           competitionId={selectedCompetitionId}
-          goBack={() => {
-            setView("competitions");
-            setSelectedCompetitionId(null);
-          }}
+          goBack={resetView}
+        />
+      )}
+
+      {view === "edit" && selectedCompetitionId && (
+        <CreateCompetition
+          competitionId={selectedCompetitionId}
+          goBack={resetView}
+          refreshCompetitions={fetchCompetitions}
         />
       )}
 
       {view === "create" && (
         <CreateCompetition
           goBack={() => {
-            setView("competitions");
+            resetView();
             fetchCompetitions(); // Refresh after creation
           }}
           refreshCompetitions={fetchCompetitions}
