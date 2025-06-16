@@ -38,7 +38,7 @@ function ControlPanel() {
     <div>
       <h2>Stjórnborð</h2>
 
-      {view !== "create" && (
+      {view === "competitions" && (
         <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
           <button onClick={() => setView("create")}>➕ Nýtt mót</button>
         </div>
@@ -54,12 +54,15 @@ function ControlPanel() {
           setYear={setYear}
           availableYears={availableYears}
           onRegister={(compId) => {
+            console.log("Setting competition ID:", compId); // Debug log
             setSelectedCompetitionId(compId);
             setView("register");
           }}
           onEdit={(compId) => {
             console.log("✏️ Edit not implemented yet for ID:", compId);
-            // setView("edit"); // if you support editing
+            // TODO: Implement edit functionality
+            // setSelectedCompetitionId(compId);
+            // setView("edit");
           }}
         />
       )}
@@ -67,13 +70,19 @@ function ControlPanel() {
       {view === "register" && selectedCompetitionId && (
         <RegisterAthletes
           competitionId={selectedCompetitionId}
-          goBack={() => setView("competitions")}
+          goBack={() => {
+            setView("competitions");
+            setSelectedCompetitionId(null);
+          }}
         />
       )}
 
       {view === "create" && (
         <CreateCompetition
-          goBack={() => setView("competitions")}
+          goBack={() => {
+            setView("competitions");
+            fetchCompetitions(); // Refresh after creation
+          }}
           refreshCompetitions={fetchCompetitions}
         />
       )}

@@ -1,5 +1,5 @@
-# competitions/views.py - Updated permission classes
 
+from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,9 +10,11 @@ from accounts.models import UserAccount
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from accounts.models import CompetitionRole
-from athletes.models import CompetitionRegistration
+from athletes.models import CompetitionRegistration, Climber
 from collections import defaultdict
-from scoring.models import ClimberRoundScore, RoundResult
+from scoring.models import ClimberRoundScore, RoundResult, Climb
+from django.db.models import Max
+from django.db import transaction
 
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
@@ -23,43 +25,51 @@ from .serializers import (
     RoundSerializer, BoulderSerializer, JudgeBoulderAssignmentSerializer
 )
 
-from accounts.permissions import IsAdminForCompetition
-from accounts.models import CompetitionRole, UserAccount
-from scoring.models import Climb
+
+# Category logic
+def get_age_based_category(age):
+    if age <= 11:
+        return "U11"
+    elif age <= 13:
+        return "U13"
+    elif age <= 15:
+        return "U15"
+    elif age <= 17:
+        return "U17"
+    elif age <= 19:
+        return "U19"
+    elif age <= 21:
+        return "U21"
+    else:
+        return "Opinn"
+
+CATEGORY_LABELS = {
+    "U11": "U11",
+    "U13": "U13",
+    "U15": "U15",
+    "U17": "U17",
+    "U19": "U19",
+    "U21": "U21",
+    "Opinn": "Opinn flokkur"
+}
 
 class CompetitionAdminOrReadOnly(IsAuthenticated):
     def has_permission(self, request, view):
-        print(f"🔍 Permission check for {request.method} by user: {request.user}")
-        print(f"   User authenticated: {request.user.is_authenticated}")
-        print(f"   Request data: {request.data}")
-
         if not request.user.is_authenticated:
             return False
-
         if request.method in SAFE_METHODS:
             return True
-
         try:
-            if request.user.profile.is_admin:
-                print("✅ Admin permission granted")
-                return True
+            return request.user.profile.is_admin
         except AttributeError:
-            print("❌ No profile found for user")
             return False
 
-        return True
-
-# ✅ Updated permission class - more permissive for authenticated users
 class IsAuthenticatedOrReadOnly(IsAuthenticated):
-    """
-    Allow authenticated users to create/edit, anonymous users to read
-    """
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
         return super().has_permission(request, view)
 
-# Also update the GetCompetitionViewSet to ensure admin role is created
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
@@ -73,75 +83,52 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        try:
-            print(f"📝 Creating competition by user: {self.request.user.username}")
-            
-            competition = serializer.save(
-                created_by=self.request.user, 
-                last_modified_by=self.request.user
+        competition = serializer.save(
+            created_by=self.request.user, 
+            last_modified_by=self.request.user
+        )
+        if not hasattr(self.request.user, 'profile'):
+            profile = UserAccount.objects.create(
+                user=self.request.user,
+                full_name=self.request.user.get_full_name() or self.request.user.username
             )
-            
-            print(f"✅ Competition '{competition.title}' created with ID: {competition.id}")
-            
-            # Ensure user has a profile
-            from accounts.models import UserAccount
-            if hasattr(self.request.user, 'profile'):
-                profile = self.request.user.profile
-            else:
-                # Create profile if it doesn't exist
-                profile = UserAccount.objects.create(
-                    user=self.request.user,
-                    full_name=self.request.user.get_full_name() or self.request.user.username
-                )
-                print(f"📝 Created UserAccount profile for {self.request.user.username}")
-            
-            # Create admin role for the creator
-            role, created = CompetitionRole.objects.update_or_create(
-                user=profile,
-                competition=competition,
-                defaults={
-                    "role": "admin", 
-                    "created_by": profile,
-                    "last_modified_by": profile
-                }
-            )
-            
-            if created:
-                print(f"✅ Created admin role for {self.request.user.username} on competition {competition.title}")
-            else:
-                print(f"✅ Updated admin role for {self.request.user.username} on competition {competition.title}")
-            
-        except Exception as e:
-            print(f"❌ Error creating competition: {str(e)}")
+        else:
+            profile = self.request.user.profile
+
+        CompetitionRole.objects.update_or_create(
+            user=profile,
+            competition=competition,
+            defaults={
+                "role": "admin",
+                "created_by": profile,
+                "last_modified_by": profile
+            }
+        )
 
 class CategoryGroupViewSet(viewsets.ModelViewSet):
     queryset = CategoryGroup.objects.all()
     serializer_class = CategoryGroupSerializer
-    permission_classes = [AllowAny]  # ✅ Allow anyone to read category groups
+    permission_classes = [AllowAny]
 
 class RoundGroupViewSet(viewsets.ModelViewSet):
     queryset = RoundGroup.objects.all()
     serializer_class = RoundGroupSerializer
-    permission_classes = [AllowAny]  # ✅ Allow anyone to read round groups
+    permission_classes = [AllowAny]
 
-# ✅ Updated to be more permissive for competition creation
-# Update the viewsets to use this permission
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [CompetitionAdminOrReadOnly]  # Use the new permission class
+    permission_classes = [CompetitionAdminOrReadOnly]
 
     def perform_create(self, serializer):
-        """Override to set created_by and last_modified_by"""
         serializer.save(
             created_by=self.request.user,
             last_modified_by=self.request.user
         )
-        print(f"✅ Competition category created by {self.request.user.username}")
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [CompetitionAdminOrReadOnly]  # Use the new permission class
+    permission_classes = [CompetitionAdminOrReadOnly]
 
     def get_queryset(self):
         competition_id = self.request.query_params.get('competition_id')
@@ -150,17 +137,15 @@ class RoundViewSet(viewsets.ModelViewSet):
         return CompetitionRound.objects.none()
 
     def perform_create(self, serializer):
-        """Override to set created_by and last_modified_by"""
         serializer.save(
             created_by=self.request.user,
             last_modified_by=self.request.user
         )
-        print(f"✅ Competition round created by {self.request.user.username}")
 
 class BoulderViewSet(viewsets.ModelViewSet):
     queryset = Boulder.objects.all()
     serializer_class = BoulderSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]  # ✅ Allow authenticated users to create
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         queryset = Boulder.objects.all()
@@ -180,19 +165,16 @@ class BoulderViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
     def perform_create(self, serializer):
-        """Override to set created_by and last_modified_by"""
         serializer.save(
             created_by=self.request.user,
             last_modified_by=self.request.user
         )
-        print("✅ Boulder created successfully")
 
 class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
     queryset = JudgeBoulderAssignment.objects.all()
     serializer_class = JudgeBoulderAssignmentSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-# Rest of your existing views remain the same...
 class AssignRoleView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -224,7 +206,6 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
-# Your existing API view functions remain the same...
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def GetCompetitionAthletes(request, pk):
@@ -236,10 +217,7 @@ def GetCompetitionAthletes(request, pk):
     registrations = (
         CompetitionRegistration.objects
         .filter(competition=competition, deleted=False)
-        .select_related(
-            "climber__user_account__nationality",
-            "competition_category__category_group"
-        )
+        .select_related("climber__user_account__nationality", "competition_category__category_group")
     )
 
     grouped = {}
@@ -250,7 +228,6 @@ def GetCompetitionAthletes(request, pk):
             continue
 
         category_name = str(reg.competition_category)
-
         athlete_data = {
             "id": climber.id,
             "full_name": user.full_name,
@@ -258,16 +235,9 @@ def GetCompetitionAthletes(request, pk):
             "nationality": user.nationality.name_local if user.nationality else "–",
         }
 
-        if category_name not in grouped:
-            grouped[category_name] = []
-
-        grouped[category_name].append(athlete_data)
+        grouped.setdefault(category_name, []).append(athlete_data)
 
     return Response(grouped)
-
-# ... (rest of your existing view functions remain unchanged)
-
-
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -285,7 +255,6 @@ def GetCompetitionBoulders(request, pk):
 
     for cat in categories:
         category_label = f"{cat.category_group.name} {cat.gender}"
-
         rounds_data = []
 
         for rnd in cat.competitionround_set.all():
@@ -313,8 +282,6 @@ def GetCompetitionBoulders(request, pk):
 
     return Response(response_data)
 
-from collections import defaultdict
-
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def GetCompetitionStartlist(request, pk):
@@ -333,30 +300,41 @@ def GetCompetitionStartlist(request, pk):
         "round_group"
     ).prefetch_related("roundresult_set__climber__user_account__user")
 
+    today = date.today()
+
     for rnd in rounds:
         category_obj = rnd.competition_category
         group_name = category_obj.category_group.name
         gender = category_obj.gender
         category_key = f"{group_name} {gender}"
-
-        round_name = rnd.round_group.name  # ✅ Use string, not model
+        round_name = rnd.round_group.name
 
         results = rnd.roundresult_set.order_by("start_order")
         athletes = []
+
         for result in results:
             climber = result.climber
             ua = climber.user_account
             user = ua.user
             full_name = ua.full_name or user.username
 
+            # ✅ Calculate age-based category
+            birth_date = ua.date_of_birth
+            if birth_date:
+                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                age_category = get_age_based_category(age)
+            else:
+                age_category = "–"
+
             athletes.append({
                 "start_order": result.start_order,
                 "full_name": full_name,
                 "gender": ua.gender or "–",
-                "category": group_name
+                "category": group_name,          # category they are registered under
+                "age_category": age_category     # real age category
             })
 
-        grouped_data[category_key][round_name].extend(athletes)  # ✅ Use string key
+        grouped_data[category_key][round_name].extend(athletes)
 
     response = []
     for category_name, rounds_dict in grouped_data.items():
@@ -373,12 +351,12 @@ def GetCompetitionStartlist(request, pk):
 
     return Response(response)
 
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def GetCompetitionResults(request, pk):
     try:
         competition = Competition.objects.get(pk=pk)
-        print(f"Competition found: {competition.title}")
     except Competition.DoesNotExist:
         return Response({"detail": "Competition not found."}, status=404)
 
@@ -390,9 +368,7 @@ def GetCompetitionResults(request, pk):
         "competition_category__category_group",
         "competition_category",
         "round_group"
-    ).prefetch_related(
-        "climberroundscore_set__climber__user_account__user"
-    )
+    ).prefetch_related("climberroundscore_set__climber__user_account__user")
 
     for rnd in rounds:
         category = rnd.competition_category
@@ -424,9 +400,8 @@ def GetCompetitionResults(request, pk):
                 "attempts_zone": total_zone_attempts
             })
 
-    result = []
-    for category_name, rounds_dict in grouped_data.items():
-        result.append({
+    result = [
+        {
             "category": category_name,
             "rounds": [
                 {
@@ -435,7 +410,201 @@ def GetCompetitionResults(request, pk):
                 }
                 for round_name, athlete_list in rounds_dict.items()
             ]
-        })
+        }
+        for category_name, rounds_dict in grouped_data.items()
+    ]
 
     return Response(result)
+
+class RegisterAthleteView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Register an athlete for a competition round"""
+        competition_id = request.data.get('competition')
+        category_name = request.data.get('category')  # e.g., "Opinn Flokkur KK"
+        round_name = request.data.get('round')  # e.g., "Qualification"
+        climber_id = request.data.get('climber')
+        
+        print(f"📝 Registering athlete: comp={competition_id}, cat={category_name}, round={round_name}, climber={climber_id}")
+        
+        if not all([competition_id, category_name, round_name, climber_id]):
+            return Response(
+                {"detail": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Parse category name to get group and gender
+            parts = category_name.split()
+            if len(parts) < 2:
+                return Response(
+                    {"detail": "Invalid category name format"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            gender = parts[-1]  # Last part is gender (KK/KVK)
+            group_name = ' '.join(parts[:-1])  # Everything else is the group name
+            
+            print(f"   Parsed: group='{group_name}', gender='{gender}'")
+            
+            # Get the competition category
+            category = CompetitionCategory.objects.get(
+                competition_id=competition_id,
+                category_group__name=group_name,
+                gender=gender
+            )
+            
+            print(f"   Found category: {category}")
+            
+            # Get the round
+            round_obj = CompetitionRound.objects.get(
+                competition_category=category,
+                round_group__name=round_name
+            )
+            
+            print(f"   Found round: {round_obj}")
+            
+            # Get the climber
+            climber = Climber.objects.get(id=climber_id)
+            
+            print(f"   Found climber: {climber}")
+            
+            # Check if already in this round
+            existing_round_result = RoundResult.objects.filter(
+                round=round_obj, 
+                climber=climber
+            ).first()
+            
+            if existing_round_result:
+                return Response(
+                    {"detail": f"{climber.user_account.full_name} er þegar skráð(ur) í {round_name}"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if already registered in this competition/category
+            existing_registration = CompetitionRegistration.objects.filter(
+                competition_id=competition_id,
+                competition_category=category,
+                climber=climber
+            ).first()
+            
+            with transaction.atomic():
+                # Create competition registration if it doesn't exist
+                if not existing_registration:
+                    registration = CompetitionRegistration.objects.create(
+                        competition_id=competition_id,
+                        competition_category=category,
+                        climber=climber,
+                        created_by=request.user,
+                        last_modified_by=request.user
+                    )
+                    print(f"   Created registration: {registration}")
+                else:
+                    registration = existing_registration
+                    print(f"   Using existing registration: {registration}")
+                
+                # Get the next start order
+                max_order = RoundResult.objects.filter(
+                    round=round_obj
+                ).aggregate(Max('start_order'))['start_order__max'] or 0
+                
+                # Create round result (start list entry)
+                round_result = RoundResult.objects.create(
+                    round=round_obj,
+                    climber=climber,
+                    start_order=max_order + 1,
+                    created_by=request.user,
+                    last_modified_by=request.user
+                )
+                
+                print(f"✅ Successfully registered {climber} with start order {round_result.start_order}")
+                
+                return Response({
+                    "detail": f"{climber.user_account.full_name} hefur verið skráð(ur) með númer {round_result.start_order}",
+                    "registration_id": registration.id,
+                    "round_result_id": round_result.id,
+                    "start_order": round_result.start_order
+                }, status=status.HTTP_201_CREATED)
+                
+        except CompetitionCategory.DoesNotExist:
+            return Response(
+                {"detail": f"Flokkur '{group_name} {gender}' fannst ekki"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except CompetitionRound.DoesNotExist:
+            return Response(
+                {"detail": f"Umferð '{round_name}' fannst ekki fyrir þennan flokk"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Climber.DoesNotExist:
+            return Response(
+                {"detail": "Keppandi fannst ekki"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"❌ Error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"detail": str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def RemoveAthleteView(request):
+    data = request.data
+    competition_id = data.get("competition")
+    category_label = data.get("category")  # e.g. "Opinn Flokkur KVK"
+    round_name = data.get("round")
+    start_order = data.get("start_order")
+
+    if not all([competition_id, category_label, round_name, start_order]):
+        return Response({"detail": "Missing data"}, status=400)
+
+    try:
+        # 🔍 Split category and gender
+        parts = category_label.strip().rsplit(" ", 1)
+        if len(parts) != 2:
+            return Response({"detail": "Invalid category format"}, status=400)
+
+        group_name, gender = parts
+
+        print(f"🧩 Removing from competition {competition_id}, category '{group_name}', gender {gender}, round '{round_name}', start_order {start_order}")
+
+        # ✅ Find the round
+        round_obj = CompetitionRound.objects.select_related(
+            "competition_category__category_group"
+        ).get(
+            competition_category__competition_id=competition_id,
+            competition_category__category_group__name=group_name,
+            competition_category__gender=gender,
+            round_group__name=round_name
+        )
+
+        # ✅ Remove athlete by start_order
+        result_to_remove = RoundResult.objects.get(round=round_obj, start_order=start_order)
+        result_to_remove.delete()
+
+        # 🔁 Reorder the remaining
+        remaining = RoundResult.objects.filter(round=round_obj).order_by("start_order")
+        for idx, r in enumerate(remaining, start=1):
+            if r.start_order != idx:
+                r.start_order = idx
+                r.save()
+
+        return Response({"detail": "Athlete removed and reordered."})
+
+    except CompetitionRound.DoesNotExist:
+        return Response({"detail": "Competition round not found."}, status=404)
+
+    except RoundResult.DoesNotExist:
+        return Response({"detail": "Athlete result not found."}, status=404)
+
+    except Exception as e:
+        print("❌ Unexpected error:", e)
+        return Response({"detail": "Unexpected error."}, status=500)
 

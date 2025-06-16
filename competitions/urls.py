@@ -1,9 +1,13 @@
+# competitions/urls.py
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     GetCompetitionViewSet, CategoryGroupViewSet, CompetitionCategoryViewSet,
     RoundViewSet, BoulderViewSet, JudgeBoulderAssignmentViewSet,
-    AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders, GetCompetitionStartlist, GetCompetitionResults, RoundGroupViewSet
+    AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders, 
+    GetCompetitionStartlist, GetCompetitionResults, RoundGroupViewSet,
+    RegisterAthleteView, RemoveAthleteView 
 )
 
 router = DefaultRouter()
@@ -21,5 +25,7 @@ urlpatterns = [
     path('competitions/<int:pk>/startlist/', GetCompetitionStartlist, name='competition-startlist'),
     path('competitions/<int:pk>/results/', GetCompetitionResults, name='competition-results'),
     path('<int:competition_id>/assign-role/', AssignRoleView.as_view(), name='assign-role'),
+    path('register-athlete/', RegisterAthleteView.as_view(), name='register-athlete'),
+    path('remove-athlete/', RemoveAthleteView, name='remove-athlete'),
     path('', include(router.urls)),
 ]
