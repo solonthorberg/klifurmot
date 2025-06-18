@@ -2,10 +2,8 @@ from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from accounts.models import UserAccount
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration, Climber
@@ -18,7 +16,7 @@ from accounts.permissions import (
     IsAuthenticatedOrReadOnly,
 )
 
-from athletes.utils import get_age_based_category, calculate_age, CATEGORY_LABELS, GENDER_LABELS
+from athletes.utils import get_age_based_category
 
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
@@ -136,7 +134,7 @@ class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 class AssignRoleView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, competition_id):
         if not hasattr(request.user, 'profile') or not CompetitionRole.objects.filter(
@@ -379,7 +377,7 @@ def GetCompetitionResults(request, pk):
     return Response(result)
 
 class RegisterAthleteView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def post(self, request):
         competition_id = request.data.get('competition')
@@ -424,7 +422,7 @@ class RegisterAthleteView(APIView):
             
             if existing_round_result:
                 return Response(
-                    {"detail": f"{climber.user_account.full_name} er þegar skráð(ur) í {round_name}"}, 
+                    {"detail": f"{climber.user_account.full_name} is already in {round_name}"}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -489,7 +487,7 @@ class RegisterAthleteView(APIView):
             )
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def RemoveAthleteView(request):
     data = request.data
     competition_id = data.get("competition")
@@ -537,7 +535,7 @@ def RemoveAthleteView(request):
         return Response({"detail": "Unexpected error."}, status=500)
 
 class UpdateStartOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request):
         try:

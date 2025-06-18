@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     GetCompetitionViewSet, CategoryGroupViewSet, CompetitionCategoryViewSet,
     RoundViewSet, BoulderViewSet, JudgeBoulderAssignmentViewSet,
-    AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders, 
+    AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders,
     GetCompetitionStartlist, GetCompetitionResults, RoundGroupViewSet,
     RegisterAthleteView, RemoveAthleteView, UpdateStartOrderView
 )

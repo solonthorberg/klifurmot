@@ -1,31 +1,26 @@
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.decorators import action
-from rest_framework import status
 from .utils import format_competition_results, auto_advance_climbers, update_round_score_for_climb
 from competitions.models import Boulder, CompetitionRound
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from accounts.models import CompetitionRole
 from django.utils import timezone
-from collections import defaultdict
 from .utils import broadcast_score_update
 
-class ReadOnlyOrIsAuthenticated(IsAuthenticated):
-    def has_permission(self, request, view):
-        if request.user and request.user.is_staff:
-            return True
-        if request.method in SAFE_METHODS:
-            return True
-        return super().has_permission(request, view)
+from accounts.permissions import (
+    IsAdminOrReadOnly,
+    IsAuthenticatedOrReadOnly,
+)
+
 
 class RoundResultViewSet(viewsets.ModelViewSet):
     queryset = RoundResult.objects.all()
     serializer_class = RoundResultSerializer
-    permission_classes = [ReadOnlyOrIsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         qs = RoundResult.objects.all()
@@ -39,13 +34,11 @@ class RoundResultViewSet(viewsets.ModelViewSet):
         if round_id:
             qs = qs.filter(round_id=round_id)
         return qs
-    
-    
 
 class ClimbViewSet(viewsets.ModelViewSet):
     queryset = Climb.objects.all()
     serializer_class = ClimbSerializer
-    permission_classes = [ReadOnlyOrIsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         qs = Climb.objects.all()
@@ -79,7 +72,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
 
         return Climb.objects.none()
 
-    @action(detail=False, methods=["post"], url_path="record_attempt", permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["post"], url_path="record_attempt", permission_classes=[IsAuthenticatedOrReadOnly])
     def record_attempt(self, request):
         data = request.data
         try:
@@ -130,7 +123,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"detail": str(e)}, status=400)
 
-    @action(detail=False, methods=["get"], url_path="bulk-scores", permission_classes=[ReadOnlyOrIsAuthenticated])
+    @action(detail=False, methods=["get"], url_path="bulk-scores", permission_classes=[IsAuthenticatedOrReadOnly])
     def bulk_scores(self, request):
         round_order = request.query_params.get("round_order")
         boulder_number = request.query_params.get("boulder_number")
@@ -153,7 +146,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
 class ClimberRoundScoreViewSet(viewsets.ModelViewSet):
     queryset = ClimberRoundScore.objects.all()
     serializer_class = ClimberRoundScoreSerializer
-    permission_classes = [ReadOnlyOrIsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         round_id = self.request.query_params.get('round_id')
@@ -224,7 +217,7 @@ class FullCompetitionResultsView(APIView):
         return Response(data)
     
 class AdvanceClimbersView(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, round_id):
         try:
@@ -246,7 +239,6 @@ def update_round_results(round_obj):
         .select_related('climber')
     )
 
-    # Sort climbers by total_score descending, then by previous round rank
     all_rounds = list(
         CompetitionRound.objects
         .filter(competition_category=round_obj.competition_category)
@@ -276,10 +268,10 @@ def update_round_results(round_obj):
             tie_count += 1
         else:
             if previous_score is not None:
-                actual_rank += tie_count  # shift for previous tie group
+                actual_rank += tie_count
             assigned_rank = actual_rank
             previous_rank = assigned_rank
-            tie_count = 1  # start new tie count
+            tie_count = 1
 
         RoundResult.objects.update_or_create(
             round=round_obj,

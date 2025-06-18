@@ -10,7 +10,8 @@ SECRET_KEY = 'django-insecure-i0r$poq*ya7^hq1d)ouvq9-o&hoezt$j*-n@$#m*aod_)65xd)
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Fix 1: Add localhost to ALLOWED_HOSTS
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -41,14 +42,42 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Fix 2: Enhanced CORS settings for development
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For development only - allows all origins
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+# Alternative: If you prefer to be more specific, use this instead of CORS_ALLOW_ALL_ORIGINS:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5173",
+# ]
+
+# Fix 3: Add CORS headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Fix 4: Add CORS methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 REST_FRAMEWORK = {

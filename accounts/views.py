@@ -209,16 +209,21 @@ class SendJudgeLinkView(APIView):
         if not user_account:
             return Response({"detail": "No user profile found."}, status=403)
 
-        if not CompetitionRole.objects.filter(
-            user=user_account,
-            competition_id=competition_id,
-            role='admin'
-        ).exists():
-            return Response({"detail": "Only competition admins can send judge links."}, status=403)
+        if not user_account.is_admin:
+            return Response({"detail": "Only admins can send judge links."}, status=403)
 
         user_id = request.data.get("user_id")
         if not user_id:
             return Response({"detail": "User ID required."}, status=400)
+
+        expires_at = request.data.get("expires_at")
+        if expires_at:
+            try:
+                expires_at = timezone.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            except ValueError:
+                return Response({"detail": "Invalid expiration date format."}, status=400)
+        else:
+            expires_at = timezone.now() + timedelta(days=1)
 
         try:
             judge_user = UserAccount.objects.get(id=user_id)
@@ -226,20 +231,25 @@ class SendJudgeLinkView(APIView):
         except (UserAccount.DoesNotExist, Competition.DoesNotExist):
             return Response({"detail": "Invalid user or competition."}, status=404)
 
-        link, _ = JudgeLink.objects.get_or_create(
+        link, created = JudgeLink.objects.get_or_create(
             user=judge_user.user,
             competition=competition,
             defaults={
                 "created_by": request.user,
-                "expires_at": timezone.now() + timedelta(days=1)
+                "expires_at": expires_at
             }
         )
+
+        if not created and link.expires_at != expires_at:
+            link.expires_at = expires_at
+            link.save()
 
         frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
         return Response({
             "judge_link": f"{frontend_url}/judge/login/{link.token}/",
             "expires_at": link.expires_at,
-            "is_used": link.is_used
+            "is_used": link.is_used,
+            "created": created
         })
 
 @api_view(['GET'])
@@ -259,3 +269,96 @@ def validate_judge_token(request, token):
         })
     except JudgeLink.DoesNotExist:
         return Response({"detail": "Invalid token."}, status=404)
+
+# Add these views to your accounts/views.py file
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_competition_judge_links(request, competition_id):
+    """Get all judge links for a specific competition"""
+    user_account = getattr(request.user, 'profile', None)
+    if not user_account:
+        return Response({"detail": "No user profile found."}, status=403)
+
+    # Check if user is admin
+    if not user_account.is_admin:
+        return Response({"detail": "Only admins can view judge links."}, status=403)
+
+    try:
+        competition = Competition.objects.get(id=competition_id)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+
+    # Get all judge links for this competition
+    judge_links = JudgeLink.objects.filter(competition=competition).select_related('user')
+    
+    frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
+    
+    links_data = []
+    for link in judge_links:
+        links_data.append({
+            "id": link.id,
+            "user_id": link.user.id,
+            "user_email": link.user.email,
+            "judge_link": f"{frontend_url}/judge/login/{link.token}/",
+            "token": str(link.token),
+            "expires_at": link.expires_at,
+            "is_used": link.is_used,
+            "created_at": link.created_at,
+        })
+    
+    return Response(links_data)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_judge_link(request, link_id):
+    """Update a judge link (mainly expiration date)"""
+    user_account = getattr(request.user, 'profile', None)
+    if not user_account:
+        return Response({"detail": "No user profile found."}, status=403)
+
+    if not user_account.is_admin:
+        return Response({"detail": "Only admins can update judge links."}, status=403)
+
+    try:
+        judge_link = JudgeLink.objects.get(id=link_id)
+    except JudgeLink.DoesNotExist:
+        return Response({"detail": "Judge link not found."}, status=404)
+
+    expires_at = request.data.get("expires_at")
+    if expires_at:
+        try:
+            judge_link.expires_at = timezone.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            judge_link.save()
+        except ValueError:
+            return Response({"detail": "Invalid expiration date format."}, status=400)
+
+    frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
+    
+    return Response({
+        "id": judge_link.id,
+        "user_id": judge_link.user.id,
+        "user_email": judge_link.user.email,
+        "judge_link": f"{frontend_url}/judge/login/{judge_link.token}/",
+        "expires_at": judge_link.expires_at,
+        "is_used": judge_link.is_used,
+        "detail": "Judge link updated successfully."
+    })
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_judge_link(request, link_id):
+    """Delete a judge link"""
+    user_account = getattr(request.user, 'profile', None)
+    if not user_account:
+        return Response({"detail": "No user profile found."}, status=403)
+
+    if not user_account.is_admin:
+        return Response({"detail": "Only admins can delete judge links."}, status=403)
+
+    try:
+        judge_link = JudgeLink.objects.get(id=link_id)
+        judge_link.delete()
+        return Response({"detail": "Judge link deleted successfully."}, status=200)
+    except JudgeLink.DoesNotExist:
+        return Response({"detail": "Judge link not found."}, status=404)

@@ -36,7 +36,7 @@ def format_competition_results(competition_id):
                 full_name = (
                     result.climber.user_account.full_name
                     if result.climber.user_account and result.climber.user_account.full_name
-                    else "Nafn óþekkt"
+                    else "Name unknown"
                 )
                 formatted_results.append({
                     "rank": result.rank,
@@ -85,12 +85,14 @@ def broadcast_score_update(competition_id):
 from scoring.utils import broadcast_score_update 
 
 def auto_advance_climbers(current_round):
-    all_results = (
-        RoundResult.objects
-        .filter(round=current_round, deleted=False)
-        .order_by('rank')
-    )
-
+    """
+    Auto-advance climbers to the next round for the same category
+    """
+    all_results = RoundResult.objects.filter(
+        round=current_round, 
+        deleted=False
+    ).order_by('rank')
+    
     next_round = (
         CompetitionRound.objects
         .filter(
@@ -102,9 +104,9 @@ def auto_advance_climbers(current_round):
     )
 
     if not next_round:
+        print("⚠️ No next round found.")
         return {"status": "error", "message": "No next round found"}
 
-    # Determine how many climbers to advance based on the NEXT round's climbers_advance value
     num_to_advance = next_round.climbers_advance
 
     existing_climber_ids = set(
@@ -118,17 +120,16 @@ def auto_advance_climbers(current_round):
 
     for result in all_results:
         if result.climber_id in existing_climber_ids:
-            continue  # skip already advanced
+            continue
 
         if len(selected) < num_to_advance:
             selected.append(result)
             cutoff_rank = result.rank
         elif result.rank == cutoff_rank:
-            selected.append(result)  # include tie at cutoff
+            selected.append(result)
         else:
             break
 
-    # Reverse start order so best ranked starts last
     selected.reverse()
 
     existing_orders = (

@@ -8,7 +8,7 @@ function SelectCategoryAndBoulder({
   competitionId,
   onSelectAthlete,
   onBack,
-}) {
+  }) {
   const [categories, setCategories] = useState([]);
   const [boulders, setBoulders] = useState([]);
   const [athletes, setAthletes] = useState([]);
@@ -126,7 +126,7 @@ function SelectCategoryAndBoulder({
         <option value="">Flokkur</option>
         {categories.map((cat) => (
           <option key={cat.id} value={cat.id}>
-            {cat.category_group.name} - {cat.gender}
+            {cat.category_group_detail.name} - {cat.gender}
           </option>
         ))}
       </select>
