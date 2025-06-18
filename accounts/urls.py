@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet, 
     me, login, google_login, register, logout, UserViewSet, SendJudgeLinkView, 
-    validate_judge_token, get_competition_judge_links, update_judge_link, delete_judge_link
+    validate_judge_token, get_competition_judge_links, manage_judge_link
 )
 
 router = DefaultRouter()
@@ -22,6 +22,5 @@ urlpatterns = [
     path('judge-links/<int:competition_id>/', SendJudgeLinkView.as_view(), name='send-judge-link'),
     path('judge-links/<uuid:token>/', validate_judge_token, name='validate-judge-link'),
     path('judge-links/competition/<int:competition_id>/', get_competition_judge_links, name='get-competition-judge-links'),
-    path('judge-links/link/<int:link_id>/', update_judge_link, name='update-judge-link'),
-    path('judge-links/link/<int:link_id>/delete/', delete_judge_link, name='delete-judge-link'),
+    path('judge-links/link/<int:link_id>/', manage_judge_link, name='manage-judge-link'),
 ]

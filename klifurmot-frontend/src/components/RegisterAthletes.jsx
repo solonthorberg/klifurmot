@@ -38,14 +38,14 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   return (
     <tr ref={setNodeRef} style={style}>
       {/* Dedicated drag handle column */}
-      <td 
-        {...attributes} 
+      <td
+        {...attributes}
         {...listeners}
-        style={{ 
+        style={{
           cursor: isDragging ? "grabbing" : "grab",
           width: "30px",
           textAlign: "center",
-          userSelect: "none"
+          userSelect: "none",
         }}
       >
         ⋮⋮
@@ -108,8 +108,9 @@ function JudgeLinkSection({ competitionId }) {
   const fetchExistingLinks = async () => {
     setIsLoadingLinks(true);
     try {
-      // This endpoint doesn't exist yet - you'll need to create it
-      const res = await api.get(`/accounts/judge-links/competition/${competitionId}/`);
+      const res = await api.get(
+        `/accounts/judge-links/competition/${competitionId}/`
+      );
       setExistingLinks(res.data);
     } catch (err) {
       console.error("Failed to fetch existing links:", err);
@@ -134,7 +135,7 @@ function JudgeLinkSection({ competitionId }) {
     setIsGenerating(true);
     try {
       const payload = {
-        user_id: selectedJudge
+        user_id: selectedJudge,
       };
 
       // Add expiration date if provided
@@ -142,16 +143,23 @@ function JudgeLinkSection({ competitionId }) {
         payload.expires_at = new Date(expirationDate).toISOString();
       }
 
-      const res = await api.post(`/accounts/judge-links/${competitionId}/`, payload);
-      
+      const res = await api.post(
+        `/accounts/judge-links/${competitionId}/`,
+        payload
+      );
+
       setGeneratedLink(res.data.judge_link);
       console.log("✅ Judge link generated:", res.data.judge_link);
-      
+
       // Refresh the existing links list
       await fetchExistingLinks();
     } catch (err) {
       console.error("❌ Failed to generate judge link:", err);
-      alert(`Ekki tókst að búa til dómaraslóð: ${err.response?.data?.detail || err.message}`);
+      alert(
+        `Ekki tókst að búa til dómaraslóð: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -169,7 +177,7 @@ function JudgeLinkSection({ competitionId }) {
       textArea.value = link;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(textArea);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
@@ -182,32 +190,42 @@ function JudgeLinkSection({ competitionId }) {
     }
 
     try {
-      await api.delete(`/accounts/judge-links/${linkId}/`);
+      // Updated URL to match the backend pattern
+      await api.delete(`/accounts/judge-links/link/${linkId}/`);
       console.log("✅ Judge link deleted");
       await fetchExistingLinks();
     } catch (err) {
       console.error("❌ Failed to delete judge link:", err);
-      alert(`Ekki tókst að eyða dómaraslóð: ${err.response?.data?.detail || err.message}`);
+      alert(
+        `Ekki tókst að eyða dómaraslóð: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
     }
   };
 
   const updateJudgeLink = async (linkId, newExpirationDate) => {
     try {
-      await api.patch(`/accounts/judge-links/${linkId}/`, {
-        expires_at: new Date(newExpirationDate).toISOString()
+      // Updated URL to match the backend pattern
+      await api.patch(`/accounts/judge-links/link/${linkId}/`, {
+        expires_at: new Date(newExpirationDate).toISOString(),
       });
       console.log("✅ Judge link updated");
       setEditingLink(null);
       await fetchExistingLinks();
     } catch (err) {
       console.error("❌ Failed to update judge link:", err);
-      alert(`Ekki tókst að uppfæra dómaraslóð: ${err.response?.data?.detail || err.message}`);
+      alert(
+        `Ekki tókst að uppfæra dómaraslóð: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
     }
   };
 
   const getJudgeName = (userId) => {
-    const judge = availableJudges.find(j => j.id === userId);
-    return judge ? (judge.full_name || judge.username) : "Óþekktur notandi";
+    const judge = availableJudges.find((j) => j.id === userId);
+    return judge ? judge.full_name || judge.username : "Óþekktur notandi";
   };
 
   const isLinkExpired = (expiresAt) => {
@@ -224,7 +242,7 @@ function JudgeLinkSection({ competitionId }) {
         <div className="row align-items-end mb-4">
           <div className="col-md-3">
             <label className="form-label">Veldu dómara:</label>
-            <select 
+            <select
               className="form-select"
               value={selectedJudge}
               onChange={(e) => setSelectedJudge(e.target.value)}
@@ -248,7 +266,7 @@ function JudgeLinkSection({ competitionId }) {
             />
           </div>
           <div className="col-md-3">
-            <button 
+            <button
               className="btn btn-primary"
               onClick={generateJudgeLink}
               disabled={!selectedJudge || !expirationDate || isGenerating}
@@ -257,19 +275,19 @@ function JudgeLinkSection({ competitionId }) {
             </button>
           </div>
         </div>
-        
+
         {generatedLink && (
           <div className="mb-4">
             <label className="form-label">Nýja dómaraslóð:</label>
             <div className="input-group">
-              <input 
-                type="text" 
-                className="form-control" 
-                value={generatedLink} 
-                readOnly 
+              <input
+                type="text"
+                className="form-control"
+                value={generatedLink}
+                readOnly
               />
-              <button 
-                className="btn btn-outline-secondary" 
+              <button
+                className="btn btn-outline-secondary"
                 onClick={() => copyToClipboard(generatedLink)}
                 title="Afrita slóð"
               >
@@ -277,7 +295,8 @@ function JudgeLinkSection({ competitionId }) {
               </button>
             </div>
             <small className="text-muted">
-              Sendu þessa slóð til dómarans. Slóðin rennur út: {new Date(expirationDate).toLocaleString('is-IS')}
+              Sendu þessa slóð til dómarans. Slóðin rennur út:{" "}
+              {new Date(expirationDate).toLocaleString("is-IS")}
             </small>
           </div>
         )}
@@ -329,7 +348,9 @@ function JudgeLinkSection({ competitionId }) {
                             <input
                               type="datetime-local"
                               className="form-control form-control-sm"
-                              defaultValue={new Date(link.expires_at).toISOString().slice(0, 16)}
+                              defaultValue={new Date(link.expires_at)
+                                .toISOString()
+                                .slice(0, 16)}
                               onChange={(e) => {
                                 link.newExpirationDate = e.target.value;
                               }}
@@ -337,7 +358,9 @@ function JudgeLinkSection({ competitionId }) {
                             />
                             <button
                               className="btn btn-success btn-sm"
-                              onClick={() => updateJudgeLink(link.id, link.newExpirationDate)}
+                              onClick={() =>
+                                updateJudgeLink(link.id, link.newExpirationDate)
+                              }
                               title="Vista"
                             >
                               ✅
@@ -352,7 +375,11 @@ function JudgeLinkSection({ competitionId }) {
                           </div>
                         ) : (
                           <div className="d-flex align-items-center gap-2">
-                            <small>{new Date(link.expires_at).toLocaleString('is-IS')}</small>
+                            <small>
+                              {new Date(link.expires_at).toLocaleString(
+                                "is-IS"
+                              )}
+                            </small>
                             <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => setEditingLink(link.id)}
@@ -364,8 +391,20 @@ function JudgeLinkSection({ competitionId }) {
                         )}
                       </td>
                       <td>
-                        <span className={`badge ${isLinkExpired(link.expires_at) ? 'bg-danger' : link.is_used ? 'bg-success' : 'bg-warning'}`}>
-                          {isLinkExpired(link.expires_at) ? 'Útrunnin' : link.is_used ? 'Notuð' : 'Virk'}
+                        <span
+                          className={`badge ${
+                            isLinkExpired(link.expires_at)
+                              ? "bg-danger"
+                              : link.is_used
+                              ? "bg-success"
+                              : "bg-warning"
+                          }`}
+                        >
+                          {isLinkExpired(link.expires_at)
+                            ? "Útrunnin"
+                            : link.is_used
+                            ? "Notuð"
+                            : "Virk"}
                         </span>
                       </td>
                       <td>
@@ -1016,7 +1055,7 @@ function RegisterAthletes({ competitionId, goBack }) {
                         <table className="table table-sm">
                           <thead>
                             <tr>
-                              <th style={{ width: "30px" }}></th> {/* Drag handle column */}
+                              <th style={{ width: "30px" }}></th>
                               <th>Nr.</th>
                               <th>Nafn</th>
                               <th>Flokkur</th>
