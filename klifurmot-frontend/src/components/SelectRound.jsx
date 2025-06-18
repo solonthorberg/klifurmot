@@ -14,20 +14,21 @@ function SelectRound({ competitionId, onContinue }) {
       try {
         const [roundRes, compRes] = await Promise.all([
           api.get(`/competitions/rounds/?competition_id=${competitionId}`),
-          api.get(`/competitions/competitions/${competitionId}/`)
+          api.get(`/competitions/competitions/${competitionId}/`),
         ]);
 
+        // Extract unique round groups from the rounds data
         const uniqueGroups = [];
         const seen = new Set();
 
-        roundRes.data.forEach(round => {
-          const group = round.round_group;
+        roundRes.data.forEach((round) => {
+          const group = round.round_group_detail;
           if (group && !seen.has(group.id)) {
             seen.add(group.id);
             uniqueGroups.push({
               id: group.id,
               name: group.name,
-              round_order: round.round_order
+              round_order: round.round_order,
             });
           }
         });
@@ -47,7 +48,7 @@ function SelectRound({ competitionId, onContinue }) {
     onContinue(roundGroupId, roundOrder, roundName);
   };
 
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <div>
@@ -65,8 +66,16 @@ function SelectRound({ competitionId, onContinue }) {
           >
             <h4>{group.name}</h4>
             <button
-              onClick={() => handleClick(group.id, group.round_order, group.name)}
-              style={{ padding: "0.5rem 1rem", background: "#ddd", border: "none", cursor: "pointer" }}>
+              onClick={() =>
+                handleClick(group.id, group.round_order, group.name)
+              }
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#ddd",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
               Dæma
             </button>
           </div>

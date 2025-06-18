@@ -1,34 +1,17 @@
+# climbers/views.py
+from datetime import date
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+
 from .models import Climber, CompetitionRegistration
 from .serializers import ClimberSerializer, CompetitionRegistrationSerializer
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from datetime import date
-
 from accounts.models import UserAccount
-from athletes.models import CompetitionRegistration
-from scoring.models import RoundResult, Climb
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from datetime import date
-from .models import Climber, CompetitionRegistration
-from scoring.models import RoundResult, Climb
+from scoring.models import RoundResult
 from competitions.models import CompetitionRound
-from accounts.models import UserAccount
-from rest_framework import viewsets
-from rest_framework.response import Response
-from .models import CompetitionRegistration
-from .serializers import CompetitionRegistrationSerializer
-
-
+from .utils import calculate_age, get_age_based_category, CATEGORY_LABELS, GENDER_LABELS
 
 
 class GetClimberViewSet(viewsets.ModelViewSet):
@@ -38,49 +21,10 @@ class GetClimberViewSet(viewsets.ModelViewSet):
 
 
 class CompetitionRegistrationViewSet(viewsets.ModelViewSet):
-    serializer_class = CompetitionRegistrationSerializer
     queryset = CompetitionRegistration.objects.all()
+    serializer_class = CompetitionRegistrationSerializer
     permission_classes = [AllowAny]
 
-    
-
-def calculate_age(birth_date):
-    today = date.today()
-    age = today.year - birth_date.year
-    if (today.month, today.day) < (birth_date.month, birth_date.day):
-        age -= 1
-    return age
-
-def get_age_based_category(age):
-    if age <= 11:
-        return "U11"
-    elif age <= 13:
-        return "U13"
-    elif age <= 15:
-        return "U15"
-    elif age <= 17:
-        return "U17"
-    elif age <= 19:
-        return "U19"
-    elif age <= 21:
-        return "U21"
-    else:
-        return "Opinn"
-
-CATEGORY_LABELS = {
-    "U11": "U11",
-    "U13": "U13",
-    "U15": "U15",
-    "U17": "U17",
-    "U19": "U19",
-    "U21": "U21",
-    "Opinn": "Opinn flokkur"
-}
-
-GENDER_LABELS = {
-    "KK": "KK",
-    "KVK": "KVK"
-}
 
 def GetResultsForClimbers(competition, climber):
     rounds = CompetitionRound.objects.filter(
@@ -92,7 +36,6 @@ def GetResultsForClimbers(competition, climber):
 
     for round in rounds:
         round_result = RoundResult.objects.filter(round=round, climber=climber).first()
-
         if round_result:
             if latest_rank is None:
                 latest_rank = round_result.rank
@@ -109,7 +52,6 @@ def GetResultsForClimbers(competition, climber):
 @permission_classes([AllowAny])
 def GetAthleteDetail(request, pk):
     athlete = get_object_or_404(UserAccount, pk=pk)
-
     climber = getattr(athlete, "climber", None)
     if not climber:
         return Response({"detail": "Climber profile not found."}, status=404)
@@ -119,8 +61,7 @@ def GetAthleteDetail(request, pk):
     gender = athlete.gender
     category = f"{CATEGORY_LABELS.get(group_name, group_name)} {GENDER_LABELS.get(gender, gender)}"
 
-    registrations = CompetitionRegistration.objects.filter(climber=climber)\
-        .select_related("competition", "competition_category__category_group")
+    registrations = CompetitionRegistration.objects.filter(climber=climber).select_related("competition", "competition_category__category_group")
 
     competitions = []
     for reg in registrations:

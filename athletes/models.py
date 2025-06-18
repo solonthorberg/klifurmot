@@ -17,6 +17,7 @@ class Climber(models.Model):
     deleted = models.BooleanField(default=False)
     def __str__(self):
         return self.user_account.full_name
+    
 class CompetitionRegistration(models.Model):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     competition_category = models.ForeignKey(CompetitionCategory, on_delete=models.CASCADE)

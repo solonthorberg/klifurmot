@@ -1,4 +1,3 @@
-
 from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -15,9 +14,11 @@ from scoring.models import ClimberRoundScore, RoundResult, Climb
 from django.db.models import Max
 from django.db import transaction
 from accounts.permissions import (
-    CompetitionAdminOrReadOnly,
+    IsAdminOrReadOnly,
     IsAuthenticatedOrReadOnly,
 )
+
+from athletes.utils import get_age_based_category, calculate_age, CATEGORY_LABELS, GENDER_LABELS
 
 from .models import (
     Competition, CategoryGroup, CompetitionCategory,
@@ -27,34 +28,6 @@ from .serializers import (
     CompetitionSerializer, CategoryGroupSerializer, CompetitionCategorySerializer, RoundGroupSerializer,
     RoundSerializer, BoulderSerializer, JudgeBoulderAssignmentSerializer
 )
-
-
-# Category logic
-def get_age_based_category(age):
-    if age <= 11:
-        return "U11"
-    elif age <= 13:
-        return "U13"
-    elif age <= 15:
-        return "U15"
-    elif age <= 17:
-        return "U17"
-    elif age <= 19:
-        return "U19"
-    elif age <= 21:
-        return "U21"
-    else:
-        return "Opinn"
-
-CATEGORY_LABELS = {
-    "U11": "U11",
-    "U13": "U13",
-    "U15": "U15",
-    "U17": "U17",
-    "U19": "U19",
-    "U21": "U21",
-    "Opinn": "Opinn flokkur"
-}
 
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
@@ -104,17 +77,18 @@ class RoundGroupViewSet(viewsets.ModelViewSet):
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [CompetitionAdminOrReadOnly]
-
-    def perform_create(self, serializer):
-        serializer.save(
-            created_by=self.request.user,
-            last_modified_by=self.request.user
-        )
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = CompetitionCategory.objects.all()
+        competition_id = self.request.query_params.get('competition_id')
+        if competition_id is not None:
+            queryset = queryset.filter(competition=competition_id)
+        return queryset
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [CompetitionAdminOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         competition_id = self.request.query_params.get('competition_id')
@@ -304,7 +278,6 @@ def GetCompetitionStartlist(request, pk):
             user = ua.user
             full_name = ua.full_name or user.username
 
-            # ✅ Calculate age-based category
             birth_date = ua.date_of_birth
             if birth_date:
                 age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
@@ -312,13 +285,17 @@ def GetCompetitionStartlist(request, pk):
             else:
                 age_category = "–"
 
-            athletes.append({
+            athlete_data = {
+                "climber_id": climber.id,
+                "id": climber.id,
                 "start_order": result.start_order,
                 "full_name": full_name,
                 "gender": ua.gender or "–",
-                "category": group_name,          # category they are registered under
-                "age_category": age_category     # real age category
-            })
+                "category": group_name,
+                "age_category": age_category
+            }
+            
+            athletes.append(athlete_data)
 
         grouped_data[category_key][round_name].extend(athletes)
 
@@ -336,7 +313,6 @@ def GetCompetitionStartlist(request, pk):
         })
 
     return Response(response)
-
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -406,13 +382,10 @@ class RegisterAthleteView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        """Register an athlete for a competition round"""
         competition_id = request.data.get('competition')
-        category_name = request.data.get('category')  # e.g., "Opinn Flokkur KK"
-        round_name = request.data.get('round')  # e.g., "Qualification"
+        category_name = request.data.get('category')
+        round_name = request.data.get('round')
         climber_id = request.data.get('climber')
-        
-        print(f"📝 Registering athlete: comp={competition_id}, cat={category_name}, round={round_name}, climber={climber_id}")
         
         if not all([competition_id, category_name, round_name, climber_id]):
             return Response(
@@ -421,7 +394,6 @@ class RegisterAthleteView(APIView):
             )
         
         try:
-            # Parse category name to get group and gender
             parts = category_name.split()
             if len(parts) < 2:
                 return Response(
@@ -429,34 +401,22 @@ class RegisterAthleteView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            gender = parts[-1]  # Last part is gender (KK/KVK)
-            group_name = ' '.join(parts[:-1])  # Everything else is the group name
+            gender = parts[-1]
+            group_name = ' '.join(parts[:-1])
             
-            print(f"   Parsed: group='{group_name}', gender='{gender}'")
-            
-            # Get the competition category
             category = CompetitionCategory.objects.get(
                 competition_id=competition_id,
                 category_group__name=group_name,
                 gender=gender
             )
             
-            print(f"   Found category: {category}")
-            
-            # Get the round
             round_obj = CompetitionRound.objects.get(
                 competition_category=category,
                 round_group__name=round_name
             )
             
-            print(f"   Found round: {round_obj}")
-            
-            # Get the climber
             climber = Climber.objects.get(id=climber_id)
             
-            print(f"   Found climber: {climber}")
-            
-            # Check if already in this round
             existing_round_result = RoundResult.objects.filter(
                 round=round_obj, 
                 climber=climber
@@ -468,7 +428,6 @@ class RegisterAthleteView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Check if already registered in this competition/category
             existing_registration = CompetitionRegistration.objects.filter(
                 competition_id=competition_id,
                 competition_category=category,
@@ -476,7 +435,6 @@ class RegisterAthleteView(APIView):
             ).first()
             
             with transaction.atomic():
-                # Create competition registration if it doesn't exist
                 if not existing_registration:
                     registration = CompetitionRegistration.objects.create(
                         competition_id=competition_id,
@@ -485,17 +443,13 @@ class RegisterAthleteView(APIView):
                         created_by=request.user,
                         last_modified_by=request.user
                     )
-                    print(f"   Created registration: {registration}")
                 else:
                     registration = existing_registration
-                    print(f"   Using existing registration: {registration}")
                 
-                # Get the next start order
                 max_order = RoundResult.objects.filter(
                     round=round_obj
                 ).aggregate(Max('start_order'))['start_order__max'] or 0
                 
-                # Create round result (start list entry)
                 round_result = RoundResult.objects.create(
                     round=round_obj,
                     climber=climber,
@@ -503,8 +457,6 @@ class RegisterAthleteView(APIView):
                     created_by=request.user,
                     last_modified_by=request.user
                 )
-                
-                print(f"✅ Successfully registered {climber} with start order {round_result.start_order}")
                 
                 return Response({
                     "detail": f"{climber.user_account.full_name} hefur verið skráð(ur) með númer {round_result.start_order}",
@@ -529,22 +481,19 @@ class RegisterAthleteView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            print(f"❌ Error: {str(e)}")
             import traceback
             traceback.print_exc()
             return Response(
                 {"detail": str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def RemoveAthleteView(request):
     data = request.data
     competition_id = data.get("competition")
-    category_label = data.get("category")  # e.g. "Opinn Flokkur KVK"
+    category_label = data.get("category")
     round_name = data.get("round")
     start_order = data.get("start_order")
 
@@ -552,16 +501,12 @@ def RemoveAthleteView(request):
         return Response({"detail": "Missing data"}, status=400)
 
     try:
-        # 🔍 Split category and gender
         parts = category_label.strip().rsplit(" ", 1)
         if len(parts) != 2:
             return Response({"detail": "Invalid category format"}, status=400)
 
         group_name, gender = parts
 
-        print(f"🧩 Removing from competition {competition_id}, category '{group_name}', gender {gender}, round '{round_name}', start_order {start_order}")
-
-        # ✅ Find the round
         round_obj = CompetitionRound.objects.select_related(
             "competition_category__category_group"
         ).get(
@@ -571,11 +516,9 @@ def RemoveAthleteView(request):
             round_group__name=round_name
         )
 
-        # ✅ Remove athlete by start_order
         result_to_remove = RoundResult.objects.get(round=round_obj, start_order=start_order)
         result_to_remove.delete()
 
-        # 🔁 Reorder the remaining
         remaining = RoundResult.objects.filter(round=round_obj).order_by("start_order")
         for idx, r in enumerate(remaining, start=1):
             if r.start_order != idx:
@@ -591,6 +534,124 @@ def RemoveAthleteView(request):
         return Response({"detail": "Athlete result not found."}, status=404)
 
     except Exception as e:
-        print("❌ Unexpected error:", e)
         return Response({"detail": "Unexpected error."}, status=500)
 
+class UpdateStartOrderView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            competition_id = request.data.get('competition')
+            category_name = request.data.get('category')
+            round_name = request.data.get('round')
+            athletes_data = request.data.get('athletes', [])
+
+            if not all([competition_id, category_name, round_name, athletes_data]):
+                missing = []
+                if not competition_id: missing.append('competition')
+                if not category_name: missing.append('category')
+                if not round_name: missing.append('round')
+                if not athletes_data: missing.append('athletes')
+                
+                return Response(
+                    {"detail": f"Missing required fields: {', '.join(missing)}"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            parts = category_name.strip().split()
+            if len(parts) < 2:
+                return Response(
+                    {"detail": f"Invalid category format. Expected: 'Group Name Gender', got: '{category_name}'"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            gender = parts[-1]
+            group_name = " ".join(parts[:-1])
+
+            try:
+                competition_category = CompetitionCategory.objects.get(
+                    competition_id=competition_id,
+                    category_group__name=group_name,
+                    gender=gender
+                )
+            except CompetitionCategory.DoesNotExist:
+                available_categories = CompetitionCategory.objects.filter(
+                    competition_id=competition_id
+                ).select_related('category_group')
+                
+                available_list = [f"{cat.category_group.name} {cat.gender}" for cat in available_categories]
+                
+                return Response(
+                    {"detail": f"Category not found: {category_name}. Available: {available_list}"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            try:
+                round_obj = CompetitionRound.objects.get(
+                    competition_category=competition_category,
+                    round_group__name=round_name
+                )
+            except CompetitionRound.DoesNotExist:
+                available_rounds = CompetitionRound.objects.filter(
+                    competition_category=competition_category
+                ).select_related('round_group')
+                
+                available_list = [r.round_group.name for r in available_rounds]
+                
+                return Response(
+                    {"detail": f"Round not found: {round_name}. Available: {available_list}"}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            updated_count = 0
+            errors = []
+
+            for i, athlete_data in enumerate(athletes_data):
+                climber_id = athlete_data.get('climber_id')
+                start_order = athlete_data.get('start_order')
+
+                if not climber_id or start_order is None:
+                    error_msg = f"Missing climber_id or start_order in athlete {i+1}: {athlete_data}"
+                    errors.append(error_msg)
+                    continue
+
+                try:
+                    round_result = RoundResult.objects.get(
+                        round=round_obj,
+                        climber_id=climber_id
+                    )
+                    
+                    round_result.start_order = start_order
+                    round_result.last_modified_by = request.user
+                    round_result.save()
+                    
+                    updated_count += 1
+
+                except RoundResult.DoesNotExist:
+                    error_msg = f"Round result not found for climber {climber_id} in round {round_name}"
+                    errors.append(error_msg)
+                except Exception as e:
+                    error_msg = f"Error updating climber {climber_id}: {str(e)}"
+                    errors.append(error_msg)
+
+            response_data = {
+                "status": "success" if updated_count > 0 else "error",
+                "updated_count": updated_count,
+                "total_athletes": len(athletes_data)
+            }
+
+            if errors:
+                response_data["errors"] = errors
+                if updated_count > 0:
+                    response_data["status"] = "partial_success"
+
+            status_code = status.HTTP_200_OK if updated_count > 0 else status.HTTP_400_BAD_REQUEST
+            return Response(response_data, status=status_code)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"detail": f"Unexpected error: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

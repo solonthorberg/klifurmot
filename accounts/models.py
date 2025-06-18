@@ -1,7 +1,8 @@
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
 import uuid
-from django.db import models
 
 from competitions.models import Competition
 
@@ -14,13 +15,6 @@ class Country(models.Model):
     def __str__(self):
         return f"{self.name_local} ({self.country_code})"
         
-
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
-
-from .models import Country  
-
 class UserAccount(models.Model):
     GENDER_CHOICES = [('KK', 'KK'), ('KVK', 'KVK')]
 
@@ -43,7 +37,6 @@ class UserAccount(models.Model):
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
-
 
 class CompetitionRole(models.Model):
     ROLE_CHOICES = [('athlete', 'Athlete'), ('admin', 'Admin'), ('judge', 'Judge')]

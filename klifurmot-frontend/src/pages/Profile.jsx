@@ -11,10 +11,17 @@ function Profile() {
     const token = localStorage.getItem("token");
     if (token) setAuthToken(token);
 
-    api.get("accounts/me/")
-      .then((res) => setMe(res.data))
+    api
+      .get("accounts/me/")
+      .then((res) => {
+        console.log("Profile data:", res.data); // 👈 Add this
+        setMe(res.data);
+      })
       .catch((err) => {
-        console.error("Error fetching profile:", err.response?.data || err.message);
+        console.error(
+          "Error fetching profile:",
+          err.response?.data || err.message
+        );
         setMe(null);
       });
   }, [editing]);
@@ -22,7 +29,11 @@ function Profile() {
   if (!me) return <p>Hleður inn...</p>;
 
   return editing ? (
-    <EditProfile me={me} onCancel={() => setEditing(false)} onSave={() => setEditing(false)} />
+    <EditProfile
+      me={me}
+      onCancel={() => setEditing(false)}
+      onSave={() => setEditing(false)}
+    />
   ) : (
     <ViewProfile me={me} onEdit={() => setEditing(true)} />
   );

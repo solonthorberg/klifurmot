@@ -71,7 +71,6 @@ def format_competition_results(competition_id):
 
 def broadcast_score_update(competition_id):
     data = format_competition_results(competition_id)
-    print("✅ Broadcasting result data:", data)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -103,7 +102,6 @@ def auto_advance_climbers(current_round):
     )
 
     if not next_round:
-        print("⚠️ No next round found.")
         return {"status": "error", "message": "No next round found"}
 
     # Determine how many climbers to advance based on the NEXT round's climbers_advance value

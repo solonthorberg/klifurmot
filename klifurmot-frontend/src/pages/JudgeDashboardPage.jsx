@@ -37,7 +37,8 @@ function JudgeDashboardPage() {
       return;
     }
 
-    api.get("accounts/me/")
+    api
+      .get("accounts/me/")
       .then((res) => {
         if (
           res.data.user.id === expectedJudge.user_id &&

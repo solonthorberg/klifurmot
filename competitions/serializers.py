@@ -1,5 +1,3 @@
-# competitions/serializers.py - Updated serializers
-
 from rest_framework import serializers
 from .models import Competition, CategoryGroup, CompetitionCategory, CompetitionRound, Boulder, JudgeBoulderAssignment, RoundGroup
 
@@ -42,8 +40,8 @@ class RoundSerializer(serializers.ModelSerializer):
                   'created_at', 'last_modified_at', 'last_modified_by', 'deleted']
         read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
         extra_kwargs = {
-            'round_group': {'write_only': True},  # Accept ID for writing
-            'competition_category': {'write_only': True}  # Accept ID for writing
+            'round_group': {'write_only': True},
+            'competition_category': {'write_only': True}
         }
 
 class BoulderSerializer(serializers.ModelSerializer):
@@ -55,7 +53,7 @@ class BoulderSerializer(serializers.ModelSerializer):
                   'created_by', 'created_at', 'last_modified_at', 'last_modified_by', 'deleted']
         read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
         extra_kwargs = {
-            'round': {'write_only': True}  # Accept ID for writing
+            'round': {'write_only': True}
         }
 
 class JudgeBoulderAssignmentSerializer(serializers.ModelSerializer):

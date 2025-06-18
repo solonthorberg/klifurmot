@@ -10,7 +10,6 @@ class ClimberSerializer(serializers.ModelSerializer):
         model = Climber
         fields = ['id', 'user_account']
 
-
 class CompetitionRegistrationSerializer(serializers.ModelSerializer):
     climber = ClimberSerializer()
     competition_category = CompetitionCategorySerializer()

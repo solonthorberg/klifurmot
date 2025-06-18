@@ -4,37 +4,58 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from rest_framework.views import APIView
 from django.contrib.auth import authenticate, get_user_model
-from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from .serializers import UserSerializer
-from rest_framework.views import APIView
-from competitions.models import Competition
-from django.shortcuts import get_object_or_404
+from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.conf import settings
-from django.utils.dateparse import parse_date
 
+from competitions.models import Competition
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
-from .serializers import CountrySerializer, UserAccountSerializer, CompetitionRoleSerializer, JudgeLinkSerializer
+from .serializers import (
+    CountrySerializer, UserAccountSerializer, CompetitionRoleSerializer, UserSerializer
+)
 
-# Create your views here.
+User = get_user_model()
+
+def serialize_user_response(user, token=None):
+    profile = getattr(user, 'profile', None)
+    return {
+        "token": token.key if token else None,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "full_name": user.get_full_name(),
+            "is_staff": user.is_staff,
+        },
+        "profile": {
+            "full_name": profile.full_name if profile else None,
+            "gender": profile.gender if profile else None,
+            "date_of_birth": profile.date_of_birth if profile else None,
+            "nationality": profile.nationality_id if profile else None,
+            "is_admin": profile.is_admin if profile else False,
+            "height_cm": profile.height_cm if profile else None,
+            "wingspan_cm": profile.wingspan_cm if profile else None,
+        } if profile else None
+    }
 
 class CountryViewSet(viewsets.ModelViewSet):
     queryset = Country.objects.all()
     serializer_class = CountrySerializer
     permission_classes = [AllowAny]
 
+
 class UserAccountViewSet(viewsets.ModelViewSet):
     queryset = UserAccount.objects.all()
     serializer_class = UserAccountSerializer
     permission_classes = [IsAuthenticated]
-
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
@@ -45,45 +66,22 @@ class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CompetitionRole.objects.all()
     serializer_class = CompetitionRoleSerializer
     permission_classes = [IsAuthenticated]
+
     def get_queryset(self):
         if self.request.user.is_staff:
             return CompetitionRole.objects.all()
-        elif hasattr(self.request.user, 'profile'):
+        if hasattr(self.request.user, 'profile'):
             return CompetitionRole.objects.filter(user=self.request.user.profile)
         return CompetitionRole.objects.none()
 
-
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data,
-                                           context={'request': request})
+        serializer = self.serializer_class(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(serialize_user_response(user, token))
 
-        
-        try:
-            profile = user.profile
-        except UserAccount.DoesNotExist:
-            profile = None
-
-        return Response({
-            'token': token.key,
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'full_name': user.get_full_name(),
-                'is_staff': user.is_staff,
-            },
-            'profile': {
-                'gender': profile.gender if profile else None,
-                'nationality': profile.nationality_id if profile else None,
-                'is_admin': profile.is_admin if profile else False,
-                'height_cm': profile.height_cm if profile else None,
-                'wingspan_cm': profile.wingspan_cm if profile else None,
-            } if profile else None
-        }, status=status.HTTP_200_OK)
-    
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me(request):
@@ -96,10 +94,9 @@ def me(request):
         if profile:
             profile.full_name = data.get('full_name', profile.full_name)
             profile.gender = data.get('gender', profile.gender)
-
             dob = data.get('date_of_birth')
-            profile.date_of_birth = parse_date(dob) if dob else None  # ✅ Safe parsing
-
+            if dob:
+                profile.date_of_birth = parse_date(dob)
             profile.nationality_id = data.get('nationality', profile.nationality_id)
             profile.height_cm = data.get('height_cm', profile.height_cm)
             profile.wingspan_cm = data.get('wingspan_cm', profile.wingspan_cm)
@@ -108,23 +105,7 @@ def me(request):
         user.email = data.get('email', user.email)
         user.save()
 
-    return Response({
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "full_name": profile.full_name if profile else None,
-            "is_staff": user.is_staff,
-        },
-        "profile": {
-            "gender": profile.gender if profile else None,
-            "date_of_birth": profile.date_of_birth if profile else None,
-            "nationality": profile.nationality_id if profile else None,
-            "is_admin": profile.is_admin if profile else False,
-            "height_cm": profile.height_cm if profile else None,
-            "wingspan_cm": profile.wingspan_cm if profile else None,
-        } if profile else None
-    }, status=status.HTTP_200_OK)
+    return Response(serialize_user_response(user))
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -136,51 +117,27 @@ def login(request):
     if not email or not password:
         return Response({"detail": "Missing credentials"}, status=400)
 
-    user = None
     try:
-        UserModel = get_user_model()
-        user_obj = UserModel.objects.get(email=email)
+        user_obj = User.objects.get(email=email)
         user = authenticate(username=user_obj.username, password=password)
-    except UserModel.DoesNotExist:
+    except User.DoesNotExist:
         return Response({"detail": "Invalid credentials"}, status=401)
 
     if user is not None:
         token, _ = Token.objects.get_or_create(user=user)
-        profile = getattr(user, 'profile', None)
-
-        return Response({
-            'token': token.key,
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'username': user.username,
-                'full_name': user.get_full_name(),
-                'is_staff': user.is_staff
-            },
-            'profile': {
-                'gender': profile.gender if profile else None,
-                'nationality': profile.nationality_id if profile else None,
-                'is_admin': profile.is_admin if profile else False,
-                'height_cm': profile.height_cm if profile else None,
-                'wingspan_cm': profile.wingspan_cm if profile else None,
-            } if profile else None
-        })
-    else:
-        return Response({"detail": "Invalid credentials"}, status=401)
+        return Response(serialize_user_response(user, token))
+    return Response({"detail": "Invalid credentials"}, status=401)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def google_login(request):
     token_from_client = request.data.get("token")
-
     if not token_from_client:
         return Response({"detail": "Missing token"}, status=400)
 
     try:
         idinfo = id_token.verify_oauth2_token(
-            token_from_client,
-            requests.Request(),
-            settings.GOOGLE_CLIENT_ID
+            token_from_client, requests.Request(), settings.GOOGLE_CLIENT_ID
         )
 
         email = idinfo["email"]
@@ -188,106 +145,55 @@ def google_login(request):
         first_name, *last_parts = full_name.strip().split(" ", 1)
         last_name = last_parts[0] if last_parts else ""
 
-        User = get_user_model()
-        user, created = User.objects.get_or_create(email=email, defaults={
+        user, _ = User.objects.get_or_create(email=email, defaults={
             "username": email.split("@")[0],
             "first_name": first_name,
             "last_name": last_name,
         })
-
         token, _ = Token.objects.get_or_create(user=user)
-
-        return Response({
-            "token": token.key,
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "username": user.username,
-                "full_name": user.get_full_name(),
-                "is_staff": user.is_staff
-            }
-        })
-
+        return Response(serialize_user_response(user, token))
     except ValueError:
         return Response({"detail": "Invalid Google token"}, status=401)
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
     data = request.data
-
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
     password2 = data.get('password2')
     full_name = data.get('full_name', '').strip()
 
-    # Basic validation
     if not username or not email or not password:
         return Response({"detail": "Username, email, and password are required."}, status=400)
-
     if password != password2:
         return Response({"detail": "Passwords do not match."}, status=400)
-
     if not full_name:
         return Response({"detail": "Full name is required."}, status=400)
-
     try:
         validate_email(email)
     except ValidationError:
         return Response({"detail": "Invalid email address."}, status=400)
-
     if len(password) < 8:
         return Response({"detail": "Password must be at least 8 characters long."}, status=400)
-
     if User.objects.filter(username=username).exists():
         return Response({"detail": "Username already exists."}, status=400)
-
     if User.objects.filter(email=email).exists():
         return Response({"detail": "Email already exists."}, status=400)
 
-    # Create the User
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password
-    )
-
-    # Get or create the UserAccount (in case it's auto-created via signal)
+    user = User.objects.create_user(username=username, email=email, password=password)
     profile, _ = UserAccount.objects.get_or_create(user=user)
-
-    # Update profile fields
     profile.full_name = full_name
     profile.gender = data.get('gender')
-    profile.date_of_birth = data.get('date_of_birth')
+    profile.date_of_birth = parse_date(data.get('date_of_birth')) if data.get('date_of_birth') else None
     profile.nationality_id = data.get('nationality')
     profile.height_cm = data.get('height_cm')
     profile.wingspan_cm = data.get('wingspan_cm')
     profile.save()
 
-    # Create auth token
     token, _ = Token.objects.get_or_create(user=user)
-
-    return Response({
-        "token": token.key,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "is_staff": user.is_staff
-        },
-        "profile": {
-            "full_name": profile.full_name,
-            "gender": profile.gender,
-            "nationality": profile.nationality_id,
-            "is_admin": profile.is_admin,
-            "height_cm": profile.height_cm,
-            "wingspan_cm": profile.wingspan_cm
-        }
-    }, status=status.HTTP_201_CREATED)
-
-
+    return Response(serialize_user_response(user, token), status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -329,8 +235,9 @@ class SendJudgeLinkView(APIView):
             }
         )
 
+        frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
         return Response({
-            "judge_link": f"http://localhost:5173/judge/login/{link.token}/",
+            "judge_link": f"{frontend_url}/judge/login/{link.token}/",
             "expires_at": link.expires_at,
             "is_used": link.is_used
         })
@@ -340,10 +247,8 @@ class SendJudgeLinkView(APIView):
 def validate_judge_token(request, token):
     try:
         link = JudgeLink.objects.get(token=token)
-
         if link.expires_at < timezone.now():
             return Response({"detail": "Link expired."}, status=400)
-
         return Response({
             "competition_id": link.competition.id,
             "competition_title": link.competition.title,

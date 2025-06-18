@@ -1,5 +1,70 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Sortable athlete row component
+function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: athlete.climber_id || athlete.id || `athlete-${index}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : isReordering ? 0.7 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    backgroundColor: isReordering ? "#f8f9fa" : "transparent",
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <td>{athlete.start_order}</td>
+      <td>
+        {athlete.full_name}
+        {isReordering && (
+          <span className="ms-2 text-muted">
+            <small>(Uppfæri...)</small>
+          </span>
+        )}
+      </td>
+      <td>{athlete.category || athlete.age_category}</td>
+      <td>{athlete.gender}</td>
+      <td>
+        <button
+          className="btn btn-sm btn-danger"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(athlete);
+          }}
+          disabled={isReordering}
+          style={{ pointerEvents: "auto" }}
+        >
+          ×
+        </button>
+      </td>
+    </tr>
+  );
+}
 
 function RegisterAthletes({ competitionId, goBack }) {
   const [startlist, setStartlist] = useState([]);
@@ -10,9 +75,11 @@ function RegisterAthletes({ competitionId, goBack }) {
   const [availableAthletes, setAvailableAthletes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [competitionTitle, setCompetitionTitle] = useState("");
-  const [advancing, setAdvancing] = useState(null); // Track which round is being advanced
-  const [rounds, setRounds] = useState([]); // Store round data with IDs
-  const [results, setResults] = useState([]); // Store results to check if round is complete
+  const [advancing, setAdvancing] = useState(null);
+  const [rounds, setRounds] = useState([]);
+  const [results, setResults] = useState([]);
+
+  const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
     fetchCompetitionDetails();
@@ -37,7 +104,23 @@ function RegisterAthletes({ competitionId, goBack }) {
       const res = await api.get(
         `/competitions/competitions/${competitionId}/startlist/`
       );
-      setStartlist(res.data);
+      console.log("📋 Startlist data received:", res.data);
+
+      // Add climber_id to athletes if missing
+      const processedData = res.data.map((category) => ({
+        ...category,
+        rounds: category.rounds.map((round) => ({
+          ...round,
+          athletes: round.athletes.map((athlete) => ({
+            ...athlete,
+            climber_id: athlete.climber_id || athlete.id, // Ensure climber_id exists
+            id: athlete.id || athlete.climber_id, // Ensure id exists
+          })),
+        })),
+      }));
+
+      console.log("📋 Processed startlist data:", processedData);
+      setStartlist(processedData);
 
       const allRounds = res.data.flatMap((cat) =>
         cat.rounds.map((r) => r.round_name)
@@ -56,6 +139,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   const fetchAvailableAthletes = async () => {
     try {
       const res = await api.get("/athletes/climbers/");
+      console.log("👥 Available athletes:", res.data);
       setAvailableAthletes(res.data);
     } catch (err) {
       console.error("Failed to load athletes:", err);
@@ -65,7 +149,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   const fetchResults = async () => {
     try {
       const res = await api.get(`/scoring/results/full/${competitionId}/`);
-      console.log("Results data:", res.data);
+      console.log("🏆 Results data:", res.data);
       setResults(res.data);
     } catch (err) {
       console.error("Failed to load results:", err);
@@ -74,21 +158,215 @@ function RegisterAthletes({ competitionId, goBack }) {
 
   const fetchRounds = async () => {
     try {
-      const res = await api.get(`/competitions/rounds/?competition_id=${competitionId}`);
-      console.log("Rounds data:", res.data); // Debug log
+      const res = await api.get(
+        `/competitions/rounds/?competition_id=${competitionId}`
+      );
+      console.log("🔄 Rounds data:", res.data);
       setRounds(res.data);
     } catch (err) {
       console.error("Failed to load rounds:", err);
     }
   };
 
+  const handleDragEnd = async (event, categoryName) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    console.log("🔄 Drag ended:", {
+      activeId: active.id,
+      overId: over.id,
+      category: categoryName,
+    });
+
+    // Find the category data
+    const categoryData = getCategoriesForRound().find(
+      (cat) => cat.category === categoryName
+    );
+
+    if (!categoryData) {
+      console.error("❌ Category not found:", categoryName);
+      return;
+    }
+
+    const athletes = [...categoryData.athletes];
+    console.log("👥 Athletes in category before processing:", athletes);
+
+    // Find the indices for the dragged items - try multiple ID strategies
+    let oldIndex = -1;
+    let newIndex = -1;
+
+    // Strategy 1: Try climber_id
+    oldIndex = athletes.findIndex(
+      (athlete) => athlete.climber_id?.toString() === active.id?.toString()
+    );
+    newIndex = athletes.findIndex(
+      (athlete) => athlete.climber_id?.toString() === over.id?.toString()
+    );
+
+    // Strategy 2: Try id if climber_id didn't work
+    if (oldIndex === -1 || newIndex === -1) {
+      oldIndex = athletes.findIndex(
+        (athlete) => athlete.id?.toString() === active.id?.toString()
+      );
+      newIndex = athletes.findIndex(
+        (athlete) => athlete.id?.toString() === over.id?.toString()
+      );
+    }
+
+    // Strategy 3: Try start_order as backup
+    if (oldIndex === -1 || newIndex === -1) {
+      const activeOrder = active.id?.toString().replace("athlete-", "");
+      const overOrder = over.id?.toString().replace("athlete-", "");
+      oldIndex = athletes.findIndex(
+        (athlete) => athlete.start_order?.toString() === activeOrder
+      );
+      newIndex = athletes.findIndex(
+        (athlete) => athlete.start_order?.toString() === overOrder
+      );
+    }
+
+    console.log("🎯 Found indices:", {
+      oldIndex,
+      newIndex,
+      activeId: active.id,
+      overId: over.id,
+    });
+
+    if (oldIndex === -1 || newIndex === -1) {
+      console.error("❌ Could not find athlete indices", {
+        oldIndex,
+        newIndex,
+        activeId: active.id,
+        overId: over.id,
+        athleteIds: athletes.map((a) => ({
+          climber_id: a.climber_id,
+          id: a.id,
+          start_order: a.start_order,
+        })),
+      });
+      return;
+    }
+
+    console.log(`📍 Moving athlete from position ${oldIndex} to ${newIndex}`);
+
+    // Reorder the athletes
+    const reorderedAthletes = arrayMove(athletes, oldIndex, newIndex);
+
+    // Update start orders
+    const updatedAthletes = reorderedAthletes.map((athlete, index) => ({
+      ...athlete,
+      start_order: index + 1,
+    }));
+
+    // Show loading state
+    setStartlist((prevStartlist) =>
+      prevStartlist.map((cat) => {
+        if (cat.category === categoryName) {
+          return {
+            ...cat,
+            isReordering: true,
+            rounds: cat.rounds.map((round) => {
+              if (round.round_name === activeRound) {
+                return {
+                  ...round,
+                  athletes: updatedAthletes,
+                };
+              }
+              return round;
+            }),
+          };
+        }
+        return cat;
+      })
+    );
+
+    try {
+      // Prepare payload for backend - ensure we have the right IDs
+      const athletesPayload = updatedAthletes.map((athlete, index) => {
+        const climberId = athlete.climber_id || athlete.id;
+        console.log(`🏃‍♂️ Athlete ${index + 1}:`, {
+          name: athlete.full_name,
+          climber_id: climberId,
+          start_order: index + 1,
+        });
+
+        if (!climberId) {
+          console.error("❌ Missing climber_id for athlete:", athlete);
+        }
+
+        return {
+          climber_id: climberId,
+          start_order: index + 1,
+        };
+      });
+
+      const payload = {
+        competition: parseInt(competitionId),
+        category: categoryName,
+        round: activeRound,
+        athletes: athletesPayload,
+      };
+
+      console.log("📤 Sending payload to backend:", payload);
+
+      // Send the updated order to the backend
+      const response = await api.post(
+        "/competitions/update-start-order/",
+        payload
+      );
+
+      console.log("✅ Start order updated successfully:", response.data);
+    } catch (err) {
+      console.error(
+        "❌ Failed to update start order:",
+        err.response?.data || err
+      );
+      console.error("❌ Full error object:", err);
+
+      // Revert the local state and show error
+      await fetchStartlist();
+
+      let errorMsg = "Ekki tókst að uppfæra röðun";
+      if (err.response?.data?.detail) {
+        errorMsg += `: ${err.response.data.detail}`;
+      } else if (err.response?.data?.errors) {
+        errorMsg += `: ${err.response.data.errors.join(", ")}`;
+      }
+
+      alert(errorMsg);
+    } finally {
+      // Remove loading state
+      setStartlist((prevStartlist) =>
+        prevStartlist.map((cat) => {
+          if (cat.category === categoryName) {
+            return {
+              ...cat,
+              isReordering: false,
+            };
+          }
+          return cat;
+        })
+      );
+    }
+  };
+
   const handleAdvanceClimbers = async (categoryName, currentRoundName) => {
-    console.log("🔥 ADVANCING CLIMBERS FROM:", currentRoundName);
-    
-    // Find rounds for this specific category
+    console.log(
+      "🚀 Advancing climbers from:",
+      currentRoundName,
+      "in category:",
+      categoryName
+    );
+
     const categoryRounds = rounds
-      .filter(round => {
-        if (!round?.competition_category_detail?.category_group_detail?.name || !round?.competition_category_detail?.gender) {
+      .filter((round) => {
+        if (
+          !round?.competition_category_detail?.category_group_detail?.name ||
+          !round?.competition_category_detail?.gender
+        ) {
           return false;
         }
         const roundCategoryName = `${round.competition_category_detail.category_group_detail.name} ${round.competition_category_detail.gender}`;
@@ -96,18 +374,17 @@ function RegisterAthletes({ competitionId, goBack }) {
       })
       .sort((a, b) => a.round_order - b.round_order);
 
-    console.log("Category rounds found:", categoryRounds);
+    console.log("🔍 Category rounds found:", categoryRounds);
 
-    const currentRoundIndex = categoryRounds.findIndex(r => 
-      r.round_group_detail?.name === currentRoundName
+    const currentRoundIndex = categoryRounds.findIndex(
+      (r) => r.round_group_detail?.name === currentRoundName
     );
-    
+
     if (currentRoundIndex === -1) {
       alert("Gat ekki fundið núverandi umferð.");
       return;
     }
 
-    // Get the current round (FROM) and next round (TO)
     const currentRound = categoryRounds[currentRoundIndex];
     const nextRound = categoryRounds[currentRoundIndex + 1];
 
@@ -116,54 +393,27 @@ function RegisterAthletes({ competitionId, goBack }) {
       return;
     }
 
-    console.log("Advancing FROM round:", currentRound.id, currentRoundName);
-    console.log("Advancing TO round:", nextRound.id, nextRound.round_group_detail.name);
-
-    console.log("🔍 About to show confirmation dialog...");
-    console.log("🔍 currentRound:", currentRound);
-    console.log("🔍 nextRound:", nextRound);
-    console.log("🔍 nextRound.round_group_detail:", nextRound.round_group_detail);
-    console.log("🔍 nextRound.round_group_detail.name:", nextRound.round_group_detail.name);
-
-    const confirmMessage = `Ertu viss um að þú viljir flytja bestu keppendur úr ${currentRoundName} í ${nextRound.round_group_detail.name}?`;
-    
-    console.log("🔍 Confirmation message:", confirmMessage);
-    console.log("🔍 Calling window.confirm...");
-    
-    const userConfirmed = window.confirm(confirmMessage);
-    console.log("🔍 User confirmation result:", userConfirmed);
-    
-    if (!userConfirmed) {
-      console.log("🔍 User cancelled the operation");
-      return;
-    }
-
-    console.log("🔍 User confirmed, proceeding with API call...");
+    console.log("➡️ Advancing FROM round:", currentRound.id, currentRoundName);
+    console.log(
+      "➡️ Advancing TO round:",
+      nextRound.id,
+      nextRound.round_group_detail.name
+    );
 
     try {
       setAdvancing(`${categoryName}-${currentRoundName}`);
-      
-      console.log("🚀 Making API call to:", `/scoring/advance/${currentRound.id}/`);
-      
-      // Use the CURRENT round ID (the one we're advancing FROM)
+
       const response = await api.post(`/scoring/advance/${currentRound.id}/`);
-      
-      console.log("🎯 API Response received:", response);
-      console.log("🎯 Response data:", response.data);
-      console.log("🎯 Response status:", response.status);
-      
+
       if (response.data.status === "ok") {
         const message = `✅ Tókst að flytja ${response.data.advanced} keppendur úr ${currentRoundName} í ${nextRound.round_group_detail.name}!`;
         console.log("✅ SUCCESS:", message);
         alert(message);
-        
-        // Refresh the startlist to show updated information
-        console.log("🔄 Refreshing startlist...");
+
         await fetchStartlist();
-        console.log("🔄 Refreshing results...");
-        await fetchResults(); // Also refresh results
-        
-        console.log("✅ Data refreshed after advancing climbers");
+        await fetchResults();
+
+        console.log("🔄 Data refreshed after advancing climbers");
       } else {
         const errorMsg = `Villa: ${response.data.message || "Óþekkt villa"}`;
         console.error("❌ Advance failed:", response.data);
@@ -171,36 +421,43 @@ function RegisterAthletes({ competitionId, goBack }) {
       }
     } catch (err) {
       console.error("❌ ERROR during advance:", err);
-      console.error("❌ Error response:", err.response);
-      console.error("❌ Error data:", err.response?.data);
-      
-      const errorMessage = err.response?.data?.detail || "Ekki tókst að flytja keppendur.";
+      const errorMessage =
+        err.response?.data?.detail || "Ekki tókst að flytja keppendur.";
       alert(`Villa: ${errorMessage}`);
     } finally {
-      console.log("🏁 Finishing advance operation");
       setAdvancing(null);
     }
   };
 
   const handleRemoveAthlete = async (athlete, category) => {
-    console.log("Removing athlete", athlete, "from", category);
+    console.log("🗑️ Removing athlete", athlete.full_name, "from", category);
 
     try {
-      const res = await api.post("/competitions/remove-athlete/", {
+      const payload = {
         competition: competitionId,
         category: category,
         round: activeRound,
         start_order: athlete.start_order,
-      });
+      };
 
-      console.log(`${athlete.full_name} removed from ${category}`);
+      console.log("📤 Remove payload:", payload);
+
+      const res = await api.post("/competitions/remove-athlete/", payload);
+
+      console.log(`✅ ${athlete.full_name} removed from ${category}`);
       await fetchStartlist();
     } catch (err) {
-      console.error("Failed to remove athlete:", err.response?.data || err);
+      console.error("❌ Failed to remove athlete:", err.response?.data || err);
+      alert(
+        `Ekki tókst að fjarlægja keppanda: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
     }
   };
 
   const handleAddAthlete = (category) => {
+    console.log("➕ Adding athlete to category:", category);
     setSelectedCategory(category);
     setShowAddModal(true);
     setSearchQuery("");
@@ -209,19 +466,41 @@ function RegisterAthletes({ competitionId, goBack }) {
   const handleSelectAthlete = async (athlete) => {
     if (!selectedCategory || !activeRound) return;
 
+    console.log(
+      "🎯 Selecting athlete:",
+      athlete.user_account?.full_name,
+      "for category:",
+      selectedCategory
+    );
+
     try {
-      const response = await api.post("/competitions/register-athlete/", {
+      const payload = {
         competition: competitionId,
         category: selectedCategory,
         round: activeRound,
         climber: athlete.id,
-      });
+      };
 
-      console.log("Athlete registered:", response.data);
+      console.log("📤 Register athlete payload:", payload);
+
+      const response = await api.post(
+        "/competitions/register-athlete/",
+        payload
+      );
+
+      console.log("✅ Athlete registered:", response.data);
       await fetchStartlist();
       setShowAddModal(false);
     } catch (err) {
-      console.error("Failed to register athlete:", err.response?.data || err);
+      console.error(
+        "❌ Failed to register athlete:",
+        err.response?.data || err
+      );
+      alert(
+        `Ekki tókst að skrá keppanda: ${
+          err.response?.data?.detail || err.message
+        }`
+      );
     }
   };
 
@@ -234,7 +513,12 @@ function RegisterAthletes({ competitionId, goBack }) {
       .map((cat) => {
         const round = cat.rounds.find((r) => r.round_name === activeRound);
         return round
-          ? { category: cat.category, athletes: round.athletes || [], roundData: round }
+          ? {
+              category: cat.category,
+              athletes: round.athletes || [],
+              roundData: round,
+              isReordering: cat.isReordering || false,
+            }
           : null;
       })
       .filter(Boolean);
@@ -253,67 +537,49 @@ function RegisterAthletes({ competitionId, goBack }) {
   };
 
   const hasResultsForRound = (categoryName, roundName) => {
-    console.log("=== Checking results for ===");
-    console.log("Looking for category:", categoryName);
-    console.log("Looking for round:", roundName);
-    
-    const categoryResults = results.find(r => {
+    const categoryResults = results.find((r) => {
       if (!r.category || !r.category.group) {
         return false;
       }
-      
+
       const resultCategoryName = `${r.category.group.name} ${r.category.gender}`;
       return resultCategoryName === categoryName;
     });
-    
+
     if (!categoryResults || !categoryResults.rounds) {
       return false;
     }
-    
-    const roundResults = categoryResults.rounds.find(r => {
+
+    const roundResults = categoryResults.rounds.find((r) => {
       return r.round_name === roundName;
     });
-    
+
     if (!roundResults || !roundResults.results) {
       return false;
     }
-    
-    const hasResults = roundResults.results.length > 0;
-    console.log("Has results for", categoryName, roundName, ":", hasResults);
-    
-    return hasResults;
+
+    return roundResults.results.length > 0;
   };
 
   const getNextRoundForCategory = (categoryName, currentRoundName) => {
-    console.log("🔍 Finding next round for:", categoryName, "current:", currentRoundName);
-    console.log("🔍 All rounds available:", rounds);
-    
-    // Find all rounds for this specific category
     const categoryRounds = rounds
-      .filter(round => {
-        if (!round?.competition_category_detail?.category_group_detail?.name || !round?.competition_category_detail?.gender) {
-          console.log("❌ Round missing category data:", round);
+      .filter((round) => {
+        if (
+          !round?.competition_category_detail?.category_group_detail?.name ||
+          !round?.competition_category_detail?.gender
+        ) {
           return false;
         }
-        
-        // Build the category name from the round data
+
         const roundCategoryName = `${round.competition_category_detail.category_group_detail.name} ${round.competition_category_detail.gender}`;
-        console.log("🔍 Comparing:", roundCategoryName, "vs", categoryName);
-        
         return roundCategoryName === categoryName;
       })
       .sort((a, b) => a.round_order - b.round_order);
 
-    console.log("🔍 Filtered category rounds:", categoryRounds);
-
-    const currentRoundIndex = categoryRounds.findIndex(r => 
-      r.round_group_detail?.name === currentRoundName
+    const currentRoundIndex = categoryRounds.findIndex(
+      (r) => r.round_group_detail?.name === currentRoundName
     );
-    
-    console.log("🔍 Current round index:", currentRoundIndex);
-    console.log("🔍 Next round would be:", categoryRounds[currentRoundIndex + 1]);
-    
-    // Return the next round
+
     return categoryRounds[currentRoundIndex + 1] || null;
   };
 
@@ -365,19 +631,12 @@ function RegisterAthletes({ competitionId, goBack }) {
         {getCategoriesForRound().map((cat, idx) => {
           const nextRound = getNextRoundForCategory(cat.category, activeRound);
           const isAdvancing = advancing === `${cat.category}-${activeRound}`;
-          const hasCurrentResults = hasResultsForRound(cat.category, activeRound);
-          
-          // Show advance button if there's a next round AND current round has results
+          const hasCurrentResults = hasResultsForRound(
+            cat.category,
+            activeRound
+          );
           const showAdvanceButton = nextRound && hasCurrentResults;
-          
-          console.log("Button logic for", cat.category, ":", {
-            showAdvanceButton,
-            hasCurrentResults,
-            currentRound: activeRound,
-            nextRound: nextRound ? nextRound.round_group_detail.name : null,
-            isAdvancing
-          });
-          
+
           return (
             <div key={idx} className="col-md-6 mb-4">
               <div className="card">
@@ -387,23 +646,22 @@ function RegisterAthletes({ competitionId, goBack }) {
                     <button
                       className="btn btn-sm btn-primary"
                       onClick={() => handleAddAthlete(cat.category)}
+                      disabled={cat.isReordering}
                     >
                       + Keppandi
                     </button>
                     {showAdvanceButton && (
                       <button
                         className="btn btn-sm btn-success"
-                        onClick={() => {
-                          console.log("🔥 BUTTON CLICKED!");
-                          console.log("Category:", cat.category);
-                          console.log("Current round:", activeRound);
-                          console.log("Next round:", nextRound.round_group_detail.name);
-                          handleAdvanceClimbers(cat.category, activeRound);
-                        }}
-                        disabled={isAdvancing}
+                        onClick={() =>
+                          handleAdvanceClimbers(cat.category, activeRound)
+                        }
+                        disabled={isAdvancing || cat.isReordering}
                         title={`Flytja bestu keppendur úr ${activeRound} í ${nextRound.round_group_detail.name}`}
                       >
-                        {isAdvancing ? "Flyti..." : `Flytja í ${nextRound.round_group_detail.name}`}
+                        {isAdvancing
+                          ? "Flyti..."
+                          : `Flytja í ${nextRound.round_group_detail.name}`}
                       </button>
                     )}
                     {nextRound && !hasCurrentResults && (
@@ -425,44 +683,60 @@ function RegisterAthletes({ competitionId, goBack }) {
                     <p className="text-muted">Engir keppendur skráðir</p>
                   ) : (
                     <div className="table-responsive">
-                      <table className="table table-sm">
-                        <thead>
-                          <tr>
-                            <th>Nr.</th>
-                            <th>Nafn</th>
-                            <th>Flokkur</th>
-                            <th>Kyn</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cat.athletes.map((athlete, i) => (
-                            <tr key={`${athlete.full_name}-${i}`}>
-                              <td>{athlete.start_order}</td>
-                              <td>{athlete.full_name}</td>
-                              <td>{athlete.category}</td>
-                              <td>{athlete.gender}</td>
-                              <td>
-                                <button
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() =>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) =>
+                          handleDragEnd(event, cat.category)
+                        }
+                      >
+                        <table className="table table-sm">
+                          <thead>
+                            <tr>
+                              <th>Nr.</th>
+                              <th>Nafn</th>
+                              <th>Flokkur</th>
+                              <th>Kyn</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <SortableContext
+                              items={cat.athletes.map(
+                                (athlete, i) =>
+                                  athlete.climber_id ||
+                                  athlete.id ||
+                                  `athlete-${i}`
+                              )}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {cat.athletes.map((athlete, i) => (
+                                <SortableAthleteRow
+                                  key={
+                                    athlete.climber_id ||
+                                    athlete.id ||
+                                    `athlete-${i}`
+                                  }
+                                  athlete={athlete}
+                                  index={i}
+                                  isReordering={cat.isReordering}
+                                  onRemove={(athlete) =>
                                     handleRemoveAthlete(athlete, cat.category)
                                   }
-                                >
-                                  ×
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                />
+                              ))}
+                            </SortableContext>
+                          </tbody>
+                        </table>
+                      </DndContext>
                     </div>
                   )}
                 </div>
                 {showAdvanceButton && (
                   <div className="card-footer">
                     <small className="text-muted">
-                      Flytur úr: {activeRound} → {nextRound.round_group_detail.name}
+                      Flytur úr: {activeRound} →{" "}
+                      {nextRound.round_group_detail.name}
                     </small>
                   </div>
                 )}
@@ -539,8 +813,12 @@ function RegisterAthletes({ competitionId, goBack }) {
       )}
 
       <div className="alert alert-info mt-4">
-        <strong>Athugið:</strong> Til að nota "Flytja" takkann þarf að vera búinn að skrá niðurstöður fyrir núverandi umferð. 
-        Kerfið flytur sjálfkrafa bestu keppendur út frá stigagjöf í næstu umferð.
+        <strong>Athugið:</strong> Til að nota "Flytja" takkann þarf að vera
+        búinn að skrá niðurstöður fyrir núverandi umferð. Kerfið flytur
+        sjálfkrafa bestu keppendur út frá stigagjöf í næstu umferð.
+        <br />
+        <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
+        ráslista röðun.
       </div>
     </div>
   );

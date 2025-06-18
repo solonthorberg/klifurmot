@@ -3,7 +3,7 @@ function ViewProfile({ me, onEdit }) {
     <div>
       <h2>Velkomin(n), {me.user.username}</h2>
       <p>Netfang: {me.user.email}</p>
-      <p>Fullt nafn: {me.user.full_name}</p>
+      <p>Fullt nafn: {me.profile?.full_name || "–"}</p>
       <p>Fæðingardagur: {me.profile?.date_of_birth || "–"}</p>
       <p>Kyn: {me.profile?.gender || "–"}</p>
       <p>Þjóðerni: {me.profile?.nationality || "–"}</p>

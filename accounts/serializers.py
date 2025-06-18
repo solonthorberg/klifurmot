@@ -4,14 +4,13 @@ from .models import Country, UserAccount, CompetitionRole, JudgeLink, User
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Country
-        fields = '__all__'
+        fields = ['country_code', 'name_en', 'name_local']
 
 class UserAccountSerializer(serializers.ModelSerializer):
     nationality = CountrySerializer()
     class Meta:
         model = UserAccount
         fields = '__all__'
-
 
 class JudgeLinkSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,8 +29,3 @@ class CompetitionRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompetitionRole
         fields = ['id', 'user', 'user_name', 'competition', 'competition_title', 'role']
-
-class CountrySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Country
-        fields = ['country_code', 'name_en', 'name_local']
