@@ -655,16 +655,3 @@ class UpdateStartOrderView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-
-def api_root(request):
-    return JsonResponse({
-        'message': 'Klifurmót API',
-        'version': '1.0',
-        'endpoints': {
-            'competitions': '/api/competitions/',
-            'athletes': '/api/athletes/',
-            'accounts': '/api/accounts/',
-            'scoring': '/api/scoring/',
-            'admin': '/admin/',
-        }
-    })
