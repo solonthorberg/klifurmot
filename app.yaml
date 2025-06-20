@@ -1,15 +1,16 @@
 name: klifurmot
 services:
-  # Backend API + WebSocket service
+  # Backend API service
   - name: web
     source_dir: /
     github:
-      repo: solonthorberg/klifurmot # CHANGE THIS TO YOUR ACTUAL REPO
+      repo: solonthorberg/klifurmot
       branch: main
+    build_command: |
+      python manage.py collectstatic --noinput
     run_command: |
-      python manage.py migrate &&
-      python manage.py collectstatic --noinput &&
-      daphne -b 0.0.0.0 -p 8080 klifurmot.asgi:application
+      python manage.py migrate --noinput &&
+      gunicorn --bind 0.0.0.0:8080 --workers 2 klifurmot.wsgi:application
     environment_slug: python
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -36,12 +37,10 @@ services:
   - name: frontend
     source_dir: /klifurmot-frontend
     github:
-      repo: solonthorberg/klifurmot # SAME REPO AS ABOVE
+      repo: solonthorberg/klifurmot
       branch: main
-    build_command: |
-      npm ci &&
-      npm run build
-    run_command: npx serve -s dist -l 8080
+    build_command: npm ci && npm run build
+    run_command: npx serve -s dist -p 8080 --single
     environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs
