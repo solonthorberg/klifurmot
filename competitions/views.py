@@ -1,4 +1,5 @@
 from datetime import date
+from django.http import JsonResponse
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -653,3 +654,17 @@ class UpdateStartOrderView(APIView):
                 {"detail": f"Unexpected error: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+
+def api_root(request):
+    return JsonResponse({
+        'message': 'Klifurmót API',
+        'version': '1.0',
+        'endpoints': {
+            'competitions': '/api/competitions/',
+            'athletes': '/api/athletes/',
+            'accounts': '/api/accounts/',
+            'scoring': '/api/scoring/',
+            'admin': '/admin/',
+        }
+    })
