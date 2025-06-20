@@ -11,7 +11,19 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-i0r$poq*ya7^hq1d)ouvq
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# ALLOWED_HOSTS configuration with fallback
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+
+# Add the Digital Ocean domain explicitly
+if not any('klifurmot-ygk2g.ondigitalocean.app' in host for host in ALLOWED_HOSTS):
+    ALLOWED_HOSTS.append('klifurmot-ygk2g.ondigitalocean.app')
+
+# For production, also add wildcard for ondigitalocean.app
+if not DEBUG:
+    ALLOWED_HOSTS.extend([
+        'klifurmot-ygk2g.ondigitalocean.app',
+        '.ondigitalocean.app',  # Allow any subdomain of ondigitalocean.app
+    ])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -56,11 +68,11 @@ if DEBUG:
 else:
     # Production CORS settings
     CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', 
-        default='https://klifurmot.ondigitalocean.app',
+        default='https://klifurmot-ygk2g.ondigitalocean.app',
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
     CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-        default='https://klifurmot-web.ondigitalocean.app,https://klifurmot.ondigitalocean.app',
+        default='https://klifurmot-ygk2g.ondigitalocean.app',
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
 
