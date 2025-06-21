@@ -151,8 +151,36 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+if not DEBUG:
+    # Production: Use Digital Ocean Spaces
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    
+    # Digital Ocean Spaces settings
+    AWS_ACCESS_KEY_ID = config('SPACES_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY = config('SPACES_SECRET_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('SPACES_BUCKET_NAME', default='klifurmot-media')
+    AWS_S3_ENDPOINT_URL = config('SPACES_ENDPOINT_URL', default='https://lon1.digitaloceanspaces.com')
+    AWS_S3_REGION_NAME = config('SPACES_REGION', default='lon1')
+    
+    # CDN domain (if using CDN)
+    AWS_S3_CUSTOM_DOMAIN = config('SPACES_CDN_DOMAIN', default=None)
+    
+    # File settings
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',  # Cache for 1 day
+    }
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
+    
+    # Media URL configuration
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+    else:
+        MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+else:
+    # Development: Use local media files
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
