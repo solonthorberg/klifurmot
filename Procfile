@@ -1,1 +1,0 @@
-web: python manage.py collectstatic --noinput && daphne -p $PORT -b 0.0.0.0 klifurmot.asgi:application
