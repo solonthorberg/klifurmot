@@ -22,7 +22,7 @@ def api_root(request):
     })
 
 urlpatterns = [
-    path('', api_root, name='api-root'),  # Handle root URL
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/athletes/', include('athletes.urls')),
