@@ -3,16 +3,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, SAFE_METHODS
 from rest_framework.decorators import action
-from .utils import format_competition_results, auto_advance_climbers, update_round_score_for_climb
+from .utils import FormatCompetitionResults, AutoAdvanceClimbers, UpdateRoundScoreForBoulder
 from competitions.models import Boulder, CompetitionRound
 from .models import RoundResult, Climb, ClimberRoundScore
 from .serializers import RoundResultSerializer, ClimbSerializer, ClimberRoundScoreSerializer
 from accounts.models import CompetitionRole
 from django.utils import timezone
-from .utils import broadcast_score_update
+from .utils import BroadcastScoreUpdate
 
 from accounts.permissions import (
-    IsAdminOrReadOnly,
     IsAuthenticatedOrReadOnly,
 )
 
@@ -99,16 +98,16 @@ class ClimbViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Boulder not found"}, status=404)
 
         try:
-            climb = Climb.objects.filter(climber_id=climber_id, boulder=boulder).first()
-            if climb:
-                climb.judge = user
-                climb.attempts_top = int(data.get("attempts_top", 0))
-                climb.attempts_zone = int(data.get("attempts_zone", 0))
-                climb.top_reached = data.get("top_reached", False)
-                climb.zone_reached = data.get("zone_reached", False)
-                climb.save()
+            boulder_climb = Climb.objects.filter(climber_id=climber_id, boulder=boulder).first()
+            if boulder_climb:
+                boulder_climb.judge = user
+                boulder_climb.attempts_top = int(data.get("attempts_top", 0))
+                boulder_climb.attempts_zone = int(data.get("attempts_zone", 0))
+                boulder_climb.top_reached = data.get("top_reached", False)
+                boulder_climb.zone_reached = data.get("zone_reached", False)
+                boulder_climb.save()
             else:
-                climb = Climb.objects.create(
+                boulder_climb = Climb.objects.create(
                     climber_id=climber_id,
                     boulder=boulder,
                     judge=user,
@@ -117,9 +116,9 @@ class ClimbViewSet(viewsets.ModelViewSet):
                     top_reached=data.get("top_reached", False),
                     zone_reached=data.get("zone_reached", False),
                 )
-            update_round_score_for_climb(climb)
-            update_round_results(climb.boulder.round)
-            return Response({"status": "success", "climb_id": climb.id}, status=200)
+            UpdateRoundScoreForBoulder(boulder_climb)
+            UpdateRoundResults(boulder_climb.boulder.round)
+            return Response({"status": "success", "climb_id": boulder_climb.id}, status=200)
         except Exception as e:
             return Response({"detail": str(e)}, status=400)
 
@@ -213,7 +212,7 @@ class FullCompetitionResultsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, competition_id):
-        data = format_competition_results(competition_id)
+        data = FormatCompetitionResults(competition_id)
         return Response(data)
     
 class AdvanceClimbersView(APIView):
@@ -225,10 +224,10 @@ class AdvanceClimbersView(APIView):
         except CompetitionRound.DoesNotExist:
             return Response({"detail": "Invalid round ID."}, status=404)
 
-        result = auto_advance_climbers(current_round)
+        result = AutoAdvanceClimbers(current_round)
         return Response(result)
     
-def update_round_results(round_obj):
+def UpdateRoundResults(round_obj):
     """
     Recalculates and updates ranks in RoundResult based on ClimberRoundScores
     for the given round.
@@ -285,4 +284,4 @@ def update_round_results(round_obj):
         previous_score = score.total_score
 
 
-    broadcast_score_update(round_obj.competition_category.competition_id)
+    BroadcastScoreUpdate(round_obj.competition_category.competition_id)

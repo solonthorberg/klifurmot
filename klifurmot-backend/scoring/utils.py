@@ -4,7 +4,7 @@ from scoring.models import ClimberRoundScore, RoundResult
 from competitions.models import CompetitionCategory, CompetitionRound
 
 
-def format_competition_results(competition_id):
+def FormatCompetitionResults(competition_id):
     categories_data = []
 
     categories = CompetitionCategory.objects.filter(
@@ -69,8 +69,8 @@ def format_competition_results(competition_id):
 
 
 
-def broadcast_score_update(competition_id):
-    data = format_competition_results(competition_id)
+def BroadcastScoreUpdate(competition_id):
+    data = FormatCompetitionResults(competition_id)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -82,9 +82,9 @@ def broadcast_score_update(competition_id):
     )
 
 
-from scoring.utils import broadcast_score_update 
+from scoring.utils import BroadcastScoreUpdate 
 
-def auto_advance_climbers(current_round):
+def AutoAdvanceClimbers(current_round):
     """
     Auto-advance climbers to the next round for the same category
     """
@@ -152,29 +152,29 @@ def auto_advance_climbers(current_round):
         if created:
             added += 1
 
-    broadcast_score_update(current_round.competition_category.competition_id)
+    BroadcastScoreUpdate(current_round.competition_category.competition_id)
 
     return {"status": "ok", "advanced": added, "next_round_id": next_round.id}
 
 
-def update_round_score_for_climb(climb):
-    climber = climb.climber
-    round_obj = climb.boulder.round
+def UpdateRoundScoreForBoulder(boulder):
+    climber = boulder.climber
+    round_obj = boulder.boulder.round
 
     if not climber or not round_obj:
         return
 
-    climbs = climber.climb_set.filter(boulder__round=round_obj)
+    boulder_climbs = climber.climb_set.filter(boulder__round=round_obj)
 
-    total_tops = sum(1 for c in climbs if c.top_reached)
-    total_zones = sum(1 for c in climbs if c.zone_reached)
-    attempts_tops = sum(c.attempts_top for c in climbs if c.top_reached)
-    attempts_zones = sum(c.attempts_zone for c in climbs if c.zone_reached)
+    total_tops = sum(1 for c in boulder_climbs if c.top_reached)
+    total_zones = sum(1 for c in boulder_climbs if c.zone_reached)
+    attempts_tops = sum(c.attempts_top for c in boulder_climbs if c.top_reached)
+    attempts_zones = sum(c.attempts_zone for c in boulder_climbs if c.zone_reached)
 
     zone_score = 0
     top_score = 0
 
-    for c in climbs:
+    for c in boulder_climbs:
         if c.top_reached:
             top_score += 25 - 0.1 * (c.attempts_top - 1)
         elif c.zone_reached:

@@ -98,7 +98,7 @@ function JudgeLinkSection({ competitionId }) {
 
   const fetchAvailableJudges = async () => {
     try {
-      const res = await api.get("/accounts/users/");
+      const res = await api.get("/accounts/user-accounts/");
       setAvailableJudges(res.data);
     } catch (err) {
       console.error("Failed to fetch judges:", err);

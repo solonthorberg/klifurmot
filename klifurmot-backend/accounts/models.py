@@ -4,8 +4,6 @@ from django.db import models
 from django.utils import timezone
 import uuid
 
-from competitions.models import Competition
-
 # Create your models here.
 
 class Country(models.Model):
@@ -30,9 +28,7 @@ class UserAccount(models.Model):
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
-    last_modified_by = models.ForeignKey(
-        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
-    )
+    last_modified_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -42,7 +38,7 @@ class CompetitionRole(models.Model):
     ROLE_CHOICES = [('athlete', 'Athlete'), ('admin', 'Admin'), ('judge', 'Judge')]
 
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
-    competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
+    competition = models.ForeignKey('competitions.Competition', on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     created_by = models.ForeignKey(UserAccount, on_delete=models.SET_NULL, null=True, related_name='+')
     created_at = models.DateTimeField(default=timezone.now)
@@ -57,12 +53,8 @@ class CompetitionRole(models.Model):
         return f"{self.user} - {self.role} at {self.competition}"
 
 class JudgeLink(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='judge_links_as_user'
-    )
-    competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name='judge_links_as_user')
+    competition = models.ForeignKey('competitions.Competition', on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)

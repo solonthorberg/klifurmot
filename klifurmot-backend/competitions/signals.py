@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from .models import CompetitionRound, Boulder
 
 @receiver(post_save, sender=CompetitionRound)
-def create_boulders_for_round(sender, instance, created, **kwargs):
+def CreateBouldersForRound(sender, instance, created, **kwargs):
     """
     Automatically create boulders when a new round is created
     """
@@ -23,7 +23,7 @@ def create_boulders_for_round(sender, instance, created, **kwargs):
         Boulder.objects.bulk_create(boulders_to_create)
 
 @receiver(post_save, sender=CompetitionRound)
-def update_boulders_on_count_change(sender, instance, created, **kwargs):
+def UpdateBouldersOnCountChange(sender, instance, created, **kwargs):
     """
     Update boulders when boulder_count changes on existing rounds
     """

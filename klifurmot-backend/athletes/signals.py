@@ -4,7 +4,7 @@ from competitions.models import Competition
 from athletes.models import CompetitionRegistration, Climber
 
 @receiver(post_delete, sender=Competition)
-def delete_orphaned_climbers(sender, instance, **kwargs):
+def DeleteOrphanedClimbers(sender, instance, **kwargs):
     climber_ids = CompetitionRegistration.objects.filter(
         competition=instance
     ).values_list("climber_id", flat=True)

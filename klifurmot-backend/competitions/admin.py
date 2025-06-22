@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import *
-from scoring.utils import auto_advance_climbers
+from scoring.utils import AutoAdvanceClimbers
 from django.contrib import messages
 
 # Register your models here.
@@ -14,7 +14,7 @@ admin.site.register(JudgeBoulderAssignment)
 
 def advance_top_climbers(modeladmin, request, queryset):
     for round_obj in queryset:
-        result = auto_advance_climbers(round_obj)
+        result = AutoAdvanceClimbers(round_obj)
         if result.get("status") == "ok":
             messages.success(request, f"{result['advanced']} climbers advanced from round {round_obj}")
         else:

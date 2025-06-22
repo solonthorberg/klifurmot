@@ -24,7 +24,7 @@ from .serializers import (
 
 User = get_user_model()
 
-def serialize_user_response(user, token=None):
+def SerializeUserResponse(user, token=None):
     profile = getattr(user, 'profile', None)
     return {
         "token": token.key if token else None,
@@ -80,11 +80,11 @@ class CustomAuthToken(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, _ = Token.objects.get_or_create(user=user)
-        return Response(serialize_user_response(user, token))
+        return Response(SerializeUserResponse(user, token))
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
-def me(request):
+def Me(request):
     user = request.user
     profile = getattr(user, 'profile', None)
 
@@ -105,11 +105,11 @@ def me(request):
         user.email = data.get('email', user.email)
         user.save()
 
-    return Response(serialize_user_response(user))
+    return Response(SerializeUserResponse(user))
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def login(request):
+def Login(request):
     data = request.data
     email = data.get("email")
     password = data.get("password")
@@ -125,12 +125,12 @@ def login(request):
 
     if user is not None:
         token, _ = Token.objects.get_or_create(user=user)
-        return Response(serialize_user_response(user, token))
+        return Response(SerializeUserResponse(user, token))
     return Response({"detail": "Invalid credentials"}, status=401)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def google_login(request):
+def GoogleLogin(request):
     token_from_client = request.data.get("token")
     if not token_from_client:
         return Response({"detail": "Missing token"}, status=400)
@@ -151,13 +151,13 @@ def google_login(request):
             "last_name": last_name,
         })
         token, _ = Token.objects.get_or_create(user=user)
-        return Response(serialize_user_response(user, token))
+        return Response(SerializeUserResponse(user, token))
     except ValueError:
         return Response({"detail": "Invalid Google token"}, status=401)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def register(request):
+def Register(request):
     data = request.data
     username = data.get('username')
     email = data.get('email')
@@ -193,11 +193,11 @@ def register(request):
     profile.save()
 
     token, _ = Token.objects.get_or_create(user=user)
-    return Response(serialize_user_response(user, token), status=status.HTTP_201_CREATED)
+    return Response(SerializeUserResponse(user, token), status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def logout(request):
+def Logout(request):
     request.user.auth_token.delete()
     return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
@@ -254,7 +254,7 @@ class SendJudgeLinkView(APIView):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def validate_judge_token(request, token):
+def ValidateJudgeToken(request, token):
     try:
         link = JudgeLink.objects.get(token=token)
         if link.expires_at < timezone.now():
@@ -272,7 +272,7 @@ def validate_judge_token(request, token):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_competition_judge_links(request, competition_id):
+def GetCompetitionJudgeLinks(request, competition_id):
     """Get all judge links for a specific competition"""
     user_account = getattr(request.user, 'profile', None)
     if not user_account:
@@ -309,7 +309,7 @@ def get_competition_judge_links(request, competition_id):
 
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def manage_judge_link(request, link_id):
+def ManageJudgeLink(request, link_id):
     """Update or delete a judge link"""
     user_account = getattr(request.user, 'profile', None)
     if not user_account:

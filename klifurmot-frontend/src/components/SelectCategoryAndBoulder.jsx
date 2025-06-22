@@ -8,7 +8,7 @@ function SelectCategoryAndBoulder({
   competitionId,
   onSelectAthlete,
   onBack,
-  }) {
+}) {
   const [categories, setCategories] = useState([]);
   const [boulders, setBoulders] = useState([]);
   const [athletes, setAthletes] = useState([]);
@@ -79,17 +79,17 @@ function SelectCategoryAndBoulder({
         });
 
         const enriched = baseAthletes.map((athlete) => {
-          const climb = climbRes.data.find(
+          const boulder_climb = climbRes.data.find(
             (c) => c.climber === athlete.climber_id
           );
           return {
             ...athlete,
-            score: climb
+            score: boulder_climb
               ? {
-                  top: climb.top_reached,
-                  topAttempts: climb.attempts_top || 0,
-                  zone: climb.zone_reached,
-                  zoneAttempts: climb.attempts_zone || 0,
+                  top: boulder_climb.top_reached,
+                  topAttempts: boulder_climb.attempts_top || 0,
+                  zone: boulder_climb.zone_reached,
+                  zoneAttempts: boulder_climb.attempts_zone || 0,
                 }
               : athlete.score,
           };
