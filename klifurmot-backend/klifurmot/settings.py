@@ -1,12 +1,17 @@
-# settings.py - CLEANED VERSION (No Digital Ocean Spaces)
+# settings.py - UPDATED VERSION with WebSocket Support
 from pathlib import Path
 import os
 from decouple import config
 import dj_database_url
 
-GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="fallback-or-blank")
-
+# Update BASE_DIR to point to the actual project root
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Point decouple to the root .env file
+from decouple import Config, RepositoryEnv
+config = Config(RepositoryEnv(os.path.join(BASE_DIR.parent, '.env')))
+
+GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="fallback-or-blank")
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-i0r$poq*ya7^hq1d)ouvq9-o&hoezt$j*-n@$#m*aod_)65xd)')
 
@@ -27,7 +32,6 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'channels',
-    # REMOVED: 'storages',  # Not needed for local storage
     'accounts',
     'competitions',
     'athletes',
@@ -46,24 +50,52 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Dynamic CORS settings based on environment
 if DEBUG:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ]
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+    # WebSocket origins for development
+    ALLOWED_WEBSOCKET_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "ws://localhost:5173",
+        "ws://127.0.0.1:5173",
+        "ws://localhost:8000",
+        "ws://127.0.0.1:8000",
     ]
 else:
-    # Production CORS settings
+    # Production CORS settings - configured via environment variables
     CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', 
-        default='https://your-frontend-domain.com',
+        default='http://localhost:5173',  # Safe default for local testing
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
     CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-        default='https://your-frontend-domain.com',
+        default='http://localhost:5173',  # Safe default for local testing
+        cast=lambda v: [s.strip() for s in v.split(',')]
+    )
+    # WebSocket origins for production
+    ALLOWED_WEBSOCKET_ORIGINS = config('ALLOWED_WEBSOCKET_ORIGINS', 
+        default='http://localhost:5173,ws://localhost:5173',  # Safe default for local testing
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
 
@@ -95,6 +127,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'klifurmot.wsgi.application'
+ASGI_APPLICATION = "klifurmot.asgi.application"
 
 # Database configuration - handles both development and production
 DATABASE_URL = config('DATABASE_URL', default=None)
@@ -142,62 +175,102 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# SIMPLIFIED MEDIA FILES CONFIGURATION (Local Storage Only)
+# Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-ASGI_APPLICATION = "klifurmot.asgi.application"
-
-# Channel layers - optimized for 3000 users
+# Channel layers configuration - optimized for 3000 users
 REDIS_URL = config('REDIS_URL', default=None)
 
 if REDIS_URL:
-    # Production: Use Redis if available
+    # Production: Use Redis for better performance
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
                 "hosts": [REDIS_URL],
+                "capacity": 5000,  # Increased for 3000 users
+                "expiry": 60,
             },
         },
     }
 else:
-    # Development/Production without Redis: Use InMemory (perfect for 3000 users)
+    # Development/Small Production: Use InMemory
+    # Note: InMemory doesn't work across multiple server instances
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
             "CONFIG": {
-                "capacity": 2000,  # More than enough for 3000 users
+                "capacity": 5000,  # Increased from 2000 to handle 3000 users
                 "expiry": 60,      # Message expiry in seconds
             },
         },
     }
 
-# Frontend base URL for judge links
+# Frontend base URL for judge links and other integrations
 FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:5173')
 
 # Security settings for production
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    
+    # Additional security headers
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # Logging configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose' if DEBUG else 'simple',
         },
     },
     'root': {
         'handlers': ['console'],
-        'level': 'INFO' if not DEBUG else 'DEBUG',
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'channels': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'scoring': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
     },
 }
+
+# WebSocket-specific settings
+WEBSOCKET_ACCEPT_ALL = False  # Only accept connections from allowed origins
