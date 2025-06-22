@@ -45,3 +45,9 @@ Uppsetning:
    skrifa síðan:
    ping
    Ættir að fá "PONG" tilbaka.
+
+9. Ná dummy gögn:
+   pg_restore -U postgres --data-only --disable-triggers -d klifurmot klifurmot.dump
+
+   Búa til dummy gögn:
+   psql -U postgres -d klifurmot -f klifurmot.dump

@@ -8,7 +8,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'countries', CountryViewSet)
-router.register(r'accounts', UserAccountViewSet)
+router.register(r'users', UserAccountViewSet)
 router.register(r'roles', CompetitionRoleViewSet)
 router.register(r'users', UserViewSet)
 

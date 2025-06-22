@@ -30,14 +30,7 @@ function CompetitionResults({ competitionId }) {
   }, [competitionId]);
 
   useEffect(() => {
-    // Determine WebSocket URL based on environment
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-    const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
-    const wsBaseUrl = baseUrl.replace(/^https?:\/\//, '').replace('/api', '');
-    const socketUrl = `${wsProtocol}://${wsBaseUrl}/ws/results/${competitionId}/`;
-    
-    console.log("🔌 Connecting to WebSocket:", socketUrl);
-    const socket = new WebSocket(socketUrl);
+    const socket = new WebSocket(`ws://127.0.0.1:8000/ws/results/${competitionId}/`);
 
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
@@ -96,7 +89,7 @@ function CompetitionResults({ competitionId }) {
           <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
             <option value="">Allir flokkar</option>
             {allCategories.map((cat, i) => (
-              <option key={i} value={cat.id}>{`${cat.group.name} - ${cat.gender}`}</option>
+              <option key={i} value={cat.id}>{`Group ${cat.group_id} - ${cat.gender}`}</option>
             ))}
           </select>
         </label>
