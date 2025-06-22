@@ -1,6 +1,6 @@
 // src/services/api.js
 import axios from "axios";
-import config from "../config/environment";
+import config from "../config/Environment";
 
 // Create axios instance with environment-based configuration
 const api = axios.create({
