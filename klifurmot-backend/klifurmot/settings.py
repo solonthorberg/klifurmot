@@ -1,23 +1,18 @@
-# settings.py - UPDATED VERSION with WebSocket Support
 from pathlib import Path
 import os
 from decouple import config
 import dj_database_url
 
-# Update BASE_DIR to point to the actual project root
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Point decouple to the root .env file
+# Load .env from project root
 from decouple import Config, RepositoryEnv
 config = Config(RepositoryEnv(os.path.join(BASE_DIR.parent, '.env')))
 
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="fallback-or-blank")
-
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-i0r$poq*ya7^hq1d)ouvq9-o&hoezt$j*-n@$#m*aod_)65xd)')
-
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-default-key')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# ALLOWED_HOSTS configuration with fallback
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 INSTALLED_APPS = [
@@ -50,7 +45,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# CORS Configuration
+# CORS/CSRF/WebSocket config
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -64,7 +59,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Dynamic CORS settings based on environment
 if DEBUG:
     CORS_ALLOWED_ORIGINS = [
         "http://localhost:5173",
@@ -74,7 +68,6 @@ if DEBUG:
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
-    # WebSocket origins for development
     ALLOWED_WEBSOCKET_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -84,18 +77,16 @@ if DEBUG:
         "ws://127.0.0.1:8000",
     ]
 else:
-    # Production CORS settings - configured via environment variables
-    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', 
-        default='http://localhost:5173',  # Safe default for local testing
+    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS',
+        default='http://165.232.111.119',
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
     CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS',
-        default='http://localhost:5173',  # Safe default for local testing
+        default='http://165.232.111.119',
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
-    # WebSocket origins for production
-    ALLOWED_WEBSOCKET_ORIGINS = config('ALLOWED_WEBSOCKET_ORIGINS', 
-        default='http://localhost:5173,ws://localhost:5173',  # Safe default for local testing
+    ALLOWED_WEBSOCKET_ORIGINS = config('ALLOWED_WEBSOCKET_ORIGINS',
+        default='http://165.232.111.119,ws://165.232.111.119',
         cast=lambda v: [s.strip() for s in v.split(',')]
     )
 
@@ -127,13 +118,12 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'klifurmot.wsgi.application'
-ASGI_APPLICATION = "klifurmot.asgi.application"
+ASGI_APPLICATION = 'klifurmot.asgi.application'
 
-# Database configuration - handles both development and production
+# Database
 DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
-    # Production: Use DATABASE_URL
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
@@ -142,7 +132,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Development: Use individual environment variables
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -166,53 +155,48 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files setup
+# Static & media
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] if os.path.exists(os.path.join(BASE_DIR, 'static')) else []
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Production static files settings
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Channel layers configuration - optimized for 3000 users
+# Channel layers (Redis or InMemory)
 REDIS_URL = config('REDIS_URL', default=None)
 
 if REDIS_URL:
-    # Production: Use Redis for better performance
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
                 "hosts": [REDIS_URL],
-                "capacity": 5000,  # Increased for 3000 users
+                "capacity": 5000,
                 "expiry": 60,
             },
         },
     }
 else:
-    # Development/Small Production: Use InMemory
-    # Note: InMemory doesn't work across multiple server instances
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
             "CONFIG": {
-                "capacity": 5000,  # Increased from 2000 to handle 3000 users
-                "expiry": 60,      # Message expiry in seconds
+                "capacity": 5000,
+                "expiry": 60,
             },
         },
     }
 
-# Frontend base URL for judge links and other integrations
+# Frontend base
 FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:5173')
 
-# Security settings for production
+# Secure settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -222,14 +206,12 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
-    
-    # Additional security headers
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# Logging configuration
+# Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -272,5 +254,11 @@ LOGGING = {
     },
 }
 
-# WebSocket-specific settings
-WEBSOCKET_ACCEPT_ALL = False  # Only accept connections from allowed origins
+# WebSocket support
+WEBSOCKET_ACCEPT_ALL = False
+
+# CSRF & Cookie support for frontend clients
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
