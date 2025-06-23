@@ -61,13 +61,13 @@ function CreateCompetition({
         setVisible(comp.visible || false);
 
         // Fetch existing rounds for this competition (which contain category info)
-        console.log("🔍 Fetching rounds for competition...");
+        console.log("Fetching rounds for competition...");
         const roundsResponse = await api.get(
           `/competitions/rounds/?competition_id=${competitionId}`
         );
-        console.log("📋 Rounds response:", roundsResponse.data);
+        console.log("Rounds response:", roundsResponse.data);
         console.log(
-          "📋 First round structure:",
+          "First round structure:",
           JSON.stringify(roundsResponse.data[0], null, 2)
         );
 
@@ -181,7 +181,7 @@ function CreateCompetition({
         }
 
         const finalCategories = Object.values(categoryGroups);
-        console.log("🏁 Final categories with rounds:", finalCategories);
+        console.log(" Final categories with rounds:", finalCategories);
         setCategories(finalCategories);
       } catch (err) {
         console.error(" Error fetching competition:", err);
@@ -261,36 +261,59 @@ function CreateCompetition({
     );
   };
 
-  const handleDeleteCategory = (categoryKey) => {
-    if (confirm("Ertu viss um að þú viljir eyða þessum flokki?")) {
-      setCategories((prev) => prev.filter((cat) => cat.key !== categoryKey));
+  const handleDeleteCategory = async (categoryKey) => {
+    const categoryToDelete = categories.find(cat => cat.key === categoryKey);
+    
+    // If this is an existing category in edit mode, we need to delete it from the database
+    if (isEditMode && categoryToDelete?.existingCategories?.length > 0) {
+      try {
+        // Delete all existing categories (both KK and KVK) for this category group
+        for (const existingCategory of categoryToDelete.existingCategories) {
+          try {
+            await api.delete(`/competitions/competition-categories/${existingCategory.id}/`);
+          } catch (err) {
+            console.error(`Failed to delete category ${existingCategory.id}:`, err);
+            // Continue trying to delete other categories even if one fails
+          }
+        }
+        
+        // Also delete any rounds that might still exist
+        for (const round of categoryToDelete.rounds) {
+          if (round.roundId) {
+            try {
+              await api.delete(`/competitions/rounds/${round.roundId}/`);
+            } catch (err) {
+              console.error(`Failed to delete round ${round.roundId}:`, err);
+              // Continue with deletion even if some rounds fail
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to delete category from database:", err);
+        setError(`Ekki tókst að eyða flokki úr gagnagrunni: ${err.response?.data?.detail || err.message}`);
+        return; // Don't remove from local state if database deletion failed
+      }
     }
+
+    // Remove from local state
+    setCategories((prev) => prev.filter((cat) => cat.key !== categoryKey));
   };
 
   const handleDeleteRound = async (categoryKey, roundIndex) => {
-    if (!confirm("Ertu viss um að þú viljir eyða þessari umferð?")) {
-      return;
-    }
-
     const category = categories.find((cat) => cat.key === categoryKey);
     const roundToDelete = category?.rounds[roundIndex];
 
     if (!roundToDelete) {
-      console.error(" Round not found for deletion");
+      console.error("Round not found for deletion");
       return;
     }
 
     // If this is an existing round from the database, we need to delete it via API
     if (roundToDelete.roundId && isEditMode) {
       try {
-        console.log(
-          "🗑️ Deleting existing round from database:",
-          roundToDelete.roundId
-        );
         await api.delete(`/competitions/rounds/${roundToDelete.roundId}/`);
-        console.log(" Successfully deleted round from database");
       } catch (err) {
-        console.error(" Failed to delete round from database:", err);
+        console.error("Failed to delete round from database:", err);
         setError("Ekki tókst að eyða umferð úr gagnagrunni");
         return;
       }
@@ -302,7 +325,6 @@ function CreateCompetition({
         if (cat.key !== categoryKey) return cat;
         const updatedRounds = [...cat.rounds];
         updatedRounds.splice(roundIndex, 1);
-        console.log(" Removed round from local state");
         return { ...cat, rounds: updatedRounds };
       })
     );
@@ -311,7 +333,7 @@ function CreateCompetition({
   const handleRoundDragEnd = (categoryKey, event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    console.log("🔄 Reordering rounds:", {
+    console.log(" Reordering rounds:", {
       activeId: active.id,
       overId: over.id,
     });
@@ -757,23 +779,25 @@ function CreateCompetition({
                       >
                         + Umferð
                       </button>
-                      {isEditMode && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCategory(cat.key)}
-                          disabled={submitting}
-                          style={{
-                            padding: "0.25rem 0.5rem",
-                            backgroundColor: "#dc3545",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "4px",
-                            cursor: submitting ? "not-allowed" : "pointer",
-                          }}
-                        >
-                          Eyða
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteCategory(cat.key);
+                        }}
+                        disabled={submitting}
+                        style={{
+                          padding: "0.25rem 0.5rem",
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: submitting ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        🗑️ Eyða flokki
+                      </button>
                     </div>
                   </div>
 

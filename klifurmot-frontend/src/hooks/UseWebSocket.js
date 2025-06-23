@@ -102,7 +102,7 @@ const useWebSocket = (path, options = {}) => {
           const delay =
             reconnectInterval * Math.pow(2, reconnectAttemptsRef.current);
           debugLog(
-            `🔄 Reconnecting in ${delay}ms (attempt ${
+            ` Reconnecting in ${delay}ms (attempt ${
               reconnectAttemptsRef.current + 1
             }/${reconnectAttempts})`
           );
