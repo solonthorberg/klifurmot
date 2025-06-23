@@ -78,7 +78,7 @@ function CreateCompetition({
 
           const categoryDetail = round.competition_category_detail;
           if (!categoryDetail) {
-            console.warn("⚠️ Round missing category detail:", round);
+            console.warn(" Round missing category detail:", round);
             return;
           }
 
@@ -133,7 +133,7 @@ function CreateCompetition({
               const roundGroupData = round.round_group_detail;
               if (!roundGroupData) {
                 console.warn(
-                  `⚠️ Round ${round.id} missing round_group_detail:`,
+                  ` Round ${round.id} missing round_group_detail:`,
                   round
                 );
                 return false;
@@ -169,12 +169,12 @@ function CreateCompetition({
             });
 
             console.log(
-              `✅ Processed ${group.rounds.length} valid rounds for ${group.name}:`,
+              ` Processed ${group.rounds.length} valid rounds for ${group.name}:`,
               group.rounds
             );
           } catch (err) {
             console.warn(
-              `⚠️ Error processing rounds for category group ${group.name}:`,
+              ` Error processing rounds for category group ${group.name}:`,
               err.response?.data || err.message
             );
           }
@@ -184,7 +184,7 @@ function CreateCompetition({
         console.log("🏁 Final categories with rounds:", finalCategories);
         setCategories(finalCategories);
       } catch (err) {
-        console.error("❌ Error fetching competition:", err);
+        console.error(" Error fetching competition:", err);
         setError("Ekki tókst að sækja mótsupplýsingar");
       } finally {
         setLoading(false);
@@ -208,7 +208,7 @@ function CreateCompetition({
   };
 
   const handleAddOrUpdateRound = async (categoryKey, round) => {
-    console.log("✅ Adding or updating round", round);
+    console.log(" Adding or updating round", round);
 
     const category = categories.find((cat) => cat.key === categoryKey);
     const editing = category?.roundToEdit;
@@ -224,9 +224,9 @@ function CreateCompetition({
         };
 
         await api.patch(`/competitions/rounds/${editing.roundId}/`, updateData);
-        console.log("✅ Successfully updated round in database");
+        console.log(" Successfully updated round in database");
       } catch (err) {
-        console.error("❌ Failed to update round in database:", err);
+        console.error(" Failed to update round in database:", err);
         setError("Ekki tókst að uppfæra umferð í gagnagrunn");
         return;
       }
@@ -276,7 +276,7 @@ function CreateCompetition({
     const roundToDelete = category?.rounds[roundIndex];
 
     if (!roundToDelete) {
-      console.error("❌ Round not found for deletion");
+      console.error(" Round not found for deletion");
       return;
     }
 
@@ -288,9 +288,9 @@ function CreateCompetition({
           roundToDelete.roundId
         );
         await api.delete(`/competitions/rounds/${roundToDelete.roundId}/`);
-        console.log("✅ Successfully deleted round from database");
+        console.log(" Successfully deleted round from database");
       } catch (err) {
-        console.error("❌ Failed to delete round from database:", err);
+        console.error(" Failed to delete round from database:", err);
         setError("Ekki tókst að eyða umferð úr gagnagrunni");
         return;
       }
@@ -302,7 +302,7 @@ function CreateCompetition({
         if (cat.key !== categoryKey) return cat;
         const updatedRounds = [...cat.rounds];
         updatedRounds.splice(roundIndex, 1);
-        console.log("✅ Removed round from local state");
+        console.log(" Removed round from local state");
         return { ...cat, rounds: updatedRounds };
       })
     );
@@ -361,7 +361,7 @@ function CreateCompetition({
             );
 
             const createdCategoryId = categoryResponse.data.id;
-            console.log("✅ Created category:", categoryResponse.data);
+            console.log(" Created category:", categoryResponse.data);
 
             // Create rounds for this category (only new rounds without roundId)
             for (let i = 0; i < category.rounds.length; i++) {
@@ -388,9 +388,9 @@ function CreateCompetition({
                   "/competitions/rounds/",
                   roundData
                 );
-                console.log("✅ Created round:", roundResponse.data);
+                console.log(" Created round:", roundResponse.data);
               } catch (roundErr) {
-                console.error("❌ Failed to create round:", roundErr);
+                console.error(" Failed to create round:", roundErr);
                 throw new Error(
                   roundErr.response?.data?.detail ||
                     JSON.stringify(roundErr.response?.data) ||
@@ -399,7 +399,7 @@ function CreateCompetition({
               }
             }
           } catch (catErr) {
-            console.error("❌ Failed to create category:", catErr);
+            console.error(" Failed to create category:", catErr);
             throw new Error(
               catErr.response?.data?.detail ||
                 JSON.stringify(catErr.response?.data) ||
@@ -409,7 +409,7 @@ function CreateCompetition({
         }
       }
     } catch (err) {
-      console.error("❌ Failed to create categories and rounds:", err);
+      console.error(" Failed to create categories and rounds:", err);
       throw new Error(
         err.message ||
           "Competition saved but failed to create categories/rounds"
@@ -462,7 +462,7 @@ function CreateCompetition({
       }
 
       console.log(
-        `✅ Competition ${isEditMode ? "updated" : "created"} successfully:`,
+        ` Competition ${isEditMode ? "updated" : "created"} successfully:`,
         response.data
       );
 
@@ -476,7 +476,7 @@ function CreateCompetition({
       goBack();
     } catch (err) {
       console.error(
-        `❌ Failed to ${isEditMode ? "update" : "create"} competition:`,
+        ` Failed to ${isEditMode ? "update" : "create"} competition:`,
         err
       );
       setError(

@@ -25,7 +25,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
           setBoulderCount(existingRound.boulder_count?.toString() || "");
         }
       } catch (err) {
-        console.error("❌ Failed to fetch round groups:", err);
+        console.error(" Failed to fetch round groups:", err);
       } finally {
         setLoading(false);
       }
@@ -65,7 +65,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
       round.index = existingRound.index;
     }
 
-    console.log("✅ Confirming round:", round);
+    console.log(" Confirming round:", round);
     onSelectRound(round);
   };
 

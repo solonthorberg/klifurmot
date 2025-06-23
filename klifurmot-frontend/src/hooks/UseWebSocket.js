@@ -43,7 +43,7 @@ const useWebSocket = (path, options = {}) => {
       socketRef.current = socket;
 
       socket.onopen = (event) => {
-        debugLog("✅ WebSocket connected");
+        debugLog(" WebSocket connected");
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
@@ -55,7 +55,7 @@ const useWebSocket = (path, options = {}) => {
       };
 
       socket.onmessage = (event) => {
-        debugLog("📨 WebSocket message received:", event.data);
+        debugLog(" WebSocket message received:", event.data);
 
         try {
           const data = JSON.parse(event.data);
@@ -71,7 +71,7 @@ const useWebSocket = (path, options = {}) => {
       };
 
       socket.onerror = (event) => {
-        debugLog("❌ WebSocket error:", event);
+        debugLog(" WebSocket error:", event);
         const errorData = {
           type: "connection_error",
           message: "WebSocket connection error",
@@ -85,7 +85,7 @@ const useWebSocket = (path, options = {}) => {
 
       socket.onclose = (event) => {
         debugLog(
-          `⚠️ WebSocket closed: Code ${event.code}, Reason: ${event.reason}`
+          ` WebSocket closed: Code ${event.code}, Reason: ${event.reason}`
         );
         setIsConnected(false);
 
@@ -128,7 +128,7 @@ const useWebSocket = (path, options = {}) => {
   ]);
 
   const disconnect = useCallback(() => {
-    debugLog("🛑 Disconnecting WebSocket");
+    debugLog(" Disconnecting WebSocket");
     shouldReconnectRef.current = false;
     clearReconnectTimeout();
 

@@ -104,7 +104,7 @@ def AutoAdvanceClimbers(current_round):
     )
 
     if not next_round:
-        print("⚠️ No next round found.")
+        print(" No next round found.")
         return {"status": "error", "message": "No next round found"}
 
     num_to_advance = next_round.climbers_advance

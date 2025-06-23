@@ -15,7 +15,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
         setCategories(res.data);
         console.log("📡 Fetched category groups:", res.data);
       } catch (err) {
-        console.error("❌ Failed to fetch category groups:", err);
+        console.error(" Failed to fetch category groups:", err);
       } finally {
         setLoading(false);
       }

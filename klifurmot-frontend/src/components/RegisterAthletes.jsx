@@ -149,12 +149,12 @@ function JudgeLinkSection({ competitionId }) {
       );
 
       setGeneratedLink(res.data.judge_link);
-      console.log("✅ Judge link generated:", res.data.judge_link);
+      console.log(" Judge link generated:", res.data.judge_link);
 
       // Refresh the existing links list
       await fetchExistingLinks();
     } catch (err) {
-      console.error("❌ Failed to generate judge link:", err);
+      console.error(" Failed to generate judge link:", err);
       alert(
         `Ekki tókst að búa til dómaraslóð: ${
           err.response?.data?.detail || err.message
@@ -192,10 +192,10 @@ function JudgeLinkSection({ competitionId }) {
     try {
       // Updated URL to match the backend pattern
       await api.delete(`/accounts/judge-links/link/${linkId}/`);
-      console.log("✅ Judge link deleted");
+      console.log(" Judge link deleted");
       await fetchExistingLinks();
     } catch (err) {
-      console.error("❌ Failed to delete judge link:", err);
+      console.error(" Failed to delete judge link:", err);
       alert(
         `Ekki tókst að eyða dómaraslóð: ${
           err.response?.data?.detail || err.message
@@ -210,11 +210,11 @@ function JudgeLinkSection({ competitionId }) {
       await api.patch(`/accounts/judge-links/link/${linkId}/`, {
         expires_at: new Date(newExpirationDate).toISOString(),
       });
-      console.log("✅ Judge link updated");
+      console.log(" Judge link updated");
       setEditingLink(null);
       await fetchExistingLinks();
     } catch (err) {
-      console.error("❌ Failed to update judge link:", err);
+      console.error(" Failed to update judge link:", err);
       alert(
         `Ekki tókst að uppfæra dómaraslóð: ${
           err.response?.data?.detail || err.message
@@ -291,7 +291,7 @@ function JudgeLinkSection({ competitionId }) {
                 onClick={() => copyToClipboard(generatedLink)}
                 title="Afrita slóð"
               >
-                {linkCopied ? "✅ Afritað!" : "📋 Afrita"}
+                {linkCopied ? " Afritað!" : "📋 Afrita"}
               </button>
             </div>
             <small className="text-muted">
@@ -362,16 +362,12 @@ function JudgeLinkSection({ competitionId }) {
                                 updateJudgeLink(link.id, link.newExpirationDate)
                               }
                               title="Vista"
-                            >
-                              ✅
-                            </button>
+                            ></button>
                             <button
                               className="btn btn-secondary btn-sm"
                               onClick={() => setEditingLink(null)}
                               title="Hætta við"
-                            >
-                              ❌
-                            </button>
+                            ></button>
                           </div>
                         ) : (
                           <div className="d-flex align-items-center gap-2">
@@ -549,7 +545,7 @@ function RegisterAthletes({ competitionId, goBack }) {
     );
 
     if (!categoryData) {
-      console.error("❌ Category not found:", categoryName);
+      console.error(" Category not found:", categoryName);
       return;
     }
 
@@ -590,7 +586,7 @@ function RegisterAthletes({ competitionId, goBack }) {
       );
     }
 
-    console.log("🎯 Found indices:", {
+    console.log(" Found indices:", {
       oldIndex,
       newIndex,
       activeId: active.id,
@@ -598,7 +594,7 @@ function RegisterAthletes({ competitionId, goBack }) {
     });
 
     if (oldIndex === -1 || newIndex === -1) {
-      console.error("❌ Could not find athlete indices", {
+      console.error(" Could not find athlete indices", {
         oldIndex,
         newIndex,
         activeId: active.id,
@@ -656,7 +652,7 @@ function RegisterAthletes({ competitionId, goBack }) {
         });
 
         if (!climberId) {
-          console.error("❌ Missing climber_id for athlete:", athlete);
+          console.error(" Missing climber_id for athlete:", athlete);
         }
 
         return {
@@ -680,13 +676,13 @@ function RegisterAthletes({ competitionId, goBack }) {
         payload
       );
 
-      console.log("✅ Start order updated successfully:", response.data);
+      console.log(" Start order updated successfully:", response.data);
     } catch (err) {
       console.error(
-        "❌ Failed to update start order:",
+        " Failed to update start order:",
         err.response?.data || err
       );
-      console.error("❌ Full error object:", err);
+      console.error(" Full error object:", err);
 
       // Revert the local state and show error
       await fetchStartlist();
@@ -717,7 +713,7 @@ function RegisterAthletes({ competitionId, goBack }) {
 
   const handleAdvanceClimbers = async (categoryName, currentRoundName) => {
     console.log(
-      "🚀 Advancing climbers from:",
+      " Advancing climbers from:",
       currentRoundName,
       "in category:",
       categoryName
@@ -768,8 +764,8 @@ function RegisterAthletes({ competitionId, goBack }) {
       const response = await api.post(`/scoring/advance/${currentRound.id}/`);
 
       if (response.data.status === "ok") {
-        const message = `✅ Tókst að flytja ${response.data.advanced} keppendur úr ${currentRoundName} í ${nextRound.round_group_detail.name}!`;
-        console.log("✅ SUCCESS:", message);
+        const message = ` Tókst að flytja ${response.data.advanced} keppendur úr ${currentRoundName} í ${nextRound.round_group_detail.name}!`;
+        console.log(" SUCCESS:", message);
         alert(message);
 
         await fetchStartlist();
@@ -778,11 +774,11 @@ function RegisterAthletes({ competitionId, goBack }) {
         console.log("🔄 Data refreshed after advancing climbers");
       } else {
         const errorMsg = `Villa: ${response.data.message || "Óþekkt villa"}`;
-        console.error("❌ Advance failed:", response.data);
+        console.error(" Advance failed:", response.data);
         alert(errorMsg);
       }
     } catch (err) {
-      console.error("❌ ERROR during advance:", err);
+      console.error(" ERROR during advance:", err);
       const errorMessage =
         err.response?.data?.detail || "Ekki tókst að flytja keppendur.";
       alert(`Villa: ${errorMessage}`);
@@ -806,10 +802,10 @@ function RegisterAthletes({ competitionId, goBack }) {
 
       const res = await api.post("/competitions/remove-athlete/", payload);
 
-      console.log(`✅ ${athlete.full_name} removed from ${category}`);
+      console.log(` ${athlete.full_name} removed from ${category}`);
       await fetchStartlist();
     } catch (err) {
-      console.error("❌ Failed to remove athlete:", err.response?.data || err);
+      console.error(" Failed to remove athlete:", err.response?.data || err);
       alert(
         `Ekki tókst að fjarlægja keppanda: ${
           err.response?.data?.detail || err.message
@@ -829,7 +825,7 @@ function RegisterAthletes({ competitionId, goBack }) {
     if (!selectedCategory || !activeRound) return;
 
     console.log(
-      "🎯 Selecting athlete:",
+      " Selecting athlete:",
       athlete.user_account?.full_name,
       "for category:",
       selectedCategory
@@ -850,14 +846,11 @@ function RegisterAthletes({ competitionId, goBack }) {
         payload
       );
 
-      console.log("✅ Athlete registered:", response.data);
+      console.log(" Athlete registered:", response.data);
       await fetchStartlist();
       setShowAddModal(false);
     } catch (err) {
-      console.error(
-        "❌ Failed to register athlete:",
-        err.response?.data || err
-      );
+      console.error(" Failed to register athlete:", err.response?.data || err);
       alert(
         `Ekki tókst að skrá keppanda: ${
           err.response?.data?.detail || err.message
