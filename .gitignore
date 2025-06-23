@@ -13,10 +13,12 @@ db.sqlite3
 *.log
 local_settings.py
 
-# Environment
-.env
+# Virtual environments
+venv/
 .venv/
-venv/k
+
+# Environment config
+.env
 
 # VS Code
 .vscode/
