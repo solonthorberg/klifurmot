@@ -15,8 +15,9 @@ function CompetitionResults({ competitionId }) {
     setError("");
     hasReceivedDataRef.current = false;
 
-    api.get(`/scoring/results/full/${competitionId}/`)
-      .then(res => {
+    api
+      .get(`/scoring/results/full/${competitionId}/`)
+      .then((res) => {
         if (Array.isArray(res.data)) {
           setResults(res.data);
           hasReceivedDataRef.current = true;
@@ -30,7 +31,11 @@ function CompetitionResults({ competitionId }) {
   }, [competitionId]);
 
   useEffect(() => {
-    const socket = new WebSocket(`ws://127.0.0.1:8000/ws/results/${competitionId}/`);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.host;
+    const socket = new WebSocket(
+      `${protocol}://${host}/ws/results/${competitionId}/`
+    );
 
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
@@ -66,7 +71,10 @@ function CompetitionResults({ competitionId }) {
 
     return () => {
       console.log("🛑 Cleaning up WebSocket");
-      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
         socket.close();
       }
     };
@@ -76,8 +84,10 @@ function CompetitionResults({ competitionId }) {
   if (loading) return <p>Sæki niðurstöður...</p>;
   if (!results.length) return <p>Engar niðurstöður skráðar.</p>;
 
-  const allCategories = results.map(r => r.category);
-  const allRounds = [...new Set(results.flatMap(r => r.rounds.map(ro => ro.round_name)))];
+  const allCategories = results.map((r) => r.category);
+  const allRounds = [
+    ...new Set(results.flatMap((r) => r.rounds.map((ro) => ro.round_name))),
+  ];
 
   return (
     <div>
@@ -86,44 +96,63 @@ function CompetitionResults({ competitionId }) {
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
         <label>
           Flokkur:
-          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
             <option value="">Allir flokkar</option>
             {allCategories.map((cat, i) => (
-              <option key={i} value={cat.id}>{`Group ${cat.group_id} - ${cat.gender}`}</option>
+              <option
+                key={i}
+                value={cat.id}
+              >{`Group ${cat.group_id} - ${cat.gender}`}</option>
             ))}
           </select>
         </label>
 
         <label>
           Umferð:
-          <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
+          <select
+            value={selectedRound}
+            onChange={(e) => setSelectedRound(e.target.value)}
+          >
             <option value="">Allar umferðir</option>
             {allRounds.map((r, i) => (
-              <option key={i} value={r}>{r}</option>
+              <option key={i} value={r}>
+                {r}
+              </option>
             ))}
           </select>
         </label>
       </div>
 
       {results
-        .filter(cat => !selectedCategory || cat.category.id === parseInt(selectedCategory))
+        .filter(
+          (cat) =>
+            !selectedCategory || cat.category.id === parseInt(selectedCategory)
+        )
         .map((cat, idx) => (
           <div key={idx} style={{ marginBottom: "2rem" }}>
             <h4>{`${cat.category.group.name} - ${cat.category.gender}`}</h4>
 
             {(cat.rounds || [])
-              .filter(r => !selectedRound || r.round_name === selectedRound)
+              .filter((r) => !selectedRound || r.round_name === selectedRound)
               .map((round, j) => (
-                <div key={j} style={{ marginBottom: "1rem", marginLeft: "1rem" }}>
+                <div
+                  key={j}
+                  style={{ marginBottom: "1rem", marginLeft: "1rem" }}
+                >
                   <h5>{round.round_name}</h5>
 
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "50px 1fr 80px 80px 100px",
-                    fontWeight: "bold",
-                    gap: "1rem",
-                    paddingBottom: "0.5rem"
-                  }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "50px 1fr 80px 80px 100px",
+                      fontWeight: "bold",
+                      gap: "1rem",
+                      paddingBottom: "0.5rem",
+                    }}
+                  >
                     <span>Nr.</span>
                     <span>Nafn</span>
                     <span>Top</span>
@@ -132,17 +161,28 @@ function CompetitionResults({ competitionId }) {
                   </div>
 
                   {(round.results || []).map((athlete, i) => (
-                    <div key={i} style={{
-                      display: "grid",
-                      gridTemplateColumns: "50px 1fr 80px 80px 100px",
-                      gap: "1rem",
-                      padding: "0.25rem 0"
-                    }}>
+                    <div
+                      key={i}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "50px 1fr 80px 80px 100px",
+                        gap: "1rem",
+                        padding: "0.25rem 0",
+                      }}
+                    >
                       <span>{athlete.rank}</span>
                       <span>{athlete.full_name}</span>
-                      <span>{athlete.tops}T ({athlete.attempts_top})</span>
-                      <span>{athlete.zones}Z ({athlete.attempts_zone})</span>
-                      <span>{athlete.total_score !== undefined ? athlete.total_score.toFixed(1) : "—"}</span>
+                      <span>
+                        {athlete.tops}T ({athlete.attempts_top})
+                      </span>
+                      <span>
+                        {athlete.zones}Z ({athlete.attempts_zone})
+                      </span>
+                      <span>
+                        {athlete.total_score !== undefined
+                          ? athlete.total_score.toFixed(1)
+                          : "—"}
+                      </span>
                     </div>
                   ))}
                 </div>
