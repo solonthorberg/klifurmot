@@ -68,7 +68,6 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
         )}
       </td>
       <td>{renderCategory()}</td>
-      <td>{athlete.gender}</td>
       {/* Remove button - completely separate from drag functionality */}
       <td>
         <button
@@ -534,10 +533,30 @@ function RegisterAthletes({ competitionId, goBack }) {
               athletes: round.athletes || [],
               roundData: round,
               isReordering: cat.isReordering || false,
+              maxAthletes: getMaxAthletesForRound(cat.category, activeRound),
             }
           : null;
       })
       .filter(Boolean);
+
+  const getMaxAthletesForRound = (categoryName, roundName) => {
+    const categoryRounds = rounds.filter((round) => {
+      if (
+        !round?.competition_category_detail?.category_group_detail?.name ||
+        !round?.competition_category_detail?.gender
+      ) {
+        return false;
+      }
+      const roundCategoryName = `${round.competition_category_detail.category_group_detail.name} ${round.competition_category_detail.gender}`;
+      return roundCategoryName === categoryName;
+    });
+
+    const matchingRound = categoryRounds.find(
+      (r) => r.round_group_detail?.name === roundName
+    );
+
+    return matchingRound?.climbers_advance || matchingRound?.max_athletes || null;
+  };
 
   const getFilteredAthletes = () => {
     if (!selectedCategory) return [];
@@ -626,7 +645,7 @@ function RegisterAthletes({ competitionId, goBack }) {
           )}
         </div>
         <div className="d-flex gap-2">
-          <button
+          <button 
             className="btn btn-success"
             onClick={handleGoToJudgeDashboard}
             title="Opna dómaraviðmót"
@@ -666,7 +685,12 @@ function RegisterAthletes({ competitionId, goBack }) {
             <div key={idx} className="col-md-6 mb-4">
               <div className="card">
                 <div className="card-header d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">{cat.category}</h5>
+                  <div className="d-flex align-items-center">
+                    <h5 className="mb-0">{cat.category}</h5>
+                    <span className="badge bg-secondary ms-2">
+                      Keppendur: {cat.athletes.length}/{cat.maxAthletes || '∞'}
+                    </span>
+                  </div>
                   <div className="d-flex gap-2">
                     <button
                       className="btn btn-sm btn-primary"
@@ -722,7 +746,6 @@ function RegisterAthletes({ competitionId, goBack }) {
                               <th>Nr.</th>
                               <th>Nafn</th>
                               <th>Flokkur</th>
-                              <th>Kyn</th>
                               <th></th>
                             </tr>
                           </thead>
@@ -849,6 +872,8 @@ function RegisterAthletes({ competitionId, goBack }) {
         <br />
         <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
         ráslista röðun.
+        <br />
+        <strong>Flokkar:</strong> Sýnir aldursflokk keppenda.
       </div>
     </div>
   );
