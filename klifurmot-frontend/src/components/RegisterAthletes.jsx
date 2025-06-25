@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import {
   DndContext,
@@ -37,6 +38,11 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
     backgroundColor: isReordering ? "#f8f9fa" : "transparent",
   };
 
+  // Helper function to render category - just show age category or fallback to competition category
+  const renderCategory = () => {
+    return athlete.age_category || athlete.category || "–";
+  };
+
   return (
     <tr ref={setNodeRef} style={style}>
       {/* Dedicated drag handle column */}
@@ -61,7 +67,7 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
           </span>
         )}
       </td>
-      <td>{athlete.category || athlete.age_category}</td>
+      <td>{renderCategory()}</td>
       <td>{athlete.gender}</td>
       {/* Remove button - completely separate from drag functionality */}
       <td>
@@ -78,6 +84,7 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
 }
 
 function RegisterAthletes({ competitionId, goBack }) {
+  const navigate = useNavigate();
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -150,7 +157,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   const fetchAvailableAthletes = async () => {
     try {
       const res = await api.get("/athletes/climbers/");
-      console.log(" Available athletes:", res.data);
+      console.log("Available athletes with categories:", res.data);
       setAvailableAthletes(res.data);
     } catch (err) {
       console.error("Failed to load athletes:", err);
@@ -160,7 +167,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   const fetchResults = async () => {
     try {
       const res = await api.get(`/scoring/results/full/${competitionId}/`);
-      console.log(" Results data:", res.data);
+      console.log("Results data:", res.data);
       setResults(res.data);
     } catch (err) {
       console.error("Failed to load results:", err);
@@ -172,11 +179,15 @@ function RegisterAthletes({ competitionId, goBack }) {
       const res = await api.get(
         `/competitions/rounds/?competition_id=${competitionId}`
       );
-      console.log(" Rounds data:", res.data);
+      console.log("Rounds data:", res.data);
       setRounds(res.data);
     } catch (err) {
       console.error("Failed to load rounds:", err);
     }
+  };
+
+  const handleGoToJudgeDashboard = () => {
+    navigate(`/admin/competition/${competitionId}/judge-dashboard`);
   };
 
   const handleDragEnd = async (event, categoryName) => {
@@ -186,7 +197,7 @@ function RegisterAthletes({ competitionId, goBack }) {
       return;
     }
 
-    console.log(" Drag ended:", {
+    console.log("Drag ended:", {
       activeId: active.id,
       overId: over.id,
       category: categoryName,
@@ -203,7 +214,7 @@ function RegisterAthletes({ competitionId, goBack }) {
     }
 
     const athletes = [...categoryData.athletes];
-    console.log(" Athletes in category before processing:", athletes);
+    console.log("Athletes in category before processing:", athletes);
 
     // Find the indices for the dragged items - try multiple ID strategies
     let oldIndex = -1;
@@ -321,7 +332,7 @@ function RegisterAthletes({ competitionId, goBack }) {
         athletes: athletesPayload,
       };
 
-      console.log("📤 Sending payload to backend:", payload);
+      console.log("Sending payload to backend:", payload);
 
       // Send the updated order to the backend
       const response = await api.post(
@@ -331,10 +342,7 @@ function RegisterAthletes({ competitionId, goBack }) {
 
       console.log("Start order updated successfully:", response.data);
     } catch (err) {
-      console.error(
-        "Failed to update start order:",
-        err.response?.data || err
-      );
+      console.error("Failed to update start order:", err.response?.data || err);
       console.error("Full error object:", err);
 
       // Revert the local state and show error
@@ -385,7 +393,7 @@ function RegisterAthletes({ competitionId, goBack }) {
       })
       .sort((a, b) => a.round_order - b.round_order);
 
-    console.log(" Category rounds found:", categoryRounds);
+    console.log("Category rounds found:", categoryRounds);
 
     const currentRoundIndex = categoryRounds.findIndex(
       (r) => r.round_group_detail?.name === currentRoundName
@@ -404,9 +412,9 @@ function RegisterAthletes({ competitionId, goBack }) {
       return;
     }
 
-    console.log("➡️ Advancing FROM round:", currentRound.id, currentRoundName);
+    console.log("Advancing FROM round:", currentRound.id, currentRoundName);
     console.log(
-      "➡️ Advancing TO round:",
+      "Advancing TO round:",
       nextRound.id,
       nextRound.round_group_detail.name
     );
@@ -424,7 +432,7 @@ function RegisterAthletes({ competitionId, goBack }) {
         await fetchStartlist();
         await fetchResults();
 
-        console.log(" Data refreshed after advancing climbers");
+        console.log("Data refreshed after advancing climbers");
       } else {
         const errorMsg = `Villa: ${response.data.message || "Óþekkt villa"}`;
         console.error("Advance failed:", response.data);
@@ -441,7 +449,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   };
 
   const handleRemoveAthlete = async (athlete, category) => {
-    console.log("🗑️ Removing athlete", athlete.full_name, "from", category);
+    console.log("Removing athlete", athlete.full_name, "from", category);
 
     try {
       const payload = {
@@ -451,7 +459,7 @@ function RegisterAthletes({ competitionId, goBack }) {
         start_order: athlete.start_order,
       };
 
-      console.log("📤 Remove payload:", payload);
+      console.log("Remove payload:", payload);
 
       const res = await api.post("/competitions/remove-athlete/", payload);
 
@@ -468,7 +476,7 @@ function RegisterAthletes({ competitionId, goBack }) {
   };
 
   const handleAddAthlete = (category) => {
-    console.log("➕ Adding athlete to category:", category);
+    console.log("Adding athlete to category:", category);
     setSelectedCategory(category);
     setShowAddModal(true);
     setSearchQuery("");
@@ -492,7 +500,7 @@ function RegisterAthletes({ competitionId, goBack }) {
         climber: athlete.id,
       };
 
-      console.log("📤 Register athlete payload:", payload);
+      console.log("Register athlete payload:", payload);
 
       const response = await api.post(
         "/competitions/register-athlete/",
@@ -617,9 +625,18 @@ function RegisterAthletes({ competitionId, goBack }) {
             <p className="text-muted mb-0">{competitionTitle}</p>
           )}
         </div>
-        <button className="btn btn-secondary" onClick={goBack}>
-          ← Til baka
-        </button>
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-success"
+            onClick={handleGoToJudgeDashboard}
+            title="Opna dómaraviðmót"
+          >
+            🎯 Dómaraviðmót
+          </button>
+          <button className="btn btn-secondary" onClick={goBack}>
+            ← Til baka
+          </button>
+        </div>
       </div>
 
       <ul className="nav nav-tabs mb-4">
@@ -796,6 +813,7 @@ function RegisterAthletes({ competitionId, goBack }) {
                               <strong>{athlete.user_account?.full_name}</strong>
                               <br />
                               <small className="text-muted">
+                                {athlete.category || "–"} •{" "}
                                 {athlete.user_account?.date_of_birth} •{" "}
                                 {athlete.user_account?.gender}
                               </small>

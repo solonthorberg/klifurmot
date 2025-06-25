@@ -226,13 +226,14 @@ class SendJudgeLinkView(APIView):
             expires_at = timezone.now() + timedelta(days=1)
 
         try:
-            judge_user = UserAccount.objects.get(id=user_id)
+            judge_user_account = UserAccount.objects.get(id=user_id)
             competition = Competition.objects.get(id=competition_id)
         except (UserAccount.DoesNotExist, Competition.DoesNotExist):
             return Response({"detail": "Invalid user or competition."}, status=404)
 
+        # Create or update the judge link
         link, created = JudgeLink.objects.get_or_create(
-            user=judge_user.user,
+            user=judge_user_account.user,
             competition=competition,
             defaults={
                 "created_by": request.user,
@@ -244,12 +245,33 @@ class SendJudgeLinkView(APIView):
             link.expires_at = expires_at
             link.save()
 
+        # Automatically assign judge role to the user for this competition
+        competition_role, role_created = CompetitionRole.objects.get_or_create(
+            user=judge_user_account,
+            competition=competition,
+            defaults={
+                "role": "judge",
+                "created_by": request.user.profile,
+                "last_modified_by": request.user.profile
+            }
+        )
+
+        # If role already exists but isn't judge, update it to judge
+        if not role_created and competition_role.role != "judge":
+            competition_role.role = "judge"
+            competition_role.last_modified_by = request.user.profile
+            competition_role.save()
+
         frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
+        
         return Response({
             "judge_link": f"{frontend_url}/judge/login/{link.token}/",
             "expires_at": link.expires_at,
             "is_used": link.is_used,
-            "created": created
+            "created": created,
+            "role_assigned": True,
+            "role_created": role_created,
+            "detail": f"Judge link created and judge role assigned to {judge_user_account.full_name}"
         })
 
 @api_view(['GET'])

@@ -5,7 +5,7 @@ from .views import (
     RoundViewSet, BoulderViewSet, JudgeBoulderAssignmentViewSet,
     AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders,
     GetCompetitionStartlist, GetCompetitionResults, RoundGroupViewSet,
-    RegisterAthleteView, RemoveAthleteView, UpdateStartOrderView
+    RegisterAthleteView, RemoveAthleteView, UpdateStartOrderView, GetUserCompetitionRoles
 )
 
 router = DefaultRouter()
@@ -26,5 +26,6 @@ urlpatterns = [
     path('register-athlete/', RegisterAthleteView.as_view(), name='register-athlete'),
     path('remove-athlete/', RemoveAthleteView, name='remove-athlete'),
     path('update-start-order/', UpdateStartOrderView.as_view(), name='update-start-order'),
+    path('roles/', GetUserCompetitionRoles, name='user-competition-roles'),
     path('', include(router.urls)),
 ]

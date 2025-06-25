@@ -5,7 +5,6 @@ function JudgeLinkSection({ competitionId }) {
   const [availableJudges, setAvailableJudges] = useState([]);
   const [selectedJudge, setSelectedJudge] = useState("");
   const [expirationDate, setExpirationDate] = useState("");
-  const [generatedLink, setGeneratedLink] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [existingLinks, setExistingLinks] = useState([]);
@@ -73,8 +72,18 @@ function JudgeLinkSection({ competitionId }) {
         payload
       );
 
-      setGeneratedLink(res.data.judge_link);
       console.log("Judge link generated:", res.data.judge_link);
+
+      // Show success message if role was assigned
+      if (res.data.role_assigned) {
+        console.log("Judge role automatically assigned");
+      }
+
+      // Reset form
+      setSelectedJudge("");
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setExpirationDate(tomorrow.toISOString().slice(0, 16));
 
       // Refresh the existing links list
       await fetchExistingLinks();
@@ -90,7 +99,7 @@ function JudgeLinkSection({ competitionId }) {
     }
   };
 
-  const copyToClipboard = async (link = generatedLink) => {
+  const copyToClipboard = async (link) => {
     try {
       await navigator.clipboard.writeText(link);
       setLinkCopied(true);
@@ -201,34 +210,8 @@ function JudgeLinkSection({ competitionId }) {
           </div>
         </div>
 
-        {generatedLink && (
-          <div className="mb-4">
-            <label className="form-label">Nýja dómaraslóð:</label>
-            <div className="input-group">
-              <input
-                type="text"
-                className="form-control"
-                value={generatedLink}
-                readOnly
-              />
-              <button
-                className="btn btn-outline-secondary"
-                onClick={() => copyToClipboard(generatedLink)}
-                title="Afrita slóð"
-              >
-                {linkCopied ? "✅ Afritað!" : "📋 Afrita"}
-              </button>
-            </div>
-            <small className="text-muted">
-              Sendu þessa slóð til dómarans. Slóðin rennur út:{" "}
-              {new Date(expirationDate).toLocaleString("is-IS")}
-            </small>
-          </div>
-        )}
-
         {/* Existing Judge Links Section */}
         <div className="mt-4">
-          <h6>Núverandi dómaraslóðir:</h6>
           {isLoadingLinks ? (
             <p className="text-muted">Hleður...</p>
           ) : existingLinks.length === 0 ? (
@@ -263,7 +246,7 @@ function JudgeLinkSection({ competitionId }) {
                             onClick={() => copyToClipboard(link.judge_link)}
                             title="Afrita slóð"
                           >
-                            📋
+                            {linkCopied ? "✅" : "📋"}
                           </button>
                         </div>
                       </td>

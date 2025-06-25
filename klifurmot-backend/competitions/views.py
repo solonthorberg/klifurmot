@@ -3,7 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from accounts.models import UserAccount
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration, Climber
@@ -276,6 +276,7 @@ def GetCompetitionStartlist(request, pk):
             user = ua.user
             full_name = ua.full_name or user.username
 
+            # Calculate age and determine age-based category using utility function
             birth_date = ua.date_of_birth
             if birth_date:
                 age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
@@ -289,8 +290,8 @@ def GetCompetitionStartlist(request, pk):
                 "start_order": result.start_order,
                 "full_name": full_name,
                 "gender": ua.gender or "–",
-                "category": group_name,
-                "age_category": age_category
+                "category": group_name,  # Competition category they're registered in
+                "age_category": age_category  # Calculated age-based category from utils
             }
             
             athletes.append(athlete_data)
@@ -653,3 +654,39 @@ class UpdateStartOrderView(APIView):
                 {"detail": f"Unexpected error: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def GetUserCompetitionRoles(request):
+    """Get user's roles for a specific competition"""
+    competition_id = request.query_params.get('competition_id')
+    user_id = request.query_params.get('user_id')
+    
+    if not competition_id:
+        return Response({"detail": "competition_id is required"}, status=400)
+    
+    # If no user_id provided, use current user
+    if not user_id:
+        user_id = request.user.id
+    
+    try:
+        # Get user's profile
+        if int(user_id) == request.user.id:
+            user_profile = request.user.profile
+        else:
+            # Only allow admins to check other users' roles
+            if not request.user.profile.is_admin:
+                return Response({"detail": "Permission denied"}, status=403)
+            user_profile = UserAccount.objects.get(user_id=user_id)
+        
+        roles = CompetitionRole.objects.filter(
+            user=user_profile,
+            competition_id=competition_id
+        ).values('role', 'competition_id', 'created_at')
+        
+        return Response(list(roles))
+        
+    except UserAccount.DoesNotExist:
+        return Response({"detail": "User not found"}, status=404)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=500)        
