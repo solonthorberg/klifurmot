@@ -89,9 +89,17 @@ class RoundViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
+        # For detail views (GET/PUT/PATCH/DELETE /rounds/ID/), return all rounds
+        # The ViewSet will handle individual lookups by ID
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            return CompetitionRound.objects.all()
+        
+        # For list views (GET /rounds/), filter by competition_id if provided
         competition_id = self.request.query_params.get('competition_id')
         if competition_id:
             return CompetitionRound.objects.filter(competition_category__competition_id=competition_id)
+        
+        # If no competition_id provided for list view, return empty queryset
         return CompetitionRound.objects.none()
 
     def perform_create(self, serializer):

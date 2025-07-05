@@ -105,7 +105,9 @@ def Me(request):
         user.email = data.get('email', user.email)
         user.save()
 
-    return Response(SerializeUserResponse(user))
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response(SerializeUserResponse(user, token))
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
