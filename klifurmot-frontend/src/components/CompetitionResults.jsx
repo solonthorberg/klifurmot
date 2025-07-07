@@ -32,19 +32,12 @@ function CompetitionResults({ competitionId }) {
   }, [competitionId]);
 
   useEffect(() => {
-<<<<<<< HEAD
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const host = window.location.host;
-    const socket = new WebSocket(`${protocol}://${host}/ws/results/${competitionId}/`);
+    const wsUrl = `${protocol}://${host}/ws/results/${competitionId}/`;
 
-
-=======
-    // Use your config to get the proper WebSocket URL
-    const wsUrl = config.getWebSocketUrl(`results/${competitionId}`);
     console.log("🔌 Connecting to WebSocket:", wsUrl);
-    
     const socket = new WebSocket(wsUrl);
->>>>>>> 9a457b3002e2bd502fe83e2e7b6cdbff703e7762
 
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
@@ -88,6 +81,7 @@ function CompetitionResults({ competitionId }) {
       }
     };
   }, [competitionId]);
+
 
   if (error && !results.length) return <p>{error}</p>;
   if (loading) return <p>Sæki niðurstöður...</p>;
