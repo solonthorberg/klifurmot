@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../services/api";
+import config from "../config/Environment"; // Import your config
 
 function CompetitionResults({ competitionId }) {
   const [results, setResults] = useState([]);
@@ -31,20 +32,20 @@ function CompetitionResults({ competitionId }) {
   }, [competitionId]);
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = window.location.host;
-    const socket = new WebSocket(
-      `${protocol}://${host}/ws/results/${competitionId}/`
-    );
+    // Use your config to get the proper WebSocket URL
+    const wsUrl = config.getWebSocketUrl(`results/${competitionId}`);
+    console.log("🔌 Connecting to WebSocket:", wsUrl);
+    
+    const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
-      console.log(" WebSocket connected");
+      console.log("✅ WebSocket connected");
     };
 
     socket.onmessage = function (event) {
       try {
         const data = JSON.parse(event.data);
-        console.log(" Message received:", data);
+        console.log("📨 Message received:", data);
         hasReceivedDataRef.current = true;
         setError("");
         if (Array.isArray(data)) {
@@ -59,18 +60,18 @@ function CompetitionResults({ competitionId }) {
     };
 
     socket.onerror = (e) => {
-      console.error(" WebSocket error:", e);
+      console.error("❌ WebSocket error:", e);
       if (!hasReceivedDataRef.current) {
         setError("Tenging við niðurstöðukerfi mistókst.");
       }
     };
 
     socket.onclose = (e) => {
-      console.warn(" WebSocket closed:", e);
+      console.warn("🔌 WebSocket closed:", e);
     };
 
     return () => {
-      console.log(" Cleaning up WebSocket");
+      console.log("🧹 Cleaning up WebSocket");
       if (
         socket.readyState === WebSocket.OPEN ||
         socket.readyState === WebSocket.CONNECTING

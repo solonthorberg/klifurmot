@@ -40,7 +40,7 @@ class CompetitionCategory(models.Model):
     last_modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     deleted = models.BooleanField(default=False)
     def __str__(self):
-        return f"{self.category_group.name} {self.get_gender_display()}"
+        return f"{self.competition.title} - {self.category_group.name} {self.get_gender_display()}"
 
 class RoundGroup(models.Model):
     name = models.CharField(max_length=50)
@@ -65,7 +65,7 @@ class CompetitionRound(models.Model):
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Round {self.round_order} - {self.competition_category}"
+        return f"{self.competition_category} - Round {self.round_order}"
     
     class Meta:
         ordering = ['round_order']
@@ -82,7 +82,7 @@ class Boulder(models.Model):
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Boulder {self.boulder_number} - {self.round}"
+        return f"{self.round} - Boulder {self.boulder_number}"
     
     class Meta:
         ordering = ['boulder_number']
