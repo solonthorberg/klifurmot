@@ -33,9 +33,9 @@ function CompetitionResults({ competitionId }) {
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const host = window.location.host;
-    const socket = new WebSocket(
-      `${protocol}://${host}/ws/results/${competitionId}/`
-    );
+    const socket = new WebSocket(`${protocol}://${host}/ws/results/${competitionId}/`);
+
+
 
     socket.onopen = () => {
       console.log(" WebSocket connected");
