@@ -77,8 +77,7 @@ function CreateCompetition({
         // First, create category groups from categories
         categoriesResponse.data.forEach((category) => {
           const groupId = category.category_group;
-          const groupName =
-            category.category_group_detail?.name || `Category ${groupId}`;
+          const groupName = category.category_group_detail?.name || `Category ${groupId}`;
 
           if (!categoryMap[groupId]) {
             categoryMap[groupId] = {
@@ -100,52 +99,48 @@ function CreateCompetition({
         if (roundsResponse.data.length > 0) {
           // Group rounds by category_group and round details to get unique rounds
           const roundsByCategory = {};
-
+          
           roundsResponse.data.forEach((round) => {
             const categoryDetail = round.competition_category_detail;
             if (!categoryDetail) return;
-
+            
             const groupId = categoryDetail.category_group;
-
+            
             if (!roundsByCategory[groupId]) {
               roundsByCategory[groupId] = [];
             }
-
+            
             // Check if we already have this round (same round_group and round_order)
-            const existingRound = roundsByCategory[groupId].find(
-              (r) =>
-                r.round_group_detail?.id === round.round_group_detail?.id &&
-                r.round_order === round.round_order
+            const existingRound = roundsByCategory[groupId].find(r => 
+              r.round_group_detail?.id === round.round_group_detail?.id && 
+              r.round_order === round.round_order
             );
-
+            
             if (!existingRound) {
               roundsByCategory[groupId].push(round);
             }
           });
 
           // Add processed rounds to categories
-          Object.keys(roundsByCategory).forEach((groupId) => {
+          Object.keys(roundsByCategory).forEach(groupId => {
             if (categoryMap[groupId]) {
               const rounds = roundsByCategory[groupId];
-
+              
               // Sort by round order
               rounds.sort((a, b) => a.round_order - b.round_order);
-
+              
               categoryMap[groupId].rounds = rounds.map((round, idx) => ({
-                id: round.round_group_detail?.id,
+                round_group_id: round.round_group_detail?.id,
                 name: round.round_group_detail?.name,
                 athlete_count: round.climbers_advance || 0,
                 boulder_count: round.boulder_count || 0,
                 _id: `existing-${round.id}-${idx}`,
-                roundId: round.id,
+                roundId: round.id, // This is the actual database round ID
                 order: round.round_order,
-                round_group_id: round.round_group_detail?.id,
                 markedForDeletion: false,
               }));
-
-              console.log(
-                `✅ Added ${categoryMap[groupId].rounds.length} rounds to ${categoryMap[groupId].name}`
-              );
+              
+              console.log(`✅ Added ${categoryMap[groupId].rounds.length} rounds to ${categoryMap[groupId].name}`);
             }
           });
         }
@@ -153,6 +148,7 @@ function CreateCompetition({
         const categoryArray = Object.values(categoryMap);
         console.log("🏁 Final categories:", categoryArray);
         setCategories(categoryArray);
+
       } catch (err) {
         console.error("Error fetching competition:", err);
         setError("Ekki tókst að sækja mótsupplýsingar");
@@ -199,6 +195,7 @@ function CreateCompetition({
         };
 
         await api.patch(`/competitions/rounds/${editing.roundId}/`, updateData);
+        console.log("✅ Successfully updated round in database");
       } catch (err) {
         console.error("Failed to update round:", err);
         setError("Ekki tókst að uppfæra umferð í gagnagrunn");
@@ -212,6 +209,7 @@ function CreateCompetition({
         const updatedRounds = [...cat.rounds];
 
         if (editing && typeof editing.index === "number") {
+          // Updating existing round
           updatedRounds[editing.index] = {
             ...round,
             _id: editing._id,
@@ -219,9 +217,15 @@ function CreateCompetition({
             markedForDeletion: false,
           };
         } else {
-          if (!round._id) round._id = `${Date.now()}-${Math.random()}`;
-          round.markedForDeletion = false;
-          updatedRounds.push(round);
+          // Adding new round
+          const newRound = {
+            ...round,
+            _id: `new-${Date.now()}-${Math.random()}`, // Mark as new with 'new-' prefix
+            roundId: null, // Explicitly mark as not saved yet
+            markedForDeletion: false,
+          };
+          updatedRounds.push(newRound);
+          console.log("➕ Added new round to category:", newRound);
         }
 
         return {
@@ -393,13 +397,61 @@ function CreateCompetition({
       );
 
       for (const category of activeCategories) {
-        if (
-          category.existingCategories &&
-          category.existingCategories.length > 0
-        ) {
-          continue;
+        // Handle existing categories - only create new rounds
+        if (category.existingCategories && category.existingCategories.length > 0) {
+          console.log(`Processing existing category: ${category.name}`);
+          
+          // Get new rounds that don't have roundId (meaning they weren't saved yet)
+          const newRounds = category.rounds.filter(
+            (round) => !round.markedForDeletion && !round.roundId
+          );
+          
+          if (newRounds.length > 0) {
+            console.log(`Found ${newRounds.length} new rounds for existing category ${category.name}`);
+            console.log("New rounds:", newRounds);
+            
+            // For existing categories, we need to create rounds for each existing competition category
+            for (const existingCategory of category.existingCategories) {
+              console.log(`Creating rounds for existing category ID: ${existingCategory.id}`);
+              
+              for (let i = 0; i < newRounds.length; i++) {
+                const round = newRounds[i];
+                
+                // Calculate the round order - get the max existing round order for this category
+                const existingRounds = category.rounds.filter(r => r.roundId);
+                const maxOrder = existingRounds.length > 0 ? Math.max(...existingRounds.map(r => r.order || 0)) : 0;
+                const roundOrder = maxOrder + i + 1;
+
+                const roundData = {
+                  competition_category: existingCategory.id,
+                  round_group: round.round_group_id,
+                  round_order: roundOrder,
+                  climbers_advance: parseInt(round.athlete_count) || 0,
+                  boulder_count: parseInt(round.boulder_count) || 0,
+                };
+
+                console.log("📤 Creating round for existing category:", roundData);
+
+                try {
+                  const response = await api.post("/competitions/rounds/", roundData);
+                  console.log("✅ Successfully created round for existing category:", response.data);
+                } catch (roundErr) {
+                  console.error("❌ Failed to create round for existing category:", roundErr);
+                  console.error("Error details:", roundErr.response?.data);
+                  throw new Error(
+                    roundErr.response?.data?.detail || "Failed to create round for existing category"
+                  );
+                }
+              }
+            }
+          } else {
+            console.log(`No new rounds to create for existing category: ${category.name}`);
+          }
+          continue; // Move to next category
         }
 
+        // Handle completely new categories
+        console.log(`Creating new category: ${category.name}`);
         const genders = ["KK", "KVK"];
 
         for (const gender of genders) {
@@ -416,6 +468,7 @@ function CreateCompetition({
             );
 
             const createdCategoryId = categoryResponse.data.id;
+            console.log("✅ Created new category:", categoryResponse.data);
 
             // Only create rounds that are not marked for deletion
             const activeRounds = category.rounds.filter(
@@ -426,7 +479,7 @@ function CreateCompetition({
               const round = activeRounds[i];
 
               if (round.roundId) {
-                continue;
+                continue; // Skip rounds that already exist
               }
 
               const roundData = {
@@ -437,19 +490,22 @@ function CreateCompetition({
                 boulder_count: parseInt(round.boulder_count) || 0,
               };
 
+              console.log("📤 Creating round for new category:", roundData);
+
               try {
                 await api.post("/competitions/rounds/", roundData);
+                console.log("✅ Successfully created round for new category");
               } catch (roundErr) {
-                console.error("Failed to create round:", roundErr);
+                console.error("Failed to create round for new category:", roundErr);
                 throw new Error(
-                  roundErr.response?.data?.detail || "Failed to create round"
+                  roundErr.response?.data?.detail || "Failed to create round for new category"
                 );
               }
             }
           } catch (catErr) {
-            console.error("Failed to create category:", catErr);
+            console.error("Failed to create new category:", catErr);
             throw new Error(
-              catErr.response?.data?.detail || "Failed to create category"
+              catErr.response?.data?.detail || "Failed to create new category"
             );
           }
         }
