@@ -86,7 +86,7 @@ class ClimbViewSet(viewsets.ModelViewSet):
         if not CompetitionRole.objects.filter(
             user__user=user,
             competition_id=competition_id,
-            role="judge"
+            role__in=["judge", "admin"]
         ).exists():
             return Response({"detail": "You are not authorized to judge in this competition."}, status=403)
 

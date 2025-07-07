@@ -35,7 +35,7 @@ class UserAccount(models.Model):
         return self.user.get_full_name() or self.user.username
 
 class CompetitionRole(models.Model):
-    ROLE_CHOICES = [('athlete', 'Athlete'), ('admin', 'Admin'), ('judge', 'Judge')]
+    ROLE_CHOICES = [('admin', 'Admin'), ('judge', 'Judge')]
 
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     competition = models.ForeignKey('competitions.Competition', on_delete=models.CASCADE)

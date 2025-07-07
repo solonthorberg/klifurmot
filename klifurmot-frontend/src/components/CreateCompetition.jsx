@@ -45,8 +45,7 @@ function CreateCompetition({
 
       setLoading(true);
       try {
-        console.log("🔍 Fetching competition data for ID:", competitionId);
-
+        // Fetch competition basic data
         const response = await api.get(
           `/competitions/competitions/${competitionId}/`
         );
@@ -60,131 +59,98 @@ function CreateCompetition({
         setDescription(comp.description || "");
         setVisible(comp.visible || false);
 
-        // Fetch existing rounds for this competition (which contain category info)
-        console.log("Fetching rounds for competition...");
+        // Fetch categories
+        const categoriesResponse = await api.get(
+          `/competitions/competition-categories/?competition_id=${competitionId}`
+        );
+        console.log("📋 Categories response:", categoriesResponse.data);
+
+        // Fetch rounds
         const roundsResponse = await api.get(
           `/competitions/rounds/?competition_id=${competitionId}`
         );
-        console.log("Rounds response:", roundsResponse.data);
-        console.log(
-          "First round structure:",
-          JSON.stringify(roundsResponse.data[0], null, 2)
-        );
+        console.log("📋 Rounds response:", roundsResponse.data);
 
-        // Group by category_group and build data structure
-        const categoryGroups = {};
-        roundsResponse.data.forEach((round) => {
-          console.log("Processing round:", round);
+        // Process categories and rounds
+        const categoryMap = {};
 
-          const categoryDetail = round.competition_category_detail;
-          if (!categoryDetail) {
-            console.warn(" Round missing category detail:", round);
-            return;
-          }
+        // First, create category groups from categories
+        categoriesResponse.data.forEach((category) => {
+          const groupId = category.category_group;
+          const groupName = category.category_group_detail?.name || `Category ${groupId}`;
 
-          const groupKey = categoryDetail.category_group;
-          const groupName =
-            categoryDetail.category_group_detail?.name ||
-            `Category ${groupKey}`;
-
-          console.log(`Group key: ${groupKey}, Group name: ${groupName}`);
-
-          if (!categoryGroups[groupKey]) {
-            categoryGroups[groupKey] = {
-              id: groupKey,
+          if (!categoryMap[groupId]) {
+            categoryMap[groupId] = {
+              id: groupId,
               name: groupName,
-              key: `${groupKey}-${Date.now()}-${Math.random()}`,
+              key: `cat-${groupId}-${Date.now()}`,
               rounds: [],
               roundsModal: false,
               roundToEdit: null,
-              existingCategories: [], // Track unique categories
+              existingCategories: [category],
+              markedForDeletion: false,
             };
-            console.log(`Created new category group: ${groupName}`);
-          }
-
-          // Add unique categories to track
-          const existingCat = categoryGroups[groupKey].existingCategories.find(
-            (cat) => cat.id === categoryDetail.id
-          );
-          if (!existingCat) {
-            categoryGroups[groupKey].existingCategories.push(categoryDetail);
+          } else {
+            categoryMap[groupId].existingCategories.push(category);
           }
         });
 
-        console.log("📊 Category groups created:", categoryGroups);
-
-        // Process rounds for each category group
-        for (const group of Object.values(categoryGroups)) {
-          try {
-            console.log(
-              `🔍 Processing rounds for category group: ${group.name}...`
+        // Then, add rounds to their respective categories
+        if (roundsResponse.data.length > 0) {
+          // Group rounds by category_group and round details to get unique rounds
+          const roundsByCategory = {};
+          
+          roundsResponse.data.forEach((round) => {
+            const categoryDetail = round.competition_category_detail;
+            if (!categoryDetail) return;
+            
+            const groupId = categoryDetail.category_group;
+            
+            if (!roundsByCategory[groupId]) {
+              roundsByCategory[groupId] = [];
+            }
+            
+            // Check if we already have this round (same round_group and round_order)
+            const existingRound = roundsByCategory[groupId].find(r => 
+              r.round_group_detail?.id === round.round_group_detail?.id && 
+              r.round_order === round.round_order
             );
+            
+            if (!existingRound) {
+              roundsByCategory[groupId].push(round);
+            }
+          });
 
-            // Filter rounds for this specific category group and remove duplicates
-            const seenRoundGroups = new Set();
-            const categoryRounds = roundsResponse.data.filter((round) => {
-              // Check if this round belongs to this category group
-              const belongsToGroup =
-                round.competition_category_detail?.category_group === group.id;
-
-              if (!belongsToGroup) return false;
-
-              // Handle round_group data
-              const roundGroupData = round.round_group_detail;
-              if (!roundGroupData) {
-                console.warn(
-                  ` Round ${round.id} missing round_group_detail:`,
-                  round
-                );
-                return false;
-              }
-
-              // Avoid duplicates by checking if we've already seen this round_group
-              const roundGroupKey = `${roundGroupData.id}-${round.round_order}`;
-              if (seenRoundGroups.has(roundGroupKey)) {
-                return false;
-              }
-              seenRoundGroups.add(roundGroupKey);
-
-              return true;
-            });
-
-            // Sort by round_order to maintain proper sequence
-            const sortedRounds = categoryRounds.sort(
-              (a, b) => a.round_order - b.round_order
-            );
-
-            group.rounds = sortedRounds.map((round, idx) => {
-              const roundGroupData = round.round_group_detail;
-              return {
-                id: roundGroupData.id,
-                name: roundGroupData.name,
+          // Add processed rounds to categories
+          Object.keys(roundsByCategory).forEach(groupId => {
+            if (categoryMap[groupId]) {
+              const rounds = roundsByCategory[groupId];
+              
+              // Sort by round order
+              rounds.sort((a, b) => a.round_order - b.round_order);
+              
+              categoryMap[groupId].rounds = rounds.map((round, idx) => ({
+                round_group_id: round.round_group_detail?.id,
+                name: round.round_group_detail?.name,
                 athlete_count: round.climbers_advance || 0,
                 boulder_count: round.boulder_count || 0,
                 _id: `existing-${round.id}-${idx}`,
-                roundId: round.id,
+                roundId: round.id, // This is the actual database round ID
                 order: round.round_order,
-                round_group_id: roundGroupData.id,
-              };
-            });
-
-            console.log(
-              ` Processed ${group.rounds.length} valid rounds for ${group.name}:`,
-              group.rounds
-            );
-          } catch (err) {
-            console.warn(
-              ` Error processing rounds for category group ${group.name}:`,
-              err.response?.data || err.message
-            );
-          }
+                markedForDeletion: false,
+              }));
+              
+              console.log(`✅ Added ${categoryMap[groupId].rounds.length} rounds to ${categoryMap[groupId].name}`);
+            }
+          });
         }
 
-        const finalCategories = Object.values(categoryGroups);
-        console.log(" Final categories with rounds:", finalCategories);
-        setCategories(finalCategories);
+        const categoryArray = Object.values(categoryMap);
+        console.log("🏁 Final categories:", categoryArray);
+        setCategories(categoryArray);
+
       } catch (err) {
-        console.error(" Error fetching competition:", err);
+        console.error("Error fetching competition:", err);
         setError("Ekki tókst að sækja mótsupplýsingar");
       } finally {
         setLoading(false);
@@ -195,28 +161,33 @@ function CreateCompetition({
   }, [isEditMode, competitionId]);
 
   const handleAddCategory = (categoryGroup) => {
+    const existingCategory = categories.find(
+      (cat) => cat.id === categoryGroup.id && !cat.markedForDeletion
+    );
+    if (existingCategory) {
+      setError(`Flokkur "${categoryGroup.name}" er nú þegar til`);
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+
     const newCategory = {
       ...categoryGroup,
       key: `${categoryGroup.id}-${Date.now()}-${Math.random()}`,
       rounds: [],
       roundsModal: false,
       roundToEdit: null,
+      markedForDeletion: false,
     };
-    console.log("➕ Added category", newCategory);
     setCategories((prev) => [...prev, newCategory]);
     setShowCategoryModal(false);
   };
 
   const handleAddOrUpdateRound = async (categoryKey, round) => {
-    console.log(" Adding or updating round", round);
-
     const category = categories.find((cat) => cat.key === categoryKey);
     const editing = category?.roundToEdit;
 
-    // If we're editing an existing round from the database
     if (editing && editing.roundId && isEditMode) {
       try {
-        console.log("📝 Updating existing round in database:", editing.roundId);
         const updateData = {
           round_group: round.round_group_id || round.id,
           climbers_advance: parseInt(round.athlete_count) || 0,
@@ -224,31 +195,37 @@ function CreateCompetition({
         };
 
         await api.patch(`/competitions/rounds/${editing.roundId}/`, updateData);
-        console.log(" Successfully updated round in database");
+        console.log("✅ Successfully updated round in database");
       } catch (err) {
-        console.error(" Failed to update round in database:", err);
+        console.error("Failed to update round:", err);
         setError("Ekki tókst að uppfæra umferð í gagnagrunn");
         return;
       }
     }
 
-    // Update local state
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.key !== categoryKey) return cat;
         const updatedRounds = [...cat.rounds];
 
         if (editing && typeof editing.index === "number") {
-          // Update existing round
+          // Updating existing round
           updatedRounds[editing.index] = {
             ...round,
-            _id: editing._id, // Keep the same _id for consistency
-            roundId: editing.roundId, // Keep the database ID if it exists
+            _id: editing._id,
+            roundId: editing.roundId,
+            markedForDeletion: false,
           };
         } else {
-          // Add new round
-          if (!round._id) round._id = `${Date.now()}-${Math.random()}`;
-          updatedRounds.push(round);
+          // Adding new round
+          const newRound = {
+            ...round,
+            _id: `new-${Date.now()}-${Math.random()}`, // Mark as new with 'new-' prefix
+            roundId: null, // Explicitly mark as not saved yet
+            markedForDeletion: false,
+          };
+          updatedRounds.push(newRound);
+          console.log("➕ Added new round to category:", newRound);
         }
 
         return {
@@ -261,70 +238,42 @@ function CreateCompetition({
     );
   };
 
-  const handleDeleteCategory = async (categoryKey) => {
-    const categoryToDelete = categories.find(cat => cat.key === categoryKey);
-    
-    // If this is an existing category in edit mode, we need to delete it from the database
-    if (isEditMode && categoryToDelete?.existingCategories?.length > 0) {
-      try {
-        // Delete all existing categories (both KK and KVK) for this category group
-        for (const existingCategory of categoryToDelete.existingCategories) {
-          try {
-            await api.delete(`/competitions/competition-categories/${existingCategory.id}/`);
-          } catch (err) {
-            console.error(`Failed to delete category ${existingCategory.id}:`, err);
-            // Continue trying to delete other categories even if one fails
-          }
-        }
-        
-        // Also delete any rounds that might still exist
-        for (const round of categoryToDelete.rounds) {
-          if (round.roundId) {
-            try {
-              await api.delete(`/competitions/rounds/${round.roundId}/`);
-            } catch (err) {
-              console.error(`Failed to delete round ${round.roundId}:`, err);
-              // Continue with deletion even if some rounds fail
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to delete category from database:", err);
-        setError(`Ekki tókst að eyða flokki úr gagnagrunni: ${err.response?.data?.detail || err.message}`);
-        return; // Don't remove from local state if database deletion failed
-      }
-    }
-
-    // Remove from local state
-    setCategories((prev) => prev.filter((cat) => cat.key !== categoryKey));
-  };
-
-  const handleDeleteRound = async (categoryKey, roundIndex) => {
-    const category = categories.find((cat) => cat.key === categoryKey);
-    const roundToDelete = category?.rounds[roundIndex];
-
-    if (!roundToDelete) {
-      console.error("Round not found for deletion");
+  const handleMarkCategoryForDeletion = (categoryKey) => {
+    if (!confirm("Ertu viss um að þú viljir eyða þessum flokki?")) {
       return;
     }
 
-    // If this is an existing round from the database, we need to delete it via API
-    if (roundToDelete.roundId && isEditMode) {
-      try {
-        await api.delete(`/competitions/rounds/${roundToDelete.roundId}/`);
-      } catch (err) {
-        console.error("Failed to delete round from database:", err);
-        setError("Ekki tókst að eyða umferð úr gagnagrunni");
-        return;
-      }
+    setCategories((prev) =>
+      prev.map((cat) => {
+        if (cat.key !== categoryKey) return cat;
+
+        // Mark category for deletion
+        const updatedCategory = { ...cat, markedForDeletion: true };
+
+        // Also mark all rounds in this category for deletion
+        updatedCategory.rounds = cat.rounds.map((round) => ({
+          ...round,
+          markedForDeletion: true,
+        }));
+
+        return updatedCategory;
+      })
+    );
+  };
+
+  const handleMarkRoundForDeletion = (categoryKey, roundIndex) => {
+    if (!confirm("Ertu viss um að þú viljir eyða þessari umferð?")) {
+      return;
     }
 
-    // Remove from local state
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.key !== categoryKey) return cat;
         const updatedRounds = [...cat.rounds];
-        updatedRounds.splice(roundIndex, 1);
+        updatedRounds[roundIndex] = {
+          ...updatedRounds[roundIndex],
+          markedForDeletion: true,
+        };
         return { ...cat, rounds: updatedRounds };
       })
     );
@@ -333,10 +282,7 @@ function CreateCompetition({
   const handleRoundDragEnd = (categoryKey, event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    console.log(" Reordering rounds:", {
-      activeId: active.id,
-      overId: over.id,
-    });
+
     setCategories((prev) => {
       return prev.map((cat) => {
         if (cat.key !== categoryKey) return cat;
@@ -350,31 +296,170 @@ function CreateCompetition({
     });
   };
 
+  const performActualDeletions = async () => {
+    // Delete categories and their rounds
+    for (const category of categories) {
+      if (
+        category.markedForDeletion &&
+        category.existingCategories?.length > 0
+      ) {
+        try {
+          for (const existingCategory of category.existingCategories) {
+            try {
+              await api.delete(
+                `/competitions/competition-categories/${existingCategory.id}/`
+              );
+            } catch (err) {
+              console.error(
+                `Failed to delete category ${existingCategory.id}:`,
+                err
+              );
+            }
+          }
+
+          // Delete all rounds in this category
+          for (const round of category.rounds) {
+            if (round.roundId) {
+              try {
+                await api.delete(`/competitions/rounds/${round.roundId}/`);
+              } catch (err) {
+                console.error(`Failed to delete round ${round.roundId}:`, err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to delete category from database:", err);
+          throw new Error(
+            `Ekki tókst að eyða flokki úr gagnagrunni: ${
+              err.response?.data?.detail || err.message
+            }`
+          );
+        }
+      } else {
+        // Delete individual rounds marked for deletion
+        for (const round of category.rounds) {
+          if (round.markedForDeletion && round.roundId && isEditMode) {
+            try {
+              const roundsResponse = await api.get(
+                `/competitions/rounds/?competition_id=${competitionId}`
+              );
+
+              const currentRoundData = roundsResponse.data.find(
+                (r) => r.id === round.roundId
+              );
+
+              if (currentRoundData) {
+                const relatedRounds = roundsResponse.data.filter(
+                  (r) =>
+                    r.competition_category_detail?.category_group ===
+                      currentRoundData.competition_category_detail
+                        ?.category_group &&
+                    r.round_group_detail?.id ===
+                      currentRoundData.round_group_detail?.id &&
+                    r.round_order === currentRoundData.round_order
+                );
+
+                for (const relatedRound of relatedRounds) {
+                  try {
+                    await api.delete(
+                      `/competitions/rounds/${relatedRound.id}/`
+                    );
+                  } catch (deleteErr) {
+                    console.error(
+                      `Failed to delete round ID ${relatedRound.id}:`,
+                      deleteErr
+                    );
+                  }
+                }
+              } else {
+                await api.delete(`/competitions/rounds/${round.roundId}/`);
+              }
+            } catch (err) {
+              if (err.response?.status !== 404) {
+                throw new Error(
+                  `Ekki tókst að eyða umferð úr gagnagrunni: ${
+                    err.response?.data?.detail || err.message
+                  }`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
   const createCategoriesAndRounds = async (competitionId) => {
     try {
-      for (const category of categories) {
-        // Skip if this category already exists in the database (for edit mode)
-        if (
-          category.existingCategories &&
-          category.existingCategories.length > 0
-        ) {
-          console.log("Skipping existing category:", category.name);
-          // Note: Updates to existing rounds are handled individually in handleAddOrUpdateRound
-          continue;
+      // Only process categories that are not marked for deletion
+      const activeCategories = categories.filter(
+        (cat) => !cat.markedForDeletion
+      );
+
+      for (const category of activeCategories) {
+        // Handle existing categories - only create new rounds
+        if (category.existingCategories && category.existingCategories.length > 0) {
+          console.log(`Processing existing category: ${category.name}`);
+          
+          // Get new rounds that don't have roundId (meaning they weren't saved yet)
+          const newRounds = category.rounds.filter(
+            (round) => !round.markedForDeletion && !round.roundId
+          );
+          
+          if (newRounds.length > 0) {
+            console.log(`Found ${newRounds.length} new rounds for existing category ${category.name}`);
+            console.log("New rounds:", newRounds);
+            
+            // For existing categories, we need to create rounds for each existing competition category
+            for (const existingCategory of category.existingCategories) {
+              console.log(`Creating rounds for existing category ID: ${existingCategory.id}`);
+              
+              for (let i = 0; i < newRounds.length; i++) {
+                const round = newRounds[i];
+                
+                // Calculate the round order - get the max existing round order for this category
+                const existingRounds = category.rounds.filter(r => r.roundId);
+                const maxOrder = existingRounds.length > 0 ? Math.max(...existingRounds.map(r => r.order || 0)) : 0;
+                const roundOrder = maxOrder + i + 1;
+
+                const roundData = {
+                  competition_category: existingCategory.id,
+                  round_group: round.round_group_id,
+                  round_order: roundOrder,
+                  climbers_advance: parseInt(round.athlete_count) || 0,
+                  boulder_count: parseInt(round.boulder_count) || 0,
+                };
+
+                console.log("📤 Creating round for existing category:", roundData);
+
+                try {
+                  const response = await api.post("/competitions/rounds/", roundData);
+                  console.log("✅ Successfully created round for existing category:", response.data);
+                } catch (roundErr) {
+                  console.error("❌ Failed to create round for existing category:", roundErr);
+                  console.error("Error details:", roundErr.response?.data);
+                  throw new Error(
+                    roundErr.response?.data?.detail || "Failed to create round for existing category"
+                  );
+                }
+              }
+            }
+          } else {
+            console.log(`No new rounds to create for existing category: ${category.name}`);
+          }
+          continue; // Move to next category
         }
 
-        // Create categories for both genders (only for new categories)
+        // Handle completely new categories
+        console.log(`Creating new category: ${category.name}`);
         const genders = ["KK", "KVK"];
 
         for (const gender of genders) {
-          // Create competition category
           const categoryData = {
             competition: competitionId,
             category_group: category.id,
             gender: gender,
           };
-
-          console.log("📤 Creating category with data:", categoryData);
 
           try {
             const categoryResponse = await api.post(
@@ -383,16 +468,18 @@ function CreateCompetition({
             );
 
             const createdCategoryId = categoryResponse.data.id;
-            console.log(" Created category:", categoryResponse.data);
+            console.log("✅ Created new category:", categoryResponse.data);
 
-            // Create rounds for this category (only new rounds without roundId)
-            for (let i = 0; i < category.rounds.length; i++) {
-              const round = category.rounds[i];
+            // Only create rounds that are not marked for deletion
+            const activeRounds = category.rounds.filter(
+              (round) => !round.markedForDeletion
+            );
 
-              // Skip rounds that already exist in the database
+            for (let i = 0; i < activeRounds.length; i++) {
+              const round = activeRounds[i];
+
               if (round.roundId) {
-                console.log("Skipping existing round:", round.name);
-                continue;
+                continue; // Skip rounds that already exist
               }
 
               const roundData = {
@@ -403,35 +490,28 @@ function CreateCompetition({
                 boulder_count: parseInt(round.boulder_count) || 0,
               };
 
-              console.log("📤 Creating round with data:", roundData);
+              console.log("📤 Creating round for new category:", roundData);
 
               try {
-                const roundResponse = await api.post(
-                  "/competitions/rounds/",
-                  roundData
-                );
-                console.log(" Created round:", roundResponse.data);
+                await api.post("/competitions/rounds/", roundData);
+                console.log("✅ Successfully created round for new category");
               } catch (roundErr) {
-                console.error(" Failed to create round:", roundErr);
+                console.error("Failed to create round for new category:", roundErr);
                 throw new Error(
-                  roundErr.response?.data?.detail ||
-                    JSON.stringify(roundErr.response?.data) ||
-                    "Failed to create round"
+                  roundErr.response?.data?.detail || "Failed to create round for new category"
                 );
               }
             }
           } catch (catErr) {
-            console.error(" Failed to create category:", catErr);
+            console.error("Failed to create new category:", catErr);
             throw new Error(
-              catErr.response?.data?.detail ||
-                JSON.stringify(catErr.response?.data) ||
-                "Failed to create category"
+              catErr.response?.data?.detail || "Failed to create new category"
             );
           }
         }
       }
     } catch (err) {
-      console.error(" Failed to create categories and rounds:", err);
+      console.error("Failed to create categories and rounds:", err);
       throw new Error(
         err.message ||
           "Competition saved but failed to create categories/rounds"
@@ -445,13 +525,17 @@ function CreateCompetition({
     setError("");
 
     try {
-      // Validate required fields
       if (!title.trim() || !startDate || !endDate || !location.trim()) {
         throw new Error("Please fill in all required fields");
       }
 
       if (new Date(startDate) >= new Date(endDate)) {
         throw new Error("End date must be after start date");
+      }
+
+      // Perform deletions first if in edit mode
+      if (isEditMode) {
+        await performActualDeletions();
       }
 
       const formData = new FormData();
@@ -465,8 +549,6 @@ function CreateCompetition({
       if (image) {
         formData.append("image", image);
       }
-
-      console.log(`📤 ${isEditMode ? "Updating" : "Creating"} competition...`);
 
       let response;
       if (isEditMode) {
@@ -483,14 +565,11 @@ function CreateCompetition({
         });
       }
 
-      console.log(
-        ` Competition ${isEditMode ? "updated" : "created"} successfully:`,
-        response.data
+      // Only create categories/rounds that are not marked for deletion
+      const activeCategories = categories.filter(
+        (cat) => !cat.markedForDeletion
       );
-
-      // Create new categories and rounds if they exist (only for new ones)
-      if (categories.length > 0) {
-        console.log("📝 Creating/updating categories and rounds...");
+      if (activeCategories.length > 0) {
         await createCategoriesAndRounds(response.data.id);
       }
 
@@ -498,7 +577,7 @@ function CreateCompetition({
       goBack();
     } catch (err) {
       console.error(
-        ` Failed to ${isEditMode ? "update" : "create"} competition:`,
+        `Failed to ${isEditMode ? "update" : "create"} competition:`,
         err
       );
       setError(
@@ -515,6 +594,11 @@ function CreateCompetition({
   if (isEditMode && loading) {
     return <p>Hleður mótsupplýsingum...</p>;
   }
+
+  // Filter out completely deleted categories for display (new categories that were never saved)
+  const displayCategories = categories.filter(
+    (cat) => !(cat.markedForDeletion && !cat.existingCategories?.length)
+  );
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -729,9 +813,9 @@ function CreateCompetition({
             </button>
           </div>
 
-          {categories.length > 0 && (
+          {displayCategories.length > 0 && (
             <div>
-              {categories.map((cat) => (
+              {displayCategories.map((cat) => (
                 <div
                   key={cat.key}
                   style={{
@@ -739,7 +823,10 @@ function CreateCompetition({
                     padding: "1rem",
                     margin: "1rem 0",
                     borderRadius: "4px",
-                    backgroundColor: "#f8f9fa",
+                    backgroundColor: cat.markedForDeletion
+                      ? "#ffe6e6"
+                      : "#f8f9fa",
+                    opacity: cat.markedForDeletion ? 0.7 : 1,
                   }}
                 >
                   <div
@@ -752,162 +839,215 @@ function CreateCompetition({
                   >
                     <h5 style={{ margin: 0 }}>{cat.name}</h5>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          console.log(
-                            "🟢 Opening round modal for category:",
-                            cat.name
-                          );
-                          setCategories((prev) =>
-                            prev.map((c) =>
-                              c.key === cat.key
-                                ? { ...c, roundsModal: true, roundToEdit: null }
-                                : c
-                            )
-                          );
-                        }}
-                        disabled={submitting}
-                        style={{
-                          padding: "0.25rem 0.5rem",
-                          backgroundColor: "#007bff",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: submitting ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        + Umferð
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDeleteCategory(cat.key);
-                        }}
-                        disabled={submitting}
-                        style={{
-                          padding: "0.25rem 0.5rem",
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: submitting ? "not-allowed" : "pointer",
-                        }}
-                      >
-                        🗑️ Eyða flokki
-                      </button>
+                      {cat.markedForDeletion ? (
+                        <span style={{ color: "red", fontStyle: "italic" }}>
+                          Verður eytt þegar þú vistar
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategories((prev) =>
+                                prev.map((c) =>
+                                  c.key === cat.key
+                                    ? {
+                                        ...c,
+                                        roundsModal: true,
+                                        roundToEdit: null,
+                                      }
+                                    : c
+                                )
+                              );
+                            }}
+                            disabled={submitting}
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              backgroundColor: "#007bff",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: submitting ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            + Umferð
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleMarkCategoryForDeletion(cat.key);
+                            }}
+                            disabled={submitting}
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              backgroundColor: "#dc3545",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: submitting ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            🗑️ Eyða flokki
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(event) => handleRoundDragEnd(cat.key, event)}
-                  >
-                    <SortableContext
-                      items={cat.rounds.map((r) => r._id)}
-                      strategy={verticalListSortingStrategy}
+                  {!cat.markedForDeletion && (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleRoundDragEnd(cat.key, event)}
                     >
-                      <div>
-                        {cat.rounds.length === 0 ? (
-                          <p style={{ color: "#666", fontStyle: "italic" }}>
-                            Engar umferðir búnar til
-                          </p>
-                        ) : (
-                          cat.rounds.map((round, idx) => (
-                            <div
-                              key={round._id}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                padding: "0.5rem",
-                                border: "1px solid #eee",
-                                margin: "0.5rem 0",
-                                backgroundColor: "white",
-                                borderRadius: "4px",
-                              }}
-                            >
-                              <SortableItem id={round._id}>
-                                <span>
-                                  {round.name} – {round.athlete_count} keppendur
-                                  – {round.boulder_count} leiðir
-                                </span>
-                              </SortableItem>
-                              <div style={{ display: "flex", gap: "0.25rem" }}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    console.log("✏️ Editing round:", round);
-                                    setCategories((prev) =>
-                                      prev.map((c) =>
-                                        c.key === cat.key
-                                          ? {
-                                              ...c,
-                                              roundsModal: true,
-                                              roundToEdit: {
-                                                ...round,
-                                                index: idx,
-                                              },
-                                            }
-                                          : c
-                                      )
-                                    );
-                                  }}
-                                  disabled={submitting}
-                                  style={{
-                                    padding: "0.25rem 0.5rem",
-                                    backgroundColor: "#ffc107",
-                                    color: "black",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: submitting
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    fontSize: "0.875rem",
-                                  }}
-                                >
-                                  Breyta
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    handleDeleteRound(cat.key, idx);
-                                  }}
-                                  disabled={submitting}
-                                  style={{
-                                    padding: "0.25rem 0.5rem",
-                                    backgroundColor: "#dc3545",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "4px",
-                                    cursor: submitting
-                                      ? "not-allowed"
-                                      : "pointer",
-                                    fontSize: "0.875rem",
-                                  }}
-                                >
-                                  Eyða
-                                </button>
+                      <SortableContext
+                        items={cat.rounds
+                          .filter((r) => !r.markedForDeletion)
+                          .map((r) => r._id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div>
+                          {cat.rounds.filter((r) => !r.markedForDeletion)
+                            .length === 0 ? (
+                            <p style={{ color: "#666", fontStyle: "italic" }}>
+                              Engar umferðir búnar til
+                            </p>
+                          ) : (
+                            cat.rounds.map((round, idx) => (
+                              <div
+                                key={round._id}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "0.5rem",
+                                  border: "1px solid #eee",
+                                  margin: "0.5rem 0",
+                                  backgroundColor: round.markedForDeletion
+                                    ? "#ffe6e6"
+                                    : "white",
+                                  borderRadius: "4px",
+                                  opacity: round.markedForDeletion ? 0.7 : 1,
+                                }}
+                              >
+                                {round.markedForDeletion ? (
+                                  <span style={{ color: "red" }}>
+                                    {round.name} – {round.athlete_count}{" "}
+                                    keppendur – {round.boulder_count} leiðir
+                                    <span
+                                      style={{
+                                        fontSize: "0.8rem",
+                                        fontStyle: "italic",
+                                        marginLeft: "1rem",
+                                      }}
+                                    >
+                                      Verður eytt þegar þú vistar
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <>
+                                    <SortableItem id={round._id}>
+                                      <span>
+                                        {round.name} – {round.athlete_count}{" "}
+                                        keppendur – {round.boulder_count} leiðir
+                                      </span>
+                                    </SortableItem>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        gap: "0.25rem",
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setCategories((prev) =>
+                                            prev.map((c) =>
+                                              c.key === cat.key
+                                                ? {
+                                                    ...c,
+                                                    roundsModal: true,
+                                                    roundToEdit: {
+                                                      ...round,
+                                                      index: idx,
+                                                    },
+                                                  }
+                                                : c
+                                            )
+                                          );
+                                        }}
+                                        disabled={submitting}
+                                        style={{
+                                          padding: "0.25rem 0.5rem",
+                                          backgroundColor: "#ffc107",
+                                          color: "black",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: submitting
+                                            ? "not-allowed"
+                                            : "pointer",
+                                          fontSize: "0.875rem",
+                                        }}
+                                      >
+                                        Breyta
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          handleMarkRoundForDeletion(
+                                            cat.key,
+                                            idx
+                                          );
+                                        }}
+                                        disabled={submitting}
+                                        style={{
+                                          padding: "0.25rem 0.5rem",
+                                          backgroundColor: "#dc3545",
+                                          color: "white",
+                                          border: "none",
+                                          borderRadius: "4px",
+                                          cursor: submitting
+                                            ? "not-allowed"
+                                            : "pointer",
+                                          fontSize: "0.875rem",
+                                        }}
+                                      >
+                                        Eyða
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
                               </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
+                            ))
+                          )}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
 
-                  {cat.roundsModal && (
+                  {cat.markedForDeletion && (
+                    <div
+                      style={{
+                        color: "#666",
+                        fontStyle: "italic",
+                        padding: "1rem",
+                      }}
+                    >
+                      Þessi flokkur og allar umferðir hans verða eyddar þegar þú
+                      vistar breytingarnar.
+                    </div>
+                  )}
+
+                  {cat.roundsModal && !cat.markedForDeletion && (
                     <RoundModal
                       existingRound={cat.roundToEdit}
                       onClose={() => {
-                        console.log("🔴 Closing round modal for:", cat.name);
                         setCategories((prev) =>
                           prev.map((c) =>
                             c.key === cat.key
@@ -926,7 +1066,7 @@ function CreateCompetition({
             </div>
           )}
 
-          {categories.length === 0 && (
+          {displayCategories.length === 0 && (
             <p
               style={{
                 fontStyle: "italic",
