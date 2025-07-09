@@ -18,7 +18,9 @@ def DeleteOrphanedClimbers(sender, instance, **kwargs):
 @receiver(post_save, sender=UserAccount)
 def create_climber_profile(sender, instance, created, **kwargs):
     if created:
-        Climber.objects.create(
+        climber, created = Climber.objects.get_or_create(
             user_account=instance,
-            created_by=instance.user if instance.user else None
+            defaults={
+                'created_by': instance.user if instance.user else None
+            }
         )
