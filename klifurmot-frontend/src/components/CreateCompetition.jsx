@@ -194,8 +194,45 @@ function CreateCompetition({
           boulder_count: parseInt(round.boulder_count) || 0,
         };
 
-        await api.patch(`/competitions/rounds/${editing.roundId}/`, updateData);
-        console.log("✅ Successfully updated round in database");
+        // Get all rounds for this competition to find related rounds
+        const roundsResponse = await api.get(
+          `/competitions/rounds/?competition_id=${competitionId}`
+        );
+
+        // Find the current round data
+        const currentRoundData = roundsResponse.data.find(
+          (r) => r.id === editing.roundId
+        );
+
+        if (currentRoundData) {
+          // Find all related rounds (same category group, round group, and round order)
+          // This includes both male and female versions
+          const relatedRounds = roundsResponse.data.filter(
+            (r) =>
+              r.competition_category_detail?.category_group ===
+                currentRoundData.competition_category_detail?.category_group &&
+              r.round_group_detail?.id ===
+                currentRoundData.round_group_detail?.id &&
+              r.round_order === currentRoundData.round_order
+          );
+
+          console.log(`📝 Updating ${relatedRounds.length} related rounds (both male and female)`);
+
+          // Update all related rounds
+          for (const relatedRound of relatedRounds) {
+            try {
+              await api.patch(`/competitions/rounds/${relatedRound.id}/`, updateData);
+              console.log(`✅ Successfully updated round ID ${relatedRound.id}`);
+            } catch (err) {
+              console.error(`❌ Failed to update round ID ${relatedRound.id}:`, err);
+              throw new Error(`Failed to update round: ${err.response?.data?.detail || err.message}`);
+            }
+          }
+        } else {
+          // Fallback: just update the single round if we can't find related ones
+          await api.patch(`/competitions/rounds/${editing.roundId}/`, updateData);
+          console.log("✅ Successfully updated single round in database");
+        }
       } catch (err) {
         console.error("Failed to update round:", err);
         setError("Ekki tókst að uppfæra umferð í gagnagrunn");
@@ -203,6 +240,7 @@ function CreateCompetition({
       }
     }
 
+    // Update the UI state
     setCategories((prev) =>
       prev.map((cat) => {
         if (cat.key !== categoryKey) return cat;
