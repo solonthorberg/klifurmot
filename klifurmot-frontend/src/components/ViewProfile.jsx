@@ -1,3 +1,6 @@
+import "./../css/pages/Profile.css";
+import Button from "@mui/material/Button";
+
 function ViewProfile({ me, onEdit }) {
   return (
     <div>
@@ -10,7 +13,9 @@ function ViewProfile({ me, onEdit }) {
       <p>Hæð: {me.profile?.height_cm || "–"} cm</p>
       <p>Vænghaf: {me.profile?.wingspan_cm || "–"} cm</p>
 
-      <button onClick={onEdit}>Breyta</button>
+      <Button variant="contained" onClick={onEdit}>
+        Breyta
+      </Button>
     </div>
   );
 }
