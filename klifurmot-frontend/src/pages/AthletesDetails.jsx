@@ -1,9 +1,24 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../services/api";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import CircularProgress from "@mui/material/CircularProgress";
+import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
+import PersonIcon from '@mui/icons-material/Person';
 
 function AthletesDetails() {
-  const { id } = useParams(); // Get athlete's user_account ID from the URL
+  const { id } = useParams();
   const [athlete, setAthlete] = useState(null);
   const [error, setError] = useState("");
 
@@ -12,7 +27,7 @@ function AthletesDetails() {
       try {
         const res = await api.get(`/athletes/${id}/`);
         setAthlete(res.data);
-        console.log(res)
+        console.log(res);
       } catch (err) {
         console.error("Error fetching athlete:", err);
         setError("Ekki tókst að sækja keppandann.");
@@ -24,45 +39,160 @@ function AthletesDetails() {
     }
   }, [id]);
 
-  if (error) return <p>{error}</p>;
-  if (!athlete) return <p>Hleð inn gögnum...</p>;
+  const formatDate = (dateString) => {
+    if (!dateString) return "–";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const calculateAge = (dateString) => {
+    if (!dateString) return null;
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatNationality = (nationality) => {
+    if (!nationality) return "–";
+    if (typeof nationality === 'object') {
+      return nationality.name_en || nationality.country_code;
+    }
+    return nationality;
+  };
+
+  const getFinalResult = (results) => {
+    if (!results || results.length === 0) return null;
+    
+    const roundOrder = ['qualification', 'semi-final', 'final'];
+    
+    let finalResult = results[0];
+    for (const result of results) {
+      const currentRoundIndex = roundOrder.findIndex(round => 
+        result.round_name.toLowerCase().includes(round)
+      );
+      const finalRoundIndex = roundOrder.findIndex(round => 
+        finalResult.round_name.toLowerCase().includes(round)
+      );
+      
+      if (currentRoundIndex > finalRoundIndex) {
+        finalResult = result;
+      }
+    }
+    
+    return finalResult;
+  };
+
+  if (error) {
+    return (
+      <Box maxWidth="lg" sx={{ mx: "auto", mt: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  if (!athlete) {
+    return (
+      <Box maxWidth="lg" sx={{ mx: "auto", textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Hleður inn gögnum...
+        </Typography>
+      </Box>
+    );
+  }
+
+  const age = calculateAge(athlete.date_of_birth);
 
   return (
-    <div>
-      <h2>{athlete.full_name}</h2>
+    <Box sx={{ maxWidth: 800, mx: "auto", mt: 3 }}>
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.300' }}>
+            <PersonIcon sx={{ fontSize: 40 }} />
+          </Avatar>
+          
+          <Typography variant="h4" component="h1" gutterBottom>
+            {athlete.full_name}
+          </Typography>
 
-      <p><strong>Aldur:</strong> {athlete.date_of_birth}</p>
-      <p><strong>Kyn:</strong> {athlete.gender}</p>
-      <p><strong>Þjóðerni:</strong> {athlete.nationality}</p>
-      <p><strong>Hæð:</strong> {athlete.height_cm} cm</p>
-      <p><strong>Vænghaf:</strong> {athlete.wingspan_cm} cm</p>
-      <p><strong>Flokkur:</strong> {athlete.category}</p>
-      <p><strong>Þátttaka í mótum:</strong> {athlete.competitions_count}</p>
-      <p><strong>Sigrar:</strong> {athlete.wins_count}</p>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mt: 3 }}>
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Aldur: {age || '–'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Hæð: {athlete.height_cm ? `${athlete.height_cm} cm` : '–'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Vænghaf: {athlete.wingspan_cm ? `${athlete.wingspan_cm} cm` : '–'}
+              </Typography>
+            </Box>
+            
+            <Box />
+            
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Flokkur: {athlete.category || '–'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Mótaþátttaka: {athlete.competitions_count || 0}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Sigrar: {athlete.wins_count || 0}
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
 
-      {athlete.competitions.length > 0 && (
-        <div>
-          <h3>Mót sem viðkomandi hefur tekið þátt í:</h3>
-          <ul>
-            {athlete.competitions.map((comp) => (
-              <li key={comp.id}>
-                <strong>{comp.title}</strong> – {comp.category} – {new Date(comp.start_date).toLocaleDateString()}
-                <div>
-                  <h4>Results:</h4>
-                  <ul>
-                    {comp.results.map((result, index) => (
-                      <li key={index}>
-                        Round: {result.round_name} - Rank: {result.rank}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {athlete.competitions && athlete.competitions.length > 0 && (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell><strong>Árangur</strong></TableCell>
+                <TableCell><strong>Mót</strong></TableCell>
+                <TableCell><strong>Flokkur</strong></TableCell>
+                <TableCell><strong>Dagsetning</strong></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {athlete.competitions.map((comp) => (
+                <TableRow key={comp.id}>
+                  <TableCell>
+                    {(() => {
+                      const finalResult = getFinalResult(comp.results);
+                      return finalResult ? finalResult.rank : '–';
+                    })()}
+                  </TableCell>
+                  <TableCell>{comp.title}</TableCell>
+                  <TableCell>{comp.category}</TableCell>
+                  <TableCell>{formatDate(comp.start_date)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+
+      {(!athlete.competitions || athlete.competitions.length === 0) && (
+        <Card>
+          <CardContent>
+            <Typography variant="body1" color="textSecondary" textAlign="center">
+              Engir keppnisárangur skráður.
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
   );
 }
 

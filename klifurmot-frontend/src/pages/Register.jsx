@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  FormControl,
+  Alert,
+  Paper,
+  Select,
+  MenuItem
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -10,7 +23,7 @@ function Register() {
     password: '',
     password2: '',
     gender: '',
-    date_of_birth: '',
+    date_of_birth: null,
     nationality: '',
     height_cm: '',
     wingspan_cm: '',
@@ -28,7 +41,7 @@ function Register() {
         setCountries(response.data);
         const iceland = response.data.find(c => c.name_en === 'Iceland');
         if (iceland) {
-          setFormData(prev => ({ ...prev, nationality: iceland.code }));
+          setFormData(prev => ({ ...prev, nationality: iceland.country_code }));
         }
       } catch (err) {
         console.error('Failed to load countries:', err);
@@ -42,166 +55,253 @@ function Register() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleDateChange = (newValue) => {
+    setFormData(prev => ({
+      ...prev,
+      date_of_birth: newValue,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
 
     if (!formData.full_name.trim()) {
-      setError('Full name is required.');
-      setSuccess('');
+      setError('Fullt nafn er nauðsynlegt.');
       return;
     }
 
     if (formData.password !== formData.password2) {
-      setError('Passwords do not match.');
-      setSuccess('');
+      setError('Lykilorð passa ekki saman.');
       return;
     }
 
     try {
-      await api.post('accounts/register/', formData);
-      navigate('/login');
+      const submitData = {
+        ...formData,
+        date_of_birth: formData.date_of_birth
+          ? formData.date_of_birth.format("YYYY-MM-DD")
+          : '',
+      };
+
+      await api.post('accounts/register/', submitData);
       setSuccess('Skráning tókst! Vinsamlegast skráðu þig inn.');
-      setError('');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err) {
       const msg =
         err.response?.data?.detail ||
-        JSON.stringify(err.response?.data) ||
-        'Registration failed.';
-      console.error('Registration failed:', msg);
+        (typeof err.response?.data === 'object' 
+          ? 'Skráning mistókst. Athugaðu upplýsingarnar.' 
+          : err.response?.data) ||
+        'Skráning mistókst.';
+      console.error('Registration failed:', err.response?.data);
       setError(msg);
-      setSuccess('');
     }
   };
 
   return (
-    <div className="register-container">
-      <h2>Nýskráning</h2>
-      <form onSubmit={handleSubmit} className="register-form">
-        {success && <p style={{ color: 'green' }}>{success}</p>}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "80vh",
+        padding: 2,
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          padding: 4,
+          maxWidth: 600,
+          width: "100%",
+        }}
+      >
+        <Typography variant="h4" component="h1" align="center" gutterBottom>
+          Nýskráning
+        </Typography>
 
-        <div className="form-group">
-          <label>Notendanafn</label>
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
 
-        <div className="form-group">
-          <label>Fullt nafn</label>
-          <input
-            type="text"
-            name="full_name"
-            value={formData.full_name}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-        <div className="form-group">
-          <label>Netfang</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+        >
+          <FormControl fullWidth>
+            <TextField
+              label="Notendanafn"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              variant="outlined"
+            />
+          </FormControl>
 
-        <div className="form-group">
-          <label>Lykilorð</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
+          <FormControl fullWidth>
+            <TextField
+              label="Fullt nafn"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              required
+              variant="outlined"
+            />
+          </FormControl>
 
-        <div className="form-group">
-          <label>Staðfesta lykilorð</label>
-          <input
-            type="password"
-            name="password2"
-            value={formData.password2}
-            onChange={handleChange}
-            required
-          />
-        </div>
+          <FormControl fullWidth>
+            <TextField
+              type="email"
+              label="Netfang"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              variant="outlined"
+            />
+          </FormControl>
 
-        <div className="form-group">
-          <label>Kyn</label>
-          <select
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
-            required
+          <FormControl fullWidth>
+            <TextField
+              type="password"
+              label="Lykilorð"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              variant="outlined"
+            />
+          </FormControl>
+
+          <FormControl fullWidth>
+            <TextField
+              type="password"
+              label="Staðfesta lykilorð"
+              name="password2"
+              value={formData.password2}
+              onChange={handleChange}
+              required
+              variant="outlined"
+            />
+          </FormControl>
+
+          <FormControl fullWidth required>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              Kyn
+            </Typography>
+            <Select 
+              name="gender" 
+              value={formData.gender} 
+              onChange={handleChange}
+              variant="outlined"
+            >
+              <MenuItem value="">Veldu kyn</MenuItem>
+              <MenuItem value="KK">KK</MenuItem>
+              <MenuItem value="KVK">KVK</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              Fæðingardagur
+            </Typography>
+            <DatePicker
+              value={formData.date_of_birth}
+              onChange={handleDateChange}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  variant: "outlined",
+                  required: true,
+                },
+              }}
+            />
+          </FormControl>
+
+          <FormControl fullWidth required>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              Þjóðerni
+            </Typography>
+            <Select
+              name="nationality"
+              value={formData.nationality}
+              onChange={handleChange}
+              variant="outlined"
+            >
+              <MenuItem value="">Veldu þjóð</MenuItem>
+              {countries.map((country) => (
+                <MenuItem key={country.country_code} value={country.country_code}>
+                  {country.name_en}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <TextField
+              type="number"
+              label="Hæð (cm)"
+              name="height_cm"
+              value={formData.height_cm}
+              onChange={handleChange}
+              variant="outlined"
+              inputProps={{ min: 0, max: 300 }}
+            />
+          </FormControl>
+
+          <FormControl fullWidth>
+            <TextField
+              type="number"
+              label="Vænghaf (cm)"
+              name="wingspan_cm"
+              value={formData.wingspan_cm}
+              onChange={handleChange}
+              variant="outlined"
+              inputProps={{ min: 0, max: 300 }}
+            />
+          </FormControl>
+
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+            sx={{ mt: 3 }}
           >
-            <option value="">Veldu kyn</option>
-            <option value="KK">KK</option>
-            <option value="KVK">KVK</option>
-          </select>
-        </div>
+            Skrá Aðgang
+          </Button>
+        </Box>
 
-        <div className="form-group">
-          <label>Fæðingardagur</label>
-          <input
-            type="date"
-            name="date_of_birth"
-            value={formData.date_of_birth}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Þjóðerni</label>
-          <select
-            name="nationality"
-            value={formData.nationality}
-            onChange={handleChange}
-            required
+        <Typography variant="body2" align="center" color="textSecondary" sx={{ mt: 3 }}>
+          Ertu nú þegar með aðgang?{" "}
+          <Link
+            to="/login"
+            style={{
+              color: "#1976d2",
+              textDecoration: "none",
+              fontWeight: "bold",
+            }}
           >
-            <option value="">Veldu þjóð</option>
-            {countries.map((country) => (
-              <option key={country.country_code} value={country.country_code}>
-                {country.name_en}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Hæð (cm)</label>
-          <input
-            type="number"
-            name="height_cm"
-            value={formData.height_cm}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Vænghaf (cm)</label>
-          <input
-            type="number"
-            name="wingspan_cm"
-            value={formData.wingspan_cm}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="form-group">
-          <button type="submit">Skrá</button>
-        </div>
-      </form>
-    </div>
+            Skrá inn
+          </Link>
+        </Typography>
+      </Paper>
+    </Box>
   );
 }
 

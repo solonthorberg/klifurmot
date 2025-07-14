@@ -9,7 +9,7 @@ function App() {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Navbar />
-      <Container>
+      <Container sx={{ marginTop: 3, marginBottom: 3 }}>
         <AppRoutes />
       </Container>
     </LocalizationProvider>

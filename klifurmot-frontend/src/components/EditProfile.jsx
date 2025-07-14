@@ -5,7 +5,6 @@ import TextField from "@mui/material/TextField";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import Box from "@mui/material/Box";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
@@ -65,7 +64,7 @@ function EditProfile({ me, onCancel, onSave }) {
   };
 
   return (
-    <Box>
+    <Box maxWidth="sm" sx={{ mx: "auto" }}>
       <h2>Breyta prófíl</h2>
       {message && <p>{message}</p>}
       <Box
@@ -158,7 +157,7 @@ function EditProfile({ me, onCancel, onSave }) {
           />
         </FormControl>
 
-        <Box sx={{ display: "flex", gap: 2, marginTop: 2 }}>
+        <Box sx={{ display: "flex", gap: 2, marginTop: 2, justifyContent: "center" }}>
           <Button variant="contained" type="submit">
             Vista
           </Button>
