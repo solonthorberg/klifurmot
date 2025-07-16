@@ -15,7 +15,7 @@ import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import Avatar from "@mui/material/Avatar";
-import PersonIcon from '@mui/icons-material/Person';
+import PersonIcon from "@mui/icons-material/Person";
 
 function AthletesDetails() {
   const { id } = useParams();
@@ -39,11 +39,20 @@ function AthletesDetails() {
     }
   }, [id]);
 
+  const getHighestRoundOnly = (results) => {
+    if (!results || !Array.isArray(results) || results.length === 0)
+      return null;
+
+    return results.reduce((highest, current) => {
+      return current.round_order > highest.round_order ? current : highest;
+    });
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "–";
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
@@ -54,7 +63,10 @@ function AthletesDetails() {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
     return age;
@@ -62,32 +74,10 @@ function AthletesDetails() {
 
   const formatNationality = (nationality) => {
     if (!nationality) return "–";
-    if (typeof nationality === 'object') {
+    if (typeof nationality === "object") {
       return nationality.name_en || nationality.country_code;
     }
     return nationality;
-  };
-
-  const getFinalResult = (results) => {
-    if (!results || results.length === 0) return null;
-    
-    const roundOrder = ['qualification', 'semi-final', 'final'];
-    
-    let finalResult = results[0];
-    for (const result of results) {
-      const currentRoundIndex = roundOrder.findIndex(round => 
-        result.round_name.toLowerCase().includes(round)
-      );
-      const finalRoundIndex = roundOrder.findIndex(round => 
-        finalResult.round_name.toLowerCase().includes(round)
-      );
-      
-      if (currentRoundIndex > finalRoundIndex) {
-        finalResult = result;
-      }
-    }
-    
-    return finalResult;
   };
 
   if (error) {
@@ -100,7 +90,7 @@ function AthletesDetails() {
 
   if (!athlete) {
     return (
-      <Box maxWidth="lg" sx={{ mx: "auto", textAlign: 'center' }}>
+      <Box maxWidth="lg" sx={{ mx: "auto", textAlign: "center" }}>
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Hleður inn gögnum...
@@ -114,33 +104,49 @@ function AthletesDetails() {
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", mt: 3 }}>
       <Card sx={{ mb: 3 }}>
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.300' }}>
+        <CardContent sx={{ textAlign: "center" }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              mx: "auto",
+              mb: 2,
+              bgcolor: "grey.300",
+            }}
+          >
             <PersonIcon sx={{ fontSize: 40 }} />
           </Avatar>
-          
+
           <Typography variant="h4" component="h1" gutterBottom>
             {athlete.full_name}
           </Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3, mt: 3 }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 3,
+              mt: 3,
+            }}
+          >
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Aldur: {age || '–'}
+                Aldur: {age || "–"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Hæð: {athlete.height_cm ? `${athlete.height_cm} cm` : '–'}
+                Hæð: {athlete.height_cm ? `${athlete.height_cm} cm` : "–"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Vænghaf: {athlete.wingspan_cm ? `${athlete.wingspan_cm} cm` : '–'}
+                Vænghaf:{" "}
+                {athlete.wingspan_cm ? `${athlete.wingspan_cm} cm` : "–"}
               </Typography>
             </Box>
-            
+
             <Box />
-            
+
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Flokkur: {athlete.category || '–'}
+                Flokkur: {athlete.category || "–"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 Mótaþátttaka: {athlete.competitions_count || 0}
@@ -153,40 +159,56 @@ function AthletesDetails() {
         </CardContent>
       </Card>
 
-      {athlete.competitions && athlete.competitions.length > 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell><strong>Árangur</strong></TableCell>
-                <TableCell><strong>Mót</strong></TableCell>
-                <TableCell><strong>Flokkur</strong></TableCell>
-                <TableCell><strong>Dagsetning</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {athlete.competitions.map((comp) => (
-                <TableRow key={comp.id}>
+      {athlete.competition_results &&
+        athlete.competition_results.length > 0 && (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
                   <TableCell>
-                    {(() => {
-                      const finalResult = getFinalResult(comp.results);
-                      return finalResult ? finalResult.rank : '–';
-                    })()}
+                    <strong>Mót</strong>
                   </TableCell>
-                  <TableCell>{comp.title}</TableCell>
-                  <TableCell>{comp.category}</TableCell>
-                  <TableCell>{formatDate(comp.start_date)}</TableCell>
+                  <TableCell>
+                    <strong>Flokkur</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Dagsetning</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Árangur</strong>
+                  </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              </TableHead>
+              <TableBody>
+                {athlete.competition_results.map((competition) => {
+                  const bestResult = getHighestRoundOnly(competition.results);
+                  return (
+                    <TableRow key={competition.id}>
+                      <TableCell>{competition.title}</TableCell>
+                      <TableCell>{competition.category}</TableCell>
+                      <TableCell>
+                        {formatDate(competition.start_date)}
+                      </TableCell>
+                      <TableCell>
+                        {bestResult ? bestResult.rank : "–"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
-      {(!athlete.competitions || athlete.competitions.length === 0) && (
+      {(!athlete.competition_results ||
+        athlete.competition_results.length === 0) && (
         <Card>
           <CardContent>
-            <Typography variant="body1" color="textSecondary" textAlign="center">
+            <Typography
+              variant="body1"
+              color="textSecondary"
+              textAlign="center"
+            >
               Engir keppnisárangur skráður.
             </Typography>
           </CardContent>
