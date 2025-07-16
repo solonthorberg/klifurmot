@@ -33,7 +33,6 @@ function Athletes() {
     fetchAthletes();
   }, []);
 
-  // Calculate age from birth date
   const calculateAge = (dateString) => {
     if (!dateString) return null;
     const birthDate = new Date(dateString);
@@ -63,7 +62,7 @@ function Athletes() {
   }
 
   return (
-    <Box maxWidth="md" sx={{ mx: "auto", textAlign: 'center', }}>
+    <Box maxWidth="md" sx={{ mx: "auto", textAlign: 'center' }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Keppendur
       </Typography>
