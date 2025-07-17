@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams } from "react-router-dom";
 import {
   Box,
@@ -7,15 +7,24 @@ import {
   Tab,
   Container,
   CircularProgress,
-  Alert
+  Alert,
 } from "@mui/material";
 
 import CompetitionOverview from "../components/CompetitionOverview";
-import CompetitionAthletes from "../components/CompetitionAthletes";
-import CompetitionBoulders from "../components/CompetitionBoulders";
-import CompetitionStartlist from "../components/CompetitionStartlist";
-import CompetitionResults from "../components/CompetitionResults";
 import api from "../services/api";
+
+const CompetitionAthletes = lazy(() =>
+  import("../components/CompetitionAthletes")
+);
+const CompetitionBoulders = lazy(() =>
+  import("../components/CompetitionBoulders")
+);
+const CompetitionStartlist = lazy(() =>
+  import("../components/CompetitionStartlist")
+);
+const CompetitionResults = lazy(() =>
+  import("../components/CompetitionResults")
+);
 
 function CompetitionDetails() {
   const { id } = useParams();
@@ -46,13 +55,29 @@ function CompetitionDetails() {
       case "competition":
         return <CompetitionOverview competition={competition} />;
       case "athletes":
-        return <CompetitionAthletes competitionId={id} />;
+        return (
+          <Suspense fallback={<CircularProgress />}>
+            <CompetitionAthletes competitionId={id} />
+          </Suspense>
+        );
       case "boulders":
-        return <CompetitionBoulders competitionId={id} />;
+        return (
+          <Suspense fallback={<CircularProgress />}>
+            <CompetitionBoulders competitionId={id} />
+          </Suspense>
+        );
       case "startlist":
-        return <CompetitionStartlist competitionId={id} />;
+        return (
+          <Suspense fallback={<CircularProgress />}>
+            <CompetitionStartlist competitionId={id} />
+          </Suspense>
+        );
       case "results":
-        return <CompetitionResults competitionId={id} />;
+        return (
+          <Suspense fallback={<CircularProgress />}>
+            <CompetitionResults competitionId={id} />
+          </Suspense>
+        );
       default:
         return null;
     }
@@ -85,27 +110,26 @@ function CompetitionDetails() {
 
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            aria-label="competition tabs"
-            textColor="primary"
-            indicatorColor="primary"
-            sx={{
-                '& .MuiTab-root': {
-                textTransform: 'none',
-                fontSize: '1rem'
-                }
-            }}
-            >
-            <Tab label="Mót" value="competition" />
-            <Tab label="Keppendur" value="athletes" />
-            <Tab label="Leiðir" value="boulders" />
-            <Tab label="Ráslisti" value="startlist" />
-            <Tab label="Niðurstöður" value="results" />
-            </Tabs>
-
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label="competition tabs"
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontSize: "1rem",
+            },
+          }}
+        >
+          <Tab label="Mót" value="competition" />
+          <Tab label="Keppendur" value="athletes" />
+          <Tab label="Leiðir" value="boulders" />
+          <Tab label="Ráslisti" value="startlist" />
+          <Tab label="Niðurstöður" value="results" />
+        </Tabs>
       </Box>
 
       <Box>{renderTab()}</Box>

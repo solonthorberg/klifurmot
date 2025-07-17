@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import api from "../services/api";
 import {
   Box,
@@ -14,24 +14,26 @@ import {
   Card,
   CardContent,
   CardMedia,
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+} from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
 function Competitions() {
   const [competitions, setCompetitions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [year, setYear] = useState('');
+  const [year, setYear] = useState("");
   const [availableYears, setAvailableYears] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCompetitions = async () => {
     try {
       const response = await api.get("competitions/competitions/");
       setCompetitions(response.data);
 
-      const years = [...new Set(response.data.map(comp =>
-        new Date(comp.start_date).getFullYear()
-      ))];
+      const years = [
+        ...new Set(
+          response.data.map((comp) => new Date(comp.start_date).getFullYear())
+        ),
+      ];
       setAvailableYears(years.sort((a, b) => b - a));
     } catch (error) {
       console.error("Error fetching competitions:", error);
@@ -46,22 +48,26 @@ function Competitions() {
 
   const filteredCompetitions = competitions
     .sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
-    .filter(comp => {
-      const matchesYear = year ? new Date(comp.start_date).getFullYear() === parseInt(year) : true;
-      const matchesSearch = comp.title.toLowerCase().includes(searchQuery.toLowerCase());
+    .filter((comp) => {
+      const matchesYear = year
+        ? new Date(comp.start_date).getFullYear() === parseInt(year)
+        : true;
+      const matchesSearch = comp.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
       return matchesYear && matchesSearch;
     });
 
   const formatDateRange = (start, end) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    const startDate = new Date(start).toLocaleDateString('en-US', options);
-    const endDate = new Date(end).toLocaleDateString('en-US', options);
+    const options = { year: "numeric", month: "short", day: "numeric" };
+    const startDate = new Date(start).toLocaleDateString("en-US", options);
+    const endDate = new Date(end).toLocaleDateString("en-US", options);
     return `${startDate} – ${endDate}`;
   };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: "center" }}>
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Hleður inn mótum...
@@ -76,12 +82,20 @@ function Competitions() {
         Mót
       </Typography>
 
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 3 }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: "flex",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: 3,
+        }}
+      >
         <TextField
           variant="outlined"
           placeholder="Leita..."
           value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -89,19 +103,19 @@ function Competitions() {
               </InputAdornment>
             ),
           }}
-          sx={{ maxWidth: 400, width: '100%' }}
+          sx={{ maxWidth: 400, width: "100%" }}
         />
 
         <FormControl sx={{ ml: 2, minWidth: 120 }}>
-          <InputLabel id="year-select-label">Year</InputLabel>
+          <InputLabel id="year-select-label">Ár</InputLabel>
           <Select
             labelId="year-select-label"
             value={year}
             label="Year"
-            onChange={e => setYear(e.target.value)}
+            onChange={(e) => setYear(e.target.value)}
           >
-            <MenuItem value="">All Years</MenuItem>
-            {availableYears.map(y => (
+            <MenuItem value="">Öll ár</MenuItem>
+            {availableYears.map((y) => (
               <MenuItem key={y} value={y}>
                 {y}
               </MenuItem>
@@ -111,30 +125,37 @@ function Competitions() {
       </Box>
 
       {filteredCompetitions.length === 0 ? (
-        <Typography variant="body1" color="textSecondary" sx={{ mt: 3, textAlign: 'center' }}>
-          {searchQuery ? 'Engin mót fundust.' : 'Engir mót fundust.'}
+        <Typography
+          variant="body1"
+          color="textSecondary"
+          sx={{ mt: 3, textAlign: "center" }}
+        >
+          {searchQuery ? "Engin mót fundust." : "Engir mót fundust."}
         </Typography>
       ) : (
         <Box>
-          {filteredCompetitions.map(comp => (
+          {filteredCompetitions.map((comp) => (
             <Card
               key={comp.id}
               component="a"
               href={`/competitions/${comp.id}`}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 mb: 2,
-                textDecoration: 'none',
-                color: 'inherit',
+                textDecoration: "none",
+                color: "inherit",
                 borderRadius: 1,
-                border: '1px solid #e0e0e0',
+                border: "1px solid #e0e0e0",
               }}
             >
               <CardMedia
                 component="img"
-                sx={{ width: 120, height: 100, objectFit: 'cover' }}
-                image={comp.image || 'https://via.placeholder.com/120x100?text=No+Image'}
+                sx={{ width: 120, height: 100, objectFit: "cover" }}
+                image={
+                  comp.image ||
+                  "https://via.placeholder.com/120x100?text=No+Image"
+                }
                 alt={comp.title}
               />
               <CardContent sx={{ flex: 1 }}>

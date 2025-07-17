@@ -125,7 +125,6 @@ function AthletesDetails() {
             sx={{
               display: "grid",
               gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 3,
               mt: 3,
             }}
           >
