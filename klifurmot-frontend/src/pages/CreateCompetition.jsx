@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
-import CategoryModal from "./CategoryModal";
-import RoundModal from "./RoundModal";
+import CategoryModal from "../components/CategoryModal";
+import RoundModal from "../components/RoundModal";
 import {
   DndContext,
   closestCenter,
@@ -14,7 +14,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import SortableItem from "./SortableItem";
+import SortableItem from "../components/SortableItem";
 
 function CreateCompetition({
   goBack,

@@ -1,5 +1,3 @@
-// Update routes.jsx to add admin access to judge dashboard
-
 import { Routes, Route, useParams } from "react-router-dom";
 import Home from "../pages/Home";
 import Competitions from "../pages/Competitions";
@@ -13,6 +11,8 @@ import Profile from "../pages/Profile";
 import JudgeLoginPage from "../pages/JudgeLoginPage";
 import JudgeDashboardPage from "../pages/JudgeDashboardPage";
 import ControlPanel from "../pages/ControlPanel";
+import ControlPanelDetails from "../pages/ControlPanelDetails";
+import CreateCompetition from "../pages/CreateCompetition";
 
 function JudgeDashboardPageWrapper() {
   const { competitionId } = useParams();
@@ -41,6 +41,8 @@ function AppRoutes() {
         element={<JudgeDashboardPageWrapper />}
       />
       <Route path="/controlpanel" element={<ControlPanel />} />
+      <Route path="/controlpanel/:competitionId" element={<ControlPanelDetails />} />
+      <Route path="/controlpanel/edit/:competitionId" element={<CreateCompetition />} />
     </Routes>
   );
 }

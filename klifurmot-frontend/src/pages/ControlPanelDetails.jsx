@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import {
   DndContext,
@@ -16,7 +16,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import JudgeLinkSection from "./JudgeLink";
+import JudgeLinkSection from "../components/JudgeLink";
 
 function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   const {
@@ -78,8 +78,9 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   );
 }
 
-function RegisterAthletes({ competitionId, goBack }) {
+function ControlPanelDetails() {
   const navigate = useNavigate();
+  const { competitionId } = useParams();
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -603,19 +604,6 @@ function RegisterAthletes({ competitionId, goBack }) {
     return categoryRounds[currentRoundIndex + 1] || null;
   };
 
-  if (!competitionId) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-warning">
-          No competition selected. Please go back and select a competition.
-        </div>
-        <button className="btn btn-secondary" onClick={goBack}>
-          ← Til baka
-        </button>
-      </div>
-    );
-  }
-
   if (loading) {
     return <div className="container mt-4">Hleður...</div>;
   }
@@ -636,9 +624,6 @@ function RegisterAthletes({ competitionId, goBack }) {
             title="Opna dómaraviðmót"
           >
             Dómaraviðmót
-          </button>
-          <button className="btn btn-secondary" onClick={goBack}>
-            ← Til baka
           </button>
         </div>
       </div>
@@ -864,4 +849,4 @@ function RegisterAthletes({ competitionId, goBack }) {
   );
 }
 
-export default RegisterAthletes;
+export default ControlPanelDetails;
