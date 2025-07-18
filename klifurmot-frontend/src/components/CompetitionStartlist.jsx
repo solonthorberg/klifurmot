@@ -1,4 +1,19 @@
 import { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
+} from "@mui/material";
 import api from "../services/api";
 
 function CompetitionStartlist({ competitionId }) {
@@ -10,7 +25,9 @@ function CompetitionStartlist({ competitionId }) {
   useEffect(() => {
     const fetchStartlists = async () => {
       try {
-        const res = await api.get(`/competitions/competitions/${competitionId}/startlist/`);
+        const res = await api.get(
+          `/competitions/competitions/${competitionId}/startlist/`
+        );
         setCategories(res.data);
       } catch (err) {
         console.error("Error fetching start list:", err);
@@ -21,69 +38,112 @@ function CompetitionStartlist({ competitionId }) {
     fetchStartlists();
   }, [competitionId]);
 
-  if (error) return <p>{error}</p>;
-  if (!categories.length) return <p>Engir keppendur í ráslista.</p>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (!categories.length)
+    return <Typography>Engir keppendur í ráslista.</Typography>;
 
-  // Gather unique filters
-  const allCategories = [...new Set(categories.map(c => c.category))];
-  const allRounds = [...new Set(
-    categories.flatMap(c => c.rounds.map(r => r.round_name))
-  )];
+  const allCategories = [...new Set(categories.map((c) => c.category))];
+  const allRounds = [
+    ...new Set(categories.flatMap((c) => c.rounds.map((r) => r.round_name))),
+  ];
 
   return (
-    <div>
-      <h3>Ráslisti</h3>
-
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <label>
-          Flokkur:
-          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-            <option value="">Allir flokkar</option>
+    <Box>
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          alignItems: "flex-start",
+        }}
+      >
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="category-label">Flokkur</InputLabel>
+          <Select
+            labelId="category-label"
+            value={selectedCategory}
+            label="Flokkur"
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <MenuItem value="">Allir flokkar</MenuItem>
             {allCategories.map((cat, i) => (
-              <option key={i} value={cat}>{cat}</option>
+              <MenuItem key={i} value={cat}>
+                {cat}
+              </MenuItem>
             ))}
-          </select>
-        </label>
+          </Select>
+        </FormControl>
 
-        <label>
-          Umferð:
-          <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
-            <option value="">Allar umferðir</option>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="round-label">Umferð</InputLabel>
+          <Select
+            labelId="round-label"
+            value={selectedRound}
+            label="Umferð"
+            onChange={(e) => setSelectedRound(e.target.value)}
+          >
+            <MenuItem value="">Allar umferðir</MenuItem>
             {allRounds.map((r, i) => (
-              <option key={i} value={r}>{r}</option>
+              <MenuItem key={i} value={r}>
+                {r}
+              </MenuItem>
             ))}
-          </select>
-        </label>
-      </div>
+          </Select>
+        </FormControl>
+      </Box>
 
       {categories
-        .filter(cat => !selectedCategory || cat.category === selectedCategory)
+        .filter((cat) => !selectedCategory || cat.category === selectedCategory)
         .map((cat, idx) => (
-          <div key={idx} style={{ marginBottom: "2rem" }}>
-            <h4>{cat.category}</h4>
-
-            {(cat.rounds || [])
-              .filter(round => !selectedRound || round.round_name === selectedRound)
+          <Box key={idx} sx={{ mb: 5 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              {cat.category}
+            </Typography>
+            {cat.rounds
+              .filter(
+                (round) => !selectedRound || round.round_name === selectedRound
+              )
               .map((round, j) => (
-                <div key={j} style={{ marginBottom: "1rem", marginLeft: "1rem" }}>
-                  <h5>{round.round_name}</h5>
-
-                  <div style={{ fontWeight: "bold", display: "flex", gap: "1rem", paddingBottom: "0.5rem" }}>
-                    <span>Nr.</span>
-                    <span>Nafn</span>
-                  </div>
-
-                  {(round.athletes || []).map((athlete, i) => (
-                    <div key={i} style={{ display: "flex", gap: "1rem" }}>
-                      <span>{athlete.start_order}</span>
-                      <span>{athlete.full_name}</span>
-                    </div>
-                  ))}
-                </div>
+                <Box key={j} sx={{ mb: 3, ml: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                    {round.round_name}
+                  </Typography>
+                  <Paper variant="outlined">
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell
+                            align="center"
+                            sx={{ width: "50px", paddingLeft: 2 }}
+                          >
+                            Nr.
+                          </TableCell>
+                          <TableCell sx={{ paddingLeft: 1 }}>Nafn</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {round.athletes.map((athlete, i) => (
+                          <TableRow key={i}>
+                            <TableCell
+                              align="center"
+                              sx={{ width: "50px", paddingLeft: 2 }}
+                            >
+                              {athlete.start_order}
+                            </TableCell>
+                            <TableCell sx={{ paddingLeft: 1 }}>
+                              {athlete.full_name}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                </Box>
               ))}
-          </div>
+          </Box>
         ))}
-    </div>
+    </Box>
   );
 }
 

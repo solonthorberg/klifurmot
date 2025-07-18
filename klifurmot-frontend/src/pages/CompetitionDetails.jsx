@@ -38,7 +38,6 @@ function CompetitionDetails() {
         const res = await api.get(`/competitions/competitions/${id}/`);
         setCompetition(res.data);
       } catch (err) {
-        console.error("Error fetching competition:", err);
         setError("Ekki tókst að sækja mótið.");
       }
     };
@@ -50,31 +49,44 @@ function CompetitionDetails() {
     setActiveTab(newValue);
   };
 
+  const renderFallback = (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "300px",
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  );
+
   const renderTab = () => {
     switch (activeTab) {
       case "competition":
         return <CompetitionOverview competition={competition} />;
       case "athletes":
         return (
-          <Suspense fallback={<CircularProgress />}>
+          <Suspense fallback={renderFallback}>
             <CompetitionAthletes competitionId={id} />
           </Suspense>
         );
       case "boulders":
         return (
-          <Suspense fallback={<CircularProgress />}>
+          <Suspense fallback={renderFallback}>
             <CompetitionBoulders competitionId={id} />
           </Suspense>
         );
       case "startlist":
         return (
-          <Suspense fallback={<CircularProgress />}>
+          <Suspense fallback={renderFallback}>
             <CompetitionStartlist competitionId={id} />
           </Suspense>
         );
       case "results":
         return (
-          <Suspense fallback={<CircularProgress />}>
+          <Suspense fallback={renderFallback}>
             <CompetitionResults competitionId={id} />
           </Suspense>
         );
@@ -93,8 +105,8 @@ function CompetitionDetails() {
 
   if (!competition) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, textAlign: "center" }}>
-        <CircularProgress />
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: "center" }}>
+        <CircularProgress size={60} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Sæki gögn...
         </Typography>

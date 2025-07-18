@@ -1,4 +1,16 @@
 import { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Card,
+  CardContent,
+  Grid,
+  Alert,
+} from "@mui/material";
 import api from "../services/api";
 
 function CompetitionBoulders({ competitionId }) {
@@ -10,10 +22,10 @@ function CompetitionBoulders({ competitionId }) {
   useEffect(() => {
     const fetchBoulders = async () => {
       try {
-        const res = await api.get(`/competitions/competitions/${competitionId}/boulders/`);
+        const res = await api.get(
+          `/competitions/competitions/${competitionId}/boulders/`
+        );
         setCategories(res.data);
-
-        console.log("Fetched athletes data:", res.data);
       } catch (err) {
         console.error("Error loading boulders:", err);
         setError("Ekki tókst að sækja leiðirnar.");
@@ -23,71 +35,96 @@ function CompetitionBoulders({ competitionId }) {
     fetchBoulders();
   }, [competitionId]);
 
-  if (error) return <p>{error}</p>;
-  if (!categories.length) return <p>Engar leiðir skráðar fyrir þetta mót.</p>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (!categories.length)
+    return <Typography>Engar leiðir skráðar fyrir þetta mót.</Typography>;
 
-  const allCategories = [...new Set(categories.map(c => c.category))];
-  const allRounds = [...new Set(categories.flatMap(c => c.rounds.map(r => r.round_name)))];
+  const allCategories = [...new Set(categories.map((c) => c.category))];
+  const allRounds = [
+    ...new Set(categories.flatMap((c) => c.rounds.map((r) => r.round_name))),
+  ];
 
   return (
-    <div>
-      <h3>Leiðir</h3>
-
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <label>
-          Flokkur:
-          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-            <option value="">Allir flokkar</option>
+    <Box>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          mb: 4,
+        }}
+      >
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="category-label">Flokkur</InputLabel>
+          <Select
+            labelId="category-label"
+            value={selectedCategory}
+            label="Flokkur"
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <MenuItem value="">Allir flokkar</MenuItem>
             {allCategories.map((cat, i) => (
-              <option key={i} value={cat}>{cat}</option>
+              <MenuItem key={i} value={cat}>
+                {cat}
+              </MenuItem>
             ))}
-          </select>
-        </label>
+          </Select>
+        </FormControl>
 
-        <label>
-          Umferð:
-          <select value={selectedRound} onChange={(e) => setSelectedRound(e.target.value)}>
-            <option value="">Allar umferðir</option>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="round-label">Umferð</InputLabel>
+          <Select
+            labelId="round-label"
+            value={selectedRound}
+            label="Umferð"
+            onChange={(e) => setSelectedRound(e.target.value)}
+          >
+            <MenuItem value="">Allar umferðir</MenuItem>
             {allRounds.map((r, i) => (
-              <option key={i} value={r}>{r}</option>
+              <MenuItem key={i} value={r}>
+                {r}
+              </MenuItem>
             ))}
-          </select>
-        </label>
-      </div>
+          </Select>
+        </FormControl>
+      </Box>
 
       {categories
-        .filter(cat => !selectedCategory || cat.category === selectedCategory)
+        .filter((cat) => !selectedCategory || cat.category === selectedCategory)
         .map((cat, i) => (
-          <div key={i} style={{ marginBottom: "2rem" }}>
-            <h4>{cat.category}</h4>
-            {(cat.rounds || [])
-              .filter(round => !selectedRound || round.round_name === selectedRound)
+          <Box key={i} sx={{ mb: 5 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              {cat.category}
+            </Typography>
+            {cat.rounds
+              .filter(
+                (round) => !selectedRound || round.round_name === selectedRound
+              )
               .map((round, j) => (
-                <div key={j} style={{ marginBottom: "1rem", marginLeft: "1rem" }}>
-                  <h5>{round.round_name}</h5>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
-                    {(round.boulders || []).map((boulder, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          border: "1px solid #ccc",
-                          padding: "1rem",
-                          borderRadius: "8px",
-                          width: "120px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div><strong>Boulder {boulder.number}</strong></div>
-                        <div>{boulder.tops}T</div>
-                        <div>{boulder.zones}Z</div>
-                      </div>
+                <Box key={j} sx={{ mb: 3, ml: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                    {round.round_name}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {round.boulders.map((boulder, idx) => (
+                      <Grid item xs={6} sm={4} md={3} lg={2} key={idx}>
+                        <Card variant="outlined" sx={{ textAlign: "center" }}>
+                          <CardContent>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Boulder {boulder.number}
+                            </Typography>
+                            <Typography>{boulder.tops}T</Typography>
+                            <Typography>{boulder.zones}Z</Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
                     ))}
-                  </div>
-                </div>
+                  </Grid>
+                </Box>
               ))}
-          </div>
+          </Box>
         ))}
-    </div>
+    </Box>
   );
 }
 

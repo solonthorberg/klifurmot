@@ -1,17 +1,44 @@
 import { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Paper,
+  Alert,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@mui/material";
 import api from "../services/api";
 
+const getFlagEmoji = (countryCode) => {
+  if (!countryCode) return "🌐";
+  return countryCode.replace(/./g, (char) =>
+    String.fromCodePoint(char.charCodeAt(0) + 127397)
+  );
+};
+
 function CompetitionAthletes({ competitionId }) {
+  const [competitionTitle, setCompetitionTitle] = useState("");
   const [groupedAthletes, setGroupedAthletes] = useState({});
   const [search, setSearch] = useState("");
-  const [genderFilter, setGenderFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchAthletes = async () => {
       try {
-        const res = await api.get(`/competitions/competitions/${competitionId}/athletes/`);
-        setGroupedAthletes(res.data);
+        const res = await api.get(
+          `/competitions/competitions/${competitionId}/athletes/`
+        );
+        setCompetitionTitle(res.data.competition || "");
+        setGroupedAthletes(res.data.categories || {});
       } catch (err) {
         console.error("Error fetching athletes:", err);
         setError("Ekki tókst að sækja keppendur.");
@@ -20,72 +47,114 @@ function CompetitionAthletes({ competitionId }) {
     fetchAthletes();
   }, [competitionId]);
 
+  const allCategories = Object.keys(groupedAthletes);
+
   const filterAthletes = (athletes) => {
     return athletes.filter((a) => {
-      const matchesSearch = a.full_name.toLowerCase().includes(search.toLowerCase());
-      const matchesGender = !genderFilter || a.gender === genderFilter;
-      return matchesSearch && matchesGender;
+      const matchesSearch = a.full_name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchesCategory =
+        !categoryFilter || a.category_name === categoryFilter;
+      return matchesSearch && matchesCategory;
     });
   };
 
-  if (error) return <p>{error}</p>;
-  if (!Object.keys(groupedAthletes).length) return <p>Engir keppendur skráðir í þetta mót.</p>;
+  if (error) return <Alert severity="error">{error}</Alert>;
+
+  if (!Object.keys(groupedAthletes).length) {
+    return (
+      <Typography variant="body1">
+        Engir keppendur skráðir í þetta mót.
+      </Typography>
+    );
+  }
 
   return (
-    <div>
-      <h3>Keppendur</h3>
-
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Leita eftir nafni..."
+    <Box>
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          alignItems: "flex-start",
+        }}
+      >
+        <TextField
+          label="Leita..."
+          variant="outlined"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          fullWidth
         />
 
-        <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}>
-          <option value="">Öll kyn</option>
-          <option value="KK">KK</option>
-          <option value="KVK">KVK</option>
-        </select>
-      </div>
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel id="category-filter-label">Flokkur</InputLabel>
+          <Select
+            labelId="category-filter-label"
+            value={categoryFilter}
+            label="Flokkur"
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <MenuItem value="">Allir flokkar</MenuItem>
+            {allCategories.map((cat) => (
+              <MenuItem key={cat} value={cat}>
+                {cat}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
-      {Object.entries(groupedAthletes).map(([category, athletes]) => {
+      {Object.entries(groupedAthletes).map(([groupName, athletes]) => {
         const filtered = filterAthletes(athletes);
         if (!filtered.length) return null;
 
         return (
-          <div key={category} style={{ marginBottom: "2rem" }}>
-            <h4>{category}</h4>
+          <Box key={groupName} sx={{ mb: 5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+                flexWrap: "wrap",
+                gap: 1,
+              }}
+            >
+              <Typography variant="h6">{groupName}</Typography>
+              <Typography variant="h6">Keppendur: {filtered.length}</Typography>
+            </Box>
 
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              fontWeight: "bold",
-              padding: "0.5rem 0"
-            }}>
-              <span>Nafn</span>
-              <span>Kyn</span>
-              <span>Þjóðerni</span>
-            </div>
-
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {filtered.map((a) => (
-                <li key={a.id} style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  padding: "0.25rem 0"
-                }}>
-                  <span>{a.full_name}</span>
-                  <span>{a.gender}</span>
-                  <span>{a.nationality}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+            <Paper variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nafn</TableCell>
+                    <TableCell>Flokkur</TableCell>
+                    <TableCell>Kyn</TableCell>
+                    <TableCell align="right">Þjóðerni</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filtered.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell>{a.full_name}</TableCell>
+                      <TableCell>{a.age_category}</TableCell>
+                      <TableCell>{a.gender}</TableCell>
+                      <TableCell align="right">
+                        {getFlagEmoji(a.nationality)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          </Box>
         );
       })}
-    </div>
+    </Box>
   );
 }
 
