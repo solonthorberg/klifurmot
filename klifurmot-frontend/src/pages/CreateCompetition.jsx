@@ -1,3 +1,4 @@
+// CreateCompetition.jsx - With External Categories Title
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompetitionData } from "../hooks/UseCompetitionData";
 import CompetitionForm from "../components/CompetitionManage/CompetitionForm";
@@ -8,7 +9,12 @@ import { Box, Typography, Alert, Button, Divider, Stack } from "@mui/material";
 function CreateCompetition() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
-  const goBack = () => navigate(-1);
+
+  const handleCancel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate("/controlpanel");
+  };
 
   const {
     formState,
@@ -51,6 +57,11 @@ function CreateCompetition() {
           setImage={setImage}
         />
 
+        {/* Categories Title Outside Card */}
+        <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+          Flokkar og Umferðir
+        </Typography>
+
         <CategoryManager
           categories={categoryState}
           setShowCategoryModal={setShowCategoryModal}
@@ -85,7 +96,8 @@ function CreateCompetition() {
           <Button
             variant="contained"
             color="secondary"
-            onClick={goBack}
+            type="button"
+            onClick={handleCancel}
             disabled={submitting}
           >
             Hætta við

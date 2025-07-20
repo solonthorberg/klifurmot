@@ -12,7 +12,6 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import api from "../services/api";
-import CreateCompetition from "./CreateCompetition";
 
 function ControlPanel() {
   const [competitions, setCompetitions] = useState([]);
@@ -20,7 +19,6 @@ function ControlPanel() {
   const [year, setYear] = useState("");
   const [availableYears, setAvailableYears] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
   const fetchCompetitions = async () => {
@@ -29,9 +27,7 @@ function ControlPanel() {
       setCompetitions(response.data);
       const years = [
         ...new Set(
-          response.data.map((comp) =>
-            new Date(comp.start_date).getFullYear()
-          )
+          response.data.map((comp) => new Date(comp.start_date).getFullYear())
         ),
       ];
       setAvailableYears(years.sort((a, b) => b - a));
@@ -46,14 +42,10 @@ function ControlPanel() {
     fetchCompetitions();
   }, []);
 
-  if (creating) {
-    return (
-      <CreateCompetition
-        goBack={() => setCreating(false)}
-        refreshCompetitions={fetchCompetitions}
-      />
-    );
-  }
+  // Handle creating new competition
+  const handleCreateCompetition = () => {
+    navigate("/controlpanel/create");
+  };
 
   const filteredCompetitions = competitions.filter((comp) => {
     const matchesQuery = comp.title
@@ -75,7 +67,7 @@ function ControlPanel() {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => setCreating(true)}
+          onClick={handleCreateCompetition}
           startIcon={<AddIcon />}
         >
           Búa til mót
@@ -126,7 +118,10 @@ function ControlPanel() {
               }}
             >
               <Box>
-                <Typography variant="h6" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
                   {comp.title}
                   <IconButton
                     size="small"

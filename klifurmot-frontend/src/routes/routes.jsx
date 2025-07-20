@@ -41,8 +41,15 @@ function AppRoutes() {
         element={<JudgeDashboardPageWrapper />}
       />
       <Route path="/controlpanel" element={<ControlPanel />} />
-      <Route path="/controlpanel/:competitionId" element={<ControlPanelDetails />} />
-      <Route path="/controlpanel/edit/:competitionId" element={<CreateCompetition />} />
+      <Route
+        path="/controlpanel/:competitionId"
+        element={<ControlPanelDetails />}
+      />
+      <Route
+        path="/controlpanel/edit/:competitionId"
+        element={<CreateCompetition />}
+      />
+      <Route path="/controlpanel/create" element={<CreateCompetition />} />
     </Routes>
   );
 }
