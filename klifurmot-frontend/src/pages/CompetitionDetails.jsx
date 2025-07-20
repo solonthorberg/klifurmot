@@ -1,69 +1,152 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams } from "react-router-dom";
+import {
+  Box,
+  Typography,
+  Tabs,
+  Tab,
+  Container,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+
 import CompetitionOverview from "../components/CompetitionOverview";
-import CompetitionAthletes from "../components/CompetitionAthletes";
-import CompetitionBoulders from "../components/CompetitionBoulders";
-import CompetitionStartlist from "../components/CompetitionStartlist";
-import CompetitionResults from "../components/CompetitionResults";
 import api from "../services/api";
 
+const CompetitionAthletes = lazy(() =>
+  import("../components/CompetitionAthletes")
+);
+const CompetitionBoulders = lazy(() =>
+  import("../components/CompetitionBoulders")
+);
+const CompetitionStartlist = lazy(() =>
+  import("../components/CompetitionStartlist")
+);
+const CompetitionResults = lazy(() =>
+  import("../components/CompetitionResults")
+);
+
 function CompetitionDetails() {
+  const { id } = useParams();
+  const [competition, setCompetition] = useState(null);
+  const [activeTab, setActiveTab] = useState("competition");
+  const [error, setError] = useState("");
 
-    const { id } = useParams();
-    const [competition, setCompetition] = useState(null);
-    const [activeTab, setActiveTab] = useState("competition");
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-        const fetchCompetition = async () => {
-        try {
-            const res = await api.get(`/competitions/competitions/${id}/`);
-            setCompetition(res.data);
-        } catch (err) {
-            console.error("Error fetching competition:", err);
-            setError("Ekki tókst að sækja mótið.");
-        }
-        };
-        fetchCompetition();
-    }, [id]);
-
-    const renderTab = () => {
-        switch (activeTab) {
-        case "competition":
-            return <CompetitionOverview competition={competition} />;
-        case "athletes":
-            return <CompetitionAthletes competitionId={id} />;
-        case "boulders":
-            return <CompetitionBoulders competitionId={id} />;
-        case "startlist":
-            return <CompetitionStartlist competitionId={id} />;
-        case "results":
-            return <CompetitionResults competitionId={id} />;
-        default:
-            return null;
-        }
+  useEffect(() => {
+    const fetchCompetition = async () => {
+      try {
+        const res = await api.get(`/competitions/competitions/${id}/`);
+        setCompetition(res.data);
+      } catch (err) {
+        setError("Ekki tókst að sækja mótið.");
+      }
     };
 
-    if (error) return <p>{error}</p>;
-    if (!competition) return <p>Sæki gögn...</p>;
+    fetchCompetition();
+  }, [id]);
 
-    return(
-        <>
-            <div className="competition-tabs" style={{ padding: "2rem" }}>
-                <h1>{competition.title}</h1>
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
-                <div className="tab-header" style={{ marginBottom: "1rem" }}>
-                    <button onClick={() => setActiveTab("competition")}>Mót</button>
-                    <button onClick={() => setActiveTab("athletes")}>Keppendur</button>
-                    <button onClick={() => setActiveTab("boulders")}>Leiðir</button>
-                    <button onClick={() => setActiveTab("startlist")}>Ráslisti</button>
-                    <button onClick={() => setActiveTab("results")}>Niðurstöður</button>
-                </div>
+  const renderFallback = (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "300px",
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  );
 
-                <div className="tab-content">{renderTab()}</div>
-            </div>
-        </>
+  const renderTab = () => {
+    switch (activeTab) {
+      case "competition":
+        return <CompetitionOverview competition={competition} />;
+      case "athletes":
+        return (
+          <Suspense fallback={renderFallback}>
+            <CompetitionAthletes competitionId={id} />
+          </Suspense>
+        );
+      case "boulders":
+        return (
+          <Suspense fallback={renderFallback}>
+            <CompetitionBoulders competitionId={id} />
+          </Suspense>
+        );
+      case "startlist":
+        return (
+          <Suspense fallback={renderFallback}>
+            <CompetitionStartlist competitionId={id} />
+          </Suspense>
+        );
+      case "results":
+        return (
+          <Suspense fallback={renderFallback}>
+            <CompetitionResults competitionId={id} />
+          </Suspense>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (error) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Alert severity="error">{error}</Alert>
+      </Container>
     );
+  }
+
+  if (!competition) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, textAlign: "center" }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Sæki gögn...
+        </Typography>
+      </Container>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography variant="h4" component="h1" gutterBottom>
+        {competition.title}
+      </Typography>
+
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label="competition tabs"
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontSize: "1rem",
+            },
+          }}
+        >
+          <Tab label="Mót" value="competition" />
+          <Tab label="Keppendur" value="athletes" />
+          <Tab label="Leiðir" value="boulders" />
+          <Tab label="Ráslisti" value="startlist" />
+          <Tab label="Niðurstöður" value="results" />
+        </Tabs>
+      </Box>
+
+      <Box>{renderTab()}</Box>
+    </Box>
+  );
 }
 
 export default CompetitionDetails;

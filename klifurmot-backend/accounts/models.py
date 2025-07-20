@@ -11,7 +11,7 @@ class Country(models.Model):
     name_en = models.CharField(max_length=100)
     name_local = models.CharField(max_length=100)
     def __str__(self):
-        return f"{self.name_local} ({self.country_code})"
+        return f"{self.name_local} {self.country_code}"
         
 class UserAccount(models.Model):
     GENDER_CHOICES = [('KK', 'KK'), ('KVK', 'KVK')]

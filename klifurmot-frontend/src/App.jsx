@@ -1,17 +1,19 @@
+import React, { Fragment } from "react";
 import AppRoutes from "./routes/routes";
 import Navbar from "./components/Navbar";
-import "./css/App.css";
-import "./css/Home.css";
-import "./css/Navbar.css";
+import { Container } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 function App() {
   return (
-    <>
-    <Navbar />
-    <AppRoutes />
-    </>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Navbar />
+      <Container sx={{ marginTop: 3, marginBottom: 3 }}>
+        <AppRoutes />
+      </Container>
+    </LocalizationProvider>
   );
 }
 
-export default App
-
+export default App;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import {
   DndContext,
@@ -16,9 +16,8 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import JudgeLinkSection from "./JudgeLink";
+import JudgeLinkSection from "../components/JudgeLink";
 
-// Sortable athlete row component with dedicated drag handle
 function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   const {
     attributes,
@@ -38,14 +37,12 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
     backgroundColor: isReordering ? "#f8f9fa" : "transparent",
   };
 
-  // Helper function to render category - just show age category or fallback to competition category
   const renderCategory = () => {
     return athlete.age_category || athlete.category || "–";
   };
 
   return (
     <tr ref={setNodeRef} style={style}>
-      {/* Dedicated drag handle column */}
       <td
         {...attributes}
         {...listeners}
@@ -68,7 +65,6 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
         )}
       </td>
       <td>{renderCategory()}</td>
-      {/* Remove button - completely separate from drag functionality */}
       <td>
         <button
           className="btn btn-sm btn-danger"
@@ -82,8 +78,9 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   );
 }
 
-function RegisterAthletes({ competitionId, goBack }) {
+function ControlPanelDetails() {
   const navigate = useNavigate();
+  const { competitionId } = useParams();
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,15 +120,14 @@ function RegisterAthletes({ competitionId, goBack }) {
       );
       console.log("Startlist data received:", res.data);
 
-      // Add climber_id to athletes if missing
       const processedData = res.data.map((category) => ({
         ...category,
         rounds: category.rounds.map((round) => ({
           ...round,
           athletes: round.athletes.map((athlete) => ({
             ...athlete,
-            climber_id: athlete.climber_id || athlete.id, // Ensure climber_id exists
-            id: athlete.id || athlete.climber_id, // Ensure id exists
+            climber_id: athlete.climber_id || athlete.id,
+            id: athlete.id || athlete.climber_id,
           })),
         })),
       }));
@@ -202,7 +198,6 @@ function RegisterAthletes({ competitionId, goBack }) {
       category: categoryName,
     });
 
-    // Find the category data
     const categoryData = getCategoriesForRound().find(
       (cat) => cat.category === categoryName
     );
@@ -215,11 +210,9 @@ function RegisterAthletes({ competitionId, goBack }) {
     const athletes = [...categoryData.athletes];
     console.log("Athletes in category before processing:", athletes);
 
-    // Find the indices for the dragged items - try multiple ID strategies
     let oldIndex = -1;
     let newIndex = -1;
 
-    // Strategy 1: Try climber_id
     oldIndex = athletes.findIndex(
       (athlete) => athlete.climber_id?.toString() === active.id?.toString()
     );
@@ -227,7 +220,6 @@ function RegisterAthletes({ competitionId, goBack }) {
       (athlete) => athlete.climber_id?.toString() === over.id?.toString()
     );
 
-    // Strategy 2: Try id if climber_id didn't work
     if (oldIndex === -1 || newIndex === -1) {
       oldIndex = athletes.findIndex(
         (athlete) => athlete.id?.toString() === active.id?.toString()
@@ -237,7 +229,6 @@ function RegisterAthletes({ competitionId, goBack }) {
       );
     }
 
-    // Strategy 3: Try start_order as backup
     if (oldIndex === -1 || newIndex === -1) {
       const activeOrder = active.id?.toString().replace("athlete-", "");
       const overOrder = over.id?.toString().replace("athlete-", "");
@@ -273,16 +264,13 @@ function RegisterAthletes({ competitionId, goBack }) {
 
     console.log(`📍 Moving athlete from position ${oldIndex} to ${newIndex}`);
 
-    // Reorder the athletes
     const reorderedAthletes = arrayMove(athletes, oldIndex, newIndex);
 
-    // Update start orders
     const updatedAthletes = reorderedAthletes.map((athlete, index) => ({
       ...athlete,
       start_order: index + 1,
     }));
 
-    // Show loading state
     setStartlist((prevStartlist) =>
       prevStartlist.map((cat) => {
         if (cat.category === categoryName) {
@@ -305,7 +293,6 @@ function RegisterAthletes({ competitionId, goBack }) {
     );
 
     try {
-      // Prepare payload for backend - ensure we have the right IDs
       const athletesPayload = updatedAthletes.map((athlete, index) => {
         const climberId = athlete.climber_id || athlete.id;
         console.log(`🏃‍♂️ Athlete ${index + 1}:`, {
@@ -333,7 +320,6 @@ function RegisterAthletes({ competitionId, goBack }) {
 
       console.log("Sending payload to backend:", payload);
 
-      // Send the updated order to the backend
       const response = await api.post(
         "/competitions/update-start-order/",
         payload
@@ -344,7 +330,6 @@ function RegisterAthletes({ competitionId, goBack }) {
       console.error("Failed to update start order:", err.response?.data || err);
       console.error("Full error object:", err);
 
-      // Revert the local state and show error
       await fetchStartlist();
 
       let errorMsg = "Ekki tókst að uppfæra röðun";
@@ -356,7 +341,6 @@ function RegisterAthletes({ competitionId, goBack }) {
 
       alert(errorMsg);
     } finally {
-      // Remove loading state
       setStartlist((prevStartlist) =>
         prevStartlist.map((cat) => {
           if (cat.category === categoryName) {
@@ -555,7 +539,9 @@ function RegisterAthletes({ competitionId, goBack }) {
       (r) => r.round_group_detail?.name === roundName
     );
 
-    return matchingRound?.climbers_advance || matchingRound?.max_athletes || null;
+    return (
+      matchingRound?.climbers_advance || matchingRound?.max_athletes || null
+    );
   };
 
   const getFilteredAthletes = () => {
@@ -618,19 +604,6 @@ function RegisterAthletes({ competitionId, goBack }) {
     return categoryRounds[currentRoundIndex + 1] || null;
   };
 
-  if (!competitionId) {
-    return (
-      <div className="container mt-4">
-        <div className="alert alert-warning">
-          No competition selected. Please go back and select a competition.
-        </div>
-        <button className="btn btn-secondary" onClick={goBack}>
-          ← Til baka
-        </button>
-      </div>
-    );
-  }
-
   if (loading) {
     return <div className="container mt-4">Hleður...</div>;
   }
@@ -645,15 +618,12 @@ function RegisterAthletes({ competitionId, goBack }) {
           )}
         </div>
         <div className="d-flex gap-2">
-          <button 
+          <button
             className="btn btn-success"
             onClick={handleGoToJudgeDashboard}
             title="Opna dómaraviðmót"
           >
-            🎯 Dómaraviðmót
-          </button>
-          <button className="btn btn-secondary" onClick={goBack}>
-            ← Til baka
+            Dómaraviðmót
           </button>
         </div>
       </div>
@@ -688,7 +658,7 @@ function RegisterAthletes({ competitionId, goBack }) {
                   <div className="d-flex align-items-center">
                     <h5 className="mb-0">{cat.category}</h5>
                     <span className="badge bg-secondary ms-2">
-                      Keppendur: {cat.athletes.length}/{cat.maxAthletes || '∞'}
+                      Keppendur: {cat.athletes.length}/{cat.maxAthletes || "∞"}
                     </span>
                   </div>
                   <div className="d-flex gap-2">
@@ -879,4 +849,4 @@ function RegisterAthletes({ competitionId, goBack }) {
   );
 }
 
-export default RegisterAthletes;
+export default ControlPanelDetails;

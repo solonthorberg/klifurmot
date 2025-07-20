@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import api from "../services/api";
+import api from "../../services/api";
 
 function CategoryModal({ show, onClose, onSelectCategory }) {
   const [categories, setCategories] = useState([]);

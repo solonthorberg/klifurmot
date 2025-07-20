@@ -1,17 +1,107 @@
-function ViewProfile({ me, onEdit }) {
-  return (
-    <div>
-      <h2>Velkomin(n), {me.user.username}</h2>
-      <p>Netfang: {me.user.email}</p>
-      <p>Fullt nafn: {me.profile?.full_name || "–"}</p>
-      <p>Fæðingardagur: {me.profile?.date_of_birth || "–"}</p>
-      <p>Kyn: {me.profile?.gender || "–"}</p>
-      <p>Þjóðerni: {me.profile?.nationality || "–"}</p>
-      <p>Hæð: {me.profile?.height_cm || "–"} cm</p>
-      <p>Vænghaf: {me.profile?.wingspan_cm || "–"} cm</p>
+import "./../css/pages/Profile.css";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import FormControl from "@mui/material/FormControl";
 
-      <button onClick={onEdit}>Breyta</button>
-    </div>
+function ViewProfile({ me, onEdit }) {
+  const formatDate = (dateString) => {
+    if (!dateString) return "–";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatGender = (gender) => {
+    if (!gender) return "–";
+    return gender;
+  };
+
+  const formatNationality = (nationality) => {
+    if (!nationality) return "–";
+    return nationality;
+  };
+
+  const DisplayField = ({ children }) => (
+    <Box
+      sx={{
+        border: '1px solid #c4c4c4',
+        borderRadius: '4px',
+        padding: '16.5px 14px',
+        backgroundColor: '#f5f5f5',
+        fontSize: '16px',
+        fontFamily: '"Roboto","Helvetica","Arial",sans-serif',
+        color: 'rgba(0, 0, 0, 0.87)',
+        minHeight: '1.45em',
+        lineHeight: '1.45em',
+      }}
+    >
+      {children}
+    </Box>
+  );
+
+  return (
+    <Box maxWidth="sm" sx={{ mx: "auto" }}>
+      <h2>Velkomin(n), {me.user.username}</h2>
+      
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <FormControl fullWidth>
+          <label>Fullt nafn</label>
+          <DisplayField>
+            {me.profile?.full_name || "–"}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Netfang</label>
+          <DisplayField>
+            {me.user.email}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Fæðingardagur</label>
+          <DisplayField>
+            {formatDate(me.profile?.date_of_birth)}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Kyn</label>
+          <DisplayField>
+            {formatGender(me.profile?.gender)}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Þjóðerni</label>
+          <DisplayField>
+            {formatNationality(me.profile?.nationality)}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Hæð (cm)</label>
+          <DisplayField>
+            {me.profile?.height_cm ? `${me.profile.height_cm} cm` : "–"}
+          </DisplayField>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <label>Vænghaf (cm)</label>
+          <DisplayField>
+            {me.profile?.wingspan_cm ? `${me.profile.wingspan_cm} cm` : "–"}
+          </DisplayField>
+        </FormControl>
+
+        <Box sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}>
+          <Button variant="contained" onClick={onEdit}>
+            Breyta
+          </Button>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

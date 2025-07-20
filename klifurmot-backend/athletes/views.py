@@ -41,11 +41,31 @@ def GetResultsForClimbers(competition, climber):
 
             climber_results.append({
                 "round_name": round.round_group.name,
+                "round_order": round.round_order,
                 "rank": latest_rank,
             })
 
     return climber_results
 
+def CalculateWins(competition, climber):
+    rounds = CompetitionRound.objects.filter(
+        competition_category__competition=competition
+    )
+
+    final_round = rounds.order_by('-round_order').first()
+    if not final_round:
+        return 0
+
+    final_result = RoundResult.objects.filter(
+        round=final_round, climber=climber
+    ).first()
+
+    if final_result and final_result.rank == 1:
+        return 1
+
+    return 0
+
+        
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -62,10 +82,10 @@ def GetAthleteDetail(request, pk):
 
     registrations = CompetitionRegistration.objects.filter(climber=climber).select_related("competition", "competition_category__category_group")
 
-    competitions = []
+    competitions_result = []
     for reg in registrations:
         results = GetResultsForClimbers(reg.competition, climber)
-        competitions.append({
+        competitions_result.append({
             "id": reg.competition.id,
             "title": reg.competition.title,
             "category": f"{CATEGORY_LABELS.get(reg.competition_category.category_group.name, reg.competition_category.category_group.name)} {GENDER_LABELS.get(reg.competition_category.gender, reg.competition_category.gender)}",
@@ -73,7 +93,10 @@ def GetAthleteDetail(request, pk):
             "results": results
         })
 
-    wins = RoundResult.objects.filter(climber=climber, rank=1).count()
+    wins = 0
+    for reg in registrations:
+        wins += CalculateWins(reg.competition, climber)
+        
 
     return Response({
         "id": athlete.id,
@@ -86,5 +109,5 @@ def GetAthleteDetail(request, pk):
         "category": category,
         "competitions_count": registrations.count(),
         "wins_count": wins,
-        "competitions": competitions
+        "competition_results": competitions_result
     })

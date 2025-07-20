@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import api from "../services/api";
 import { Link } from 'react-router-dom';
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import ListItemButton from "@mui/material/ListItemButton";
+import CircularProgress from "@mui/material/CircularProgress";
+import Container from "@mui/material/Container";
+import InputAdornment from "@mui/material/InputAdornment";
+import SearchIcon from '@mui/icons-material/Search';
 
 function Athletes() {
   const [athletes, setAthletes] = useState([]);
@@ -22,40 +33,94 @@ function Athletes() {
     fetchAthletes();
   }, []);
 
+  const calculateAge = (dateString) => {
+    if (!dateString) return null;
+    const birthDate = new Date(dateString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const filteredAthletes = athletes.filter(climber => {
     const fullName = climber.user_account?.full_name || '';
     return fullName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  if (loading) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Hleður inn keppendur...
+        </Typography>
+      </Container>
+    );
+  }
+
   return (
-    <>
-      <h2>Keppendur</h2>
-      <div>
-        <input
-          type="text"
-          placeholder="Leita af keppanda..."
+    <Box maxWidth="md" sx={{ mx: "auto", textAlign: 'center' }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Keppendur
+      </Typography>
+      
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Leita..."
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
         />
-      </div>
-      {loading ? (
-        <p>Hleður inn keppendur...</p>
-      ) : filteredAthletes.length === 0 ? (
-        <p>Engir keppendur fundust.</p>
+      </Box>
+
+      {filteredAthletes.length === 0 ? (
+        <Typography variant="body1" color="textSecondary" sx={{ mt: 3 }}>
+          {searchQuery ? 'Engir keppendur fundust.' : 'Engir keppendur skráðir.'}
+        </Typography>
       ) : (
-        <div>
-          {filteredAthletes.map(climber => (
-            <div key={climber.id}>
-              <div>
-                <h5>{climber.user_account.full_name}</h5>
-                <p>{climber.user_account.date_of_birth}</p>
-                <Link to={`/athletes/${climber.user_account.id}`}>Skoða nánar</Link>
-              </div>
-            </div>
-          ))}
-        </div>
+        <List sx={{ bgcolor: 'background.paper' }}>
+          {filteredAthletes.map(climber => {
+            const age = calculateAge(climber.user_account?.date_of_birth);
+            const nationality = climber.user_account?.nationality?.country_code || '';
+            
+            return (
+              <ListItem key={climber.id} disablePadding sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                <ListItemButton
+                  component={Link}
+                  to={`/athletes/${climber.user_account?.id}`}
+                  sx={{ py: 2 }}
+                >
+                  <ListItemText
+                    primary={
+                      <Typography variant="h6">
+                        {climber.user_account?.full_name || 'Nafn vantar'}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="body2" color="textSecondary">
+                        {nationality} • {age ? `${age} ára` : 'Aldur óþekktur'}
+                      </Typography>
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
       )}
-    </>
+    </Box>
   );
 }
 

@@ -172,6 +172,11 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from datetime import date
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def GetCompetitionAthletes(request, pk):
@@ -186,24 +191,41 @@ def GetCompetitionAthletes(request, pk):
         .select_related("climber__user_account__nationality", "competition_category__category_group")
     )
 
+    today = date.today()
     grouped = {}
+
     for reg in registrations:
         climber = reg.climber
         user = getattr(climber, "user_account", None)
         if not user:
             continue
 
-        category_name = str(reg.competition_category)
+        birth_date = user.date_of_birth
+        if birth_date:
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            age_category = get_age_based_category(age)
+        else:
+            age_category = "–"
+
+        category_group = reg.competition_category.category_group.name
+        gender = reg.competition_category.gender
+        category_name = f"{category_group} {gender}"
+
         athlete_data = {
             "id": climber.id,
             "full_name": user.full_name,
             "gender": user.gender or "–",
-            "nationality": user.nationality.name_local if user.nationality else "–",
+            "age_category": age_category,
+            "nationality": user.nationality.country_code if user.nationality else "–",
         }
 
         grouped.setdefault(category_name, []).append(athlete_data)
 
-    return Response(grouped)
+    return Response({
+        "competition": competition.title,
+        "categories": grouped
+    })
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -284,7 +306,6 @@ def GetCompetitionStartlist(request, pk):
             user = ua.user
             full_name = ua.full_name or user.username
 
-            # Calculate age and determine age-based category using utility function
             birth_date = ua.date_of_birth
             if birth_date:
                 age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
@@ -297,9 +318,7 @@ def GetCompetitionStartlist(request, pk):
                 "id": climber.id,
                 "start_order": result.start_order,
                 "full_name": full_name,
-                "gender": ua.gender or "–",
-                "category": group_name,  # Competition category they're registered in
-                "age_category": age_category  # Calculated age-based category from utils
+                "age_category": age_category
             }
             
             athletes.append(athlete_data)
