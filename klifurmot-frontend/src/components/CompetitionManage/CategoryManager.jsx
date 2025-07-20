@@ -1,5 +1,18 @@
+// CategoryManager.jsx - Using Flex Layout (No Stack)
+import {
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Box,
+  Chip,
+  Divider,
+  Alert,
+} from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import RoundList from "./RoundList";
-import RoundModal from "../RoundModal";
+import RoundModal from "./RoundModal";
 import CategoryModal from "./CategoryModal";
 
 function CategoryManager({
@@ -15,146 +28,197 @@ function CategoryManager({
   handleDragRound,
 }) {
   const visibleCategories = categories.filter(
-    (cat) => !(cat.markedForDeletion && !cat.existingCategories?.length)
+    (cat) => !(cat.markedForDeletion && !cat.existingId)
   );
 
+  const getDraftCounts = () => {
+    const totalRounds = categories.reduce((acc, cat) => {
+      if (cat.markedForDeletion) return acc;
+      return acc + cat.rounds.filter((r) => !r.markedForDeletion).length;
+    }, 0);
+
+    const draftRounds = categories.reduce((acc, cat) => {
+      if (cat.markedForDeletion) return acc;
+      return (
+        acc +
+        cat.rounds.filter((r) => !r.markedForDeletion && !r.existingId).length
+      );
+    }, 0);
+
+    const draftCategories = categories.filter(
+      (cat) => !cat.markedForDeletion && !cat.existingId
+    ).length;
+
+    return { totalRounds, draftRounds, draftCategories };
+  };
+
+  const { totalRounds, draftRounds, draftCategories } = getDraftCounts();
+
   return (
-    <div style={{ marginBottom: "2rem" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <h4>Flokkar og Umferðir</h4>
-        <button
-          type="button"
-          onClick={() => setShowCategoryModal(true)}
-          disabled={submitting}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: submitting ? "not-allowed" : "pointer",
-          }}
-        >
-          + Flokkur
-        </button>
-      </div>
-
-      {visibleCategories.length === 0 && (
-        <p
-          style={{
-            fontStyle: "italic",
-            color: "#666",
-            textAlign: "center",
-            padding: "2rem",
-          }}
-        >
-          Engir flokkar skráðir. Smelltu á "+ Flokkur" til að byrja.
-        </p>
-      )}
-
-      {visibleCategories.map((cat) => (
-        <div
-          key={cat.key}
-          style={{
-            border: "1px solid #ddd",
-            padding: "1rem",
-            margin: "1rem 0",
-            borderRadius: "4px",
-            backgroundColor: cat.markedForDeletion ? "#ffe6e6" : "#f8f9fa",
-            opacity: cat.markedForDeletion ? 0.7 : 1,
-          }}
-        >
-          <div
-            style={{
+    <Card>
+      <CardContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Header with button */}
+          <Box
+            sx={{
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent: "center",
               alignItems: "center",
-              marginBottom: "1rem",
             }}
           >
-            <h5 style={{ margin: 0 }}>{cat.name}</h5>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {cat.markedForDeletion ? (
-                <span style={{ color: "red", fontStyle: "italic" }}>
-                  Verður eytt þegar þú vistar
-                </span>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleAddOrUpdateRound(cat.key, null, "open")
-                    }
-                    disabled={submitting}
-                    style={{
-                      padding: "0.25rem 0.5rem",
-                      backgroundColor: "#007bff",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    + Umferð
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteCategory(cat.key)}
-                    disabled={submitting}
-                    style={{
-                      padding: "0.25rem 0.5rem",
-                      backgroundColor: "#dc3545",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: submitting ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    🗑️ Eyða flokki
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setShowCategoryModal(true)}
+              disabled={submitting}
+            >
+              Flokkur
+            </Button>
+          </Box>
 
-          {!cat.markedForDeletion && (
-            <RoundList
-              rounds={cat.rounds}
-              catKey={cat.key}
-              submitting={submitting}
-              handleAddOrUpdateRound={handleAddOrUpdateRound}
-              handleDeleteRound={handleDeleteRound}
-              handleDragRound={handleDragRound}
-            />
+          {/* Categories content */}
+          {visibleCategories.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: "center",
+                py: 6,
+                color: "text.secondary",
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Engir flokkar skráðir
+              </Typography>
+              <Typography variant="body2">
+                Byrjaðu á að búa til flokk fyrir keppendur
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {visibleCategories.map((cat) => (
+                <Card
+                  key={cat.key}
+                  variant="outlined"
+                  sx={{
+                    opacity: cat.markedForDeletion ? 0.7 : 1,
+                    bgcolor: cat.markedForDeletion
+                      ? "error.light"
+                      : "background.paper",
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                    >
+                      {/* Category header */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="h6">{cat.name}</Typography>
+
+                          {!cat.markedForDeletion && (
+                            <Typography variant="body2" color="text.secondary">
+                              {
+                                cat.rounds.filter((r) => !r.markedForDeletion)
+                                  .length
+                              }{" "}
+                              umferðir
+                            </Typography>
+                          )}
+                        </Box>
+
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          {cat.markedForDeletion ? (
+                            <Chip
+                              label="Verður eytt við vistun"
+                              color="error"
+                              variant="outlined"
+                            />
+                          ) : (
+                            <>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={() =>
+                                  handleAddOrUpdateRound(cat.key, null, "open")
+                                }
+                                disabled={submitting}
+                              >
+                                Umferð
+                              </Button>
+
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => handleDeleteCategory(cat.key)}
+                                disabled={submitting}
+                              >
+                                <DeleteIcon />
+                              </Button>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Rounds list */}
+                      {!cat.markedForDeletion && (
+                        <>
+                          <Divider />
+                          <RoundList
+                            rounds={cat.rounds}
+                            catKey={cat.key}
+                            submitting={submitting}
+                            handleAddOrUpdateRound={handleAddOrUpdateRound}
+                            handleDeleteRound={handleDeleteRound}
+                            handleDragRound={handleDragRound}
+                          />
+                        </>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
           )}
+        </Box>
 
-          {cat.roundsModal && !cat.markedForDeletion && (
-            <RoundModal
-              existingRound={cat.roundToEdit}
-              onClose={() => handleAddOrUpdateRound(cat.key, null, "close")}
-              onSelectRound={(round) =>
-                handleAddOrUpdateRound(cat.key, round, "save")
-              }
-            />
-          )}
-        </div>
-      ))}
+        {/* Round Modal */}
+        {visibleCategories.some(
+          (cat) => cat.roundsModal && !cat.markedForDeletion
+        ) &&
+          (() => {
+            const modalCategory = visibleCategories.find(
+              (cat) => cat.roundsModal
+            );
+            return modalCategory ? (
+              <RoundModal
+                existingRound={modalCategory.roundToEdit}
+                onClose={() =>
+                  handleAddOrUpdateRound(modalCategory.key, null, "close")
+                }
+                onSelectRound={(round) =>
+                  handleAddOrUpdateRound(modalCategory.key, round, "save")
+                }
+              />
+            ) : null;
+          })()}
 
-      {showCategoryModal && (
-        <CategoryModal
-          show={showCategoryModal}
-          onClose={() => setShowCategoryModal(false)}
-          onSelectCategory={handleAddCategory}
-        />
-      )}
-    </div>
+        {/* Category Modal */}
+        {showCategoryModal && (
+          <CategoryModal
+            show={showCategoryModal}
+            onClose={() => setShowCategoryModal(false)}
+            onSelectCategory={handleAddCategory}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

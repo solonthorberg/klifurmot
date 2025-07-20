@@ -1,3 +1,32 @@
+// CompetitionForm.jsx - Using MUI MobileDateTimePicker (Fixed)
+import React from "react";
+import {
+  Box,
+  TextField,
+  FormControlLabel,
+  Switch,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  styled,
+} from "@mui/material";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import dayjs from "dayjs";
+import { MobileDateTimePicker } from "@mui/x-date-pickers/MobileDateTimePicker";
+
+const VisuallyHiddenInput = styled("input")({
+  clip: "rect(0 0 0 0)",
+  clipPath: "inset(50%)",
+  height: 1,
+  overflow: "hidden",
+  position: "absolute",
+  bottom: 0,
+  left: 0,
+  whiteSpace: "nowrap",
+  width: 1,
+});
+
 function CompetitionForm({ formState, setFormField, setImage }) {
   const {
     title,
@@ -11,168 +40,138 @@ function CompetitionForm({ formState, setFormField, setImage }) {
     isEditMode,
   } = formState;
 
+  // Convert string dates to dayjs objects for DateTimePicker
+  const startDateValue = startDate ? dayjs(startDate) : null;
+  const endDateValue = endDate ? dayjs(endDate) : null;
+
+  // Handle date changes and convert back to string format
+  const handleStartDateChange = (newValue) => {
+    const dateString = newValue ? newValue.format("YYYY-MM-DDTHH:mm") : "";
+    setFormField("startDate", dateString);
+  };
+
+  const handleEndDateChange = (newValue) => {
+    const dateString = newValue ? newValue.format("YYYY-MM-DDTHH:mm") : "";
+    setFormField("endDate", dateString);
+  };
+
   return (
-    <>
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "block", marginBottom: "0.5rem" }}>
-          Titill: *
-          <input
-            type="text"
+    <Card>
+      <CardContent>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          {/* Competition Title */}
+          <TextField
+            fullWidth
+            required
+            label="Titill"
             value={title}
             onChange={(e) => setFormField("title", e.target.value)}
+            variant="outlined"
+            placeholder="T.d. Íslandsmeistaramót (ár)"
+          />
+
+          {/* Location */}
+          <TextField
+            fullWidth
             required
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              marginTop: "0.25rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          />
-        </label>
-      </div>
-
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "block", marginBottom: "0.5rem" }}>
-          Mynd:
-          {isEditMode && currentImageUrl && (
-            <div style={{ marginBottom: "0.5rem" }}>
-              <img
-                src={currentImageUrl}
-                alt="Current"
-                style={{
-                  width: "200px",
-                  height: "120px",
-                  objectFit: "cover",
-                  borderRadius: "4px",
-                }}
-              />
-              <p
-                style={{
-                  fontSize: "0.9rem",
-                  color: "#666",
-                  margin: "0.25rem 0",
-                }}
-              >
-                Núverandi mynd
-              </p>
-            </div>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              marginTop: "0.25rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          />
-          {image && (
-            <p
-              style={{
-                fontSize: "0.9rem",
-                color: "#333",
-                margin: "0.25rem 0",
-              }}
-            >
-              Ný mynd valin: {image.name}
-            </p>
-          )}
-        </label>
-      </div>
-
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Byrjunardag: *
-            <input
-              type="datetime-local"
-              value={startDate}
-              onChange={(e) => setFormField("startDate", e.target.value)}
-              required
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                marginTop: "0.25rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-              }}
-            />
-          </label>
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ display: "block", marginBottom: "0.5rem" }}>
-            Lokadagur: *
-            <input
-              type="datetime-local"
-              value={endDate}
-              onChange={(e) => setFormField("endDate", e.target.value)}
-              required
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                marginTop: "0.25rem",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-              }}
-            />
-          </label>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "block", marginBottom: "0.5rem" }}>
-          Staðsetning: *
-          <input
-            type="text"
+            label="Staðsetning"
             value={location}
             onChange={(e) => setFormField("location", e.target.value)}
-            required
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              marginTop: "0.25rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
+            variant="outlined"
+            placeholder="T.d. Klifurhúsið - Ármúli 21/23"
+          />
+
+          {/* Start Date */}
+          <MobileDateTimePicker
+            label="Byrjunardagur og tími *"
+            value={startDateValue}
+            onChange={handleStartDateChange}
+            format="DD/MM/YYYY HH:mm"
+            ampm={false}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                variant: "outlined",
+                required: true,
+              },
             }}
           />
-        </label>
-      </div>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "block", marginBottom: "0.5rem" }}>
-          Lýsing:
-          <textarea
+          {/* End Date */}
+          <MobileDateTimePicker
+            label="Lokadagur og tími *"
+            value={endDateValue}
+            onChange={handleEndDateChange}
+            format="DD/MM/YYYY HH:mm"
+            ampm={false}
+            minDateTime={startDateValue}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                variant: "outlined",
+                required: true,
+              },
+            }}
+          />
+
+          {/* Description */}
+          <TextField
+            fullWidth
+            multiline
+            rows={6}
+            label="Upplýsingar"
             value={description}
             onChange={(e) => setFormField("description", e.target.value)}
-            rows={4}
-            style={{
-              width: "100%",
-              padding: "0.5rem",
-              marginTop: "0.25rem",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              resize: "vertical",
-            }}
+            variant="outlined"
+            placeholder="Lýstu mótinu, skráningu, reglum, verðlaunum og öðrum mikilvægum upplýsingum..."
           />
-        </label>
-      </div>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={{ display: "flex", alignItems: "center" }}>
-          <input
-            type="checkbox"
-            checked={visible}
-            onChange={(e) => setFormField("visible", e.target.checked)}
-            style={{ marginRight: "0.5rem" }}
+          {/* Image Upload Section */}
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Button
+              component="label"
+              role={undefined}
+              variant="contained"
+              tabIndex={-1}
+              startIcon={<CloudUploadIcon />}
+              size="medium"
+            >
+              {image ? `Ný mynd valin: ${image.name}` : "Mynd"}
+              <VisuallyHiddenInput
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImage(e.target.files[0])}
+              />
+            </Button>
+          </Box>
+
+          {/* Visibility Setting */}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={visible}
+                onChange={(e) => setFormField("visible", e.target.checked)}
+                color="primary"
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="body1">Birta mót á vefsíðu</Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Þegar kveikt geta allir séð mótið á forsíðu og í mótalista
+                </Typography>
+              </Box>
+            }
           />
-          Birta keppni á vefsíðu
-        </label>
-      </div>
-    </>
+        </Box>
+      </CardContent>
+    </Card>
   );
 }
 
