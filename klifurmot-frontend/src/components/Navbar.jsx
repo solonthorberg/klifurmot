@@ -195,7 +195,8 @@ function Navbar() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ backgroundColor: '#60B5FF' }}>
+      <AppBar position="static" sx={{ 
+        backgroundColor: '#60B5FF', }}>
         <Toolbar sx={{ minHeight: { xs: 64, sm: 64, md: 64 } }}>
           <Typography 
             variant="h6" 
