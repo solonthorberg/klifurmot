@@ -15,7 +15,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
         setCategories(res.data);
         console.log("📡 Fetched category groups:", res.data);
       } catch (err) {
-        console.error(" Failed to fetch category groups:", err);
+        console.error("❌ Failed to fetch category groups:", err);
       } finally {
         setLoading(false);
       }
@@ -23,6 +23,21 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
 
     fetchCategories();
   }, [show]);
+
+  const handleCategorySelect = (category) => {
+    console.log("🟢 Selected category:", category);
+
+    // Call the parent handler to add the category
+    onSelectCategory({
+      id: category.id,
+      name: category.name,
+      categoryGroupId: category.id, // Add this for the UseCompetitionData hook
+      is_default: category.is_default || false,
+    });
+
+    // Close the modal after selection
+    onClose();
+  };
 
   if (!show || !document.body) return null;
 
@@ -38,6 +53,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
         justifyContent: "center",
         zIndex: 1000,
       }}
+      onClick={onClose} // Close when clicking backdrop
     >
       <div
         className="custom-modal-content"
@@ -50,6 +66,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
           maxHeight: "80vh",
           overflow: "auto",
         }}
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking content
       >
         <div
           style={{
@@ -91,14 +108,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
-                    onClick={() => {
-                      console.log("🟢 Selected category:", cat);
-                      onSelectCategory({
-                        id: cat.id,
-                        name: cat.name,
-                        is_default: cat.is_default || false,
-                      });
-                    }}
+                    onClick={() => handleCategorySelect(cat)}
                     style={{
                       padding: "0.75rem",
                       backgroundColor: "#f8f9fa",

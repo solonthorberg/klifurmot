@@ -8,9 +8,17 @@ import {
   MenuItem,
   IconButton,
   Paper,
+  useMediaQuery,
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../services/api";
 
 function ControlPanel() {
@@ -19,7 +27,16 @@ function ControlPanel() {
   const [year, setYear] = useState("");
   const [availableYears, setAvailableYears] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    competition: null,
+  });
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
+
+  // Mobile detection
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const fetchCompetitions = async () => {
     try {
@@ -42,9 +59,40 @@ function ControlPanel() {
     fetchCompetitions();
   }, []);
 
-  // Handle creating new competition
   const handleCreateCompetition = () => {
     navigate("/controlpanel/create");
+  };
+
+  const handleDeleteClick = (competition) => {
+    setDeleteDialog({ open: true, competition });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.competition) return;
+
+    setDeleting(true);
+    try {
+      await api.delete(
+        `/competitions/competitions/${deleteDialog.competition.id}/`
+      );
+
+      // Remove from local state
+      setCompetitions((prev) =>
+        prev.filter((comp) => comp.id !== deleteDialog.competition.id)
+      );
+
+      // Close dialog
+      setDeleteDialog({ open: false, competition: null });
+    } catch (error) {
+      console.error("Error deleting competition:", error);
+      alert("Ekki tókst að eyða mótinu. Reyndu aftur.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ open: false, competition: null });
   };
 
   const filteredCompetitions = competitions.filter((comp) => {
@@ -58,27 +106,36 @@ function ControlPanel() {
   });
 
   return (
-    <Box sx={{ maxWidth: "800px", margin: "0 auto" }}>
+    <Box
+      sx={{
+        maxWidth: "800px",
+        margin: "0 auto",
+      }}
+    >
       <Typography variant="h4" sx={{ mb: 3 }}>
         Stjórnborð
       </Typography>
 
-      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleCreateCompetition}
-          startIcon={<AddIcon />}
-        >
-          Búa til mót
-        </Button>
+      {/* Mobile-responsive control section */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 3,
+          flexDirection: { xs: "column", sm: "row" },
+          flexWrap: "wrap",
+        }}
+      >
         <TextField
           label="Leita"
           variant="outlined"
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          fullWidth={isMobile}
+          sx={{ flex: 1 }}
         />
+
         <TextField
           label="Ár"
           variant="outlined"
@@ -86,7 +143,11 @@ function ControlPanel() {
           select
           value={year}
           onChange={(e) => setYear(e.target.value)}
-          sx={{ minWidth: 100 }}
+          fullWidth={isMobile}
+          sx={{
+            minWidth: { xs: "100%", sm: 120 },
+            flexShrink: 0,
+          }}
         >
           <MenuItem value="">Allt</MenuItem>
           {availableYears.map((yr) => (
@@ -95,6 +156,17 @@ function ControlPanel() {
             </MenuItem>
           ))}
         </TextField>
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleCreateCompetition}
+          startIcon={<AddIcon />}
+          fullWidth={isMobile}
+          sx={{ flexShrink: 0 }}
+        >
+          Búa til mót
+        </Button>
       </Box>
 
       {loading ? (
@@ -111,41 +183,113 @@ function ControlPanel() {
               variant="outlined"
               sx={{
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                px: 2,
-                py: 1.5,
+                flexDirection: { xs: "column", sm: "row" },
+                justifyContent: { xs: "flex-start", sm: "space-between" },
+                alignItems: { xs: "stretch", sm: "center" },
+                p: { xs: 2, sm: 2 },
+                gap: { xs: 2, sm: 1 },
               }}
             >
-              <Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
                 <Typography
                   variant="h6"
-                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
                 >
                   {comp.title}
-                  <IconButton
-                    size="small"
-                    onClick={() => navigate(`/controlpanel/edit/${comp.id}`)}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
+                  {/* ✅ FIXED: Added both edit and delete buttons */}
+                  <Box sx={{ display: "flex", gap: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/controlpanel/edit/${comp.id}`)}
+                      title="Breyta móti"
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(comp)}
+                      color="error"
+                      title="Eyða móti"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
                   {new Date(comp.start_date).toLocaleDateString("is-IS")} –{" "}
                   {new Date(comp.end_date).toLocaleDateString("is-IS")}
                 </Typography>
               </Box>
+
+              {/* Mobile-optimized button */}
               <Button
                 variant="contained"
-                color="secondary"
+                color="success"
                 onClick={() => navigate(`/controlpanel/${comp.id}`)}
+                fullWidth={isMobile}
+                sx={{
+                  minWidth: { xs: "auto", sm: "140px" },
+                  py: { xs: 1.5, sm: 1 },
+                  flexShrink: 0,
+                }}
               >
-                Skrá keppendur
+                SKRÁ KEPPENDUR
               </Button>
             </Paper>
           ))}
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">Staðfesta eyðingu</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Ertu viss um að þú viljir eyða mótinu "
+            {deleteDialog.competition?.title}"?
+            <br />
+            <br />
+            <strong>Viðvörun:</strong> Þessi aðgerð er endanleg og mun eyða öllu
+            tengt mótinu, þar á meðal flokkum, umferðum og niðurstöðum.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleDeleteCancel}
+            disabled={deleting}
+            color="inherit"
+          >
+            Hætta við
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            disabled={deleting}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            {deleting ? "Eyði..." : "Eyða móti"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
