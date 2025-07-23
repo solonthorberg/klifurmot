@@ -1,10 +1,9 @@
-// RoundList.jsx - Fixed Drag with Drag Handle
 import {
   DndContext,
-  PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
+  PointerSensor,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -12,20 +11,30 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Button } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-// Custom SortableItem with drag handle
+// SortableRoundItem component for drag and drop
 function SortableRoundItem({ id, children }) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
-      {children({ dragHandleProps: { ...attributes, ...listeners } })}
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children(listeners)}
     </div>
   );
 }
@@ -40,49 +49,66 @@ function RoundList({
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
 
-  const visibleRounds = rounds.filter((r) => !r.markedForDeletion);
-  const deletedRounds = rounds.filter((r) => r.markedForDeletion);
+  // Filter out deleted rounds for display
+  const activeRounds = rounds.filter((r) => r && !r.markedForDeletion);
+
+  console.log("🔍 RoundList filtering:", {
+    totalRounds: rounds.length,
+    activeRounds: activeRounds.length,
+    rounds: rounds.map((r) => ({
+      id: r._id,
+      name: r.name,
+      deleted: r.markedForDeletion,
+    })),
+  });
+
+  const handleDragEnd = (event) => {
+    handleDragRound(catKey, event);
+  };
+
+  if (activeRounds.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
+        <p>Engar umferðir búnar til</p>
+      </div>
+    );
+  }
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={(event) => handleDragRound(catKey, event)}
+      onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={visibleRounds.map((r) => r._id)}
+        items={activeRounds.map((r) => r._id)}
         strategy={verticalListSortingStrategy}
       >
         <div>
-          {visibleRounds.length === 0 && (
-            <p style={{ color: "#666", fontStyle: "italic" }}>
-              Engar umferðir búnar til
-            </p>
-          )}
-
-          {visibleRounds.map((round, idx) => (
+          {activeRounds.map((round, idx) => (
             <SortableRoundItem key={round._id} id={round._id}>
-              {({ dragHandleProps }) => (
+              {(listeners) => (
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    padding: "0.5rem",
+                    padding: "0.75rem",
                     border: "1px solid #eee",
                     margin: "0.5rem 0",
                     backgroundColor: "white",
                     borderRadius: "4px",
+                    cursor: "pointer",
                   }}
                 >
+                  {/* Drag handle and content */}
                   <div
                     style={{ display: "flex", alignItems: "center", flex: 1 }}
+                    {...listeners}
                   >
-                    {/* Drag Handle */}
+                    {/* Drag handle */}
                     <div
-                      {...dragHandleProps}
                       style={{
-                        cursor: "grab",
                         padding: "0.25rem",
                         marginRight: "0.5rem",
                         color: "#666",
@@ -100,42 +126,39 @@ function RoundList({
                     </span>
                   </div>
 
-                  {/* Buttons - these can now be clicked normally */}
+                  {/* ✅ UPDATED: Material-UI Button components with variant="contained" */}
                   <div style={{ display: "flex", gap: "0.25rem" }}>
-                    <button
-                      type="button"
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      size="small"
                       onClick={() =>
                         handleAddOrUpdateRound(catKey, round, "edit")
                       }
                       disabled={submitting}
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        backgroundColor: "#ffc107",
-                        color: "black",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: submitting ? "not-allowed" : "pointer",
-                        fontSize: "0.875rem",
+                      sx={{
+                        minWidth: "auto",
+                        padding: "6px 8px",
                       }}
+                      title="Breyta umferð"
                     >
-                      Breyta
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRound(catKey, idx)}
+                      <EditIcon sx={{ fontSize: "16px" }} />
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={() => handleDeleteRound(catKey, round._id)}
                       disabled={submitting}
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: submitting ? "not-allowed" : "pointer",
-                        fontSize: "0.875rem",
+                      sx={{
+                        minWidth: "auto",
+                        padding: "6px 8px",
                       }}
+                      title="Eyða umferð"
                     >
-                      Eyða
-                    </button>
+                      <DeleteIcon sx={{ fontSize: "16px" }} />
+                    </Button>
                   </div>
                 </div>
               )}

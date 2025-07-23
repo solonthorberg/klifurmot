@@ -51,11 +51,10 @@ function CompetitionStartlist({ competitionId }) {
     <Box>
       <Box
         sx={{
-          mb: 4,
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
           gap: 2,
-          alignItems: "flex-start",
+          mb: 4,
         }}
       >
         <FormControl sx={{ minWidth: 200 }}>

@@ -15,7 +15,46 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  List,
+  ListItem,
+  ListItemButton,
+  Alert,
+  Grid,
+  CircularProgress,
+  useMediaQuery,
+  useTheme,
+  Stack,
+  Divider,
+  Container,
+} from "@mui/material";
+import {
+  DragIndicator as DragIcon,
+  Close as CloseIcon,
+  Add as AddIcon,
+  Gavel as JudgeIcon,
+} from "@mui/icons-material";
 import JudgeLinkSection from "../components/JudgeLink";
 
 function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
@@ -34,7 +73,6 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : isReordering ? 0.7 : 1,
-    backgroundColor: isReordering ? "#f8f9fa" : "transparent",
   };
 
   const renderCategory = () => {
@@ -42,45 +80,62 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   };
 
   return (
-    <tr ref={setNodeRef} style={style}>
-      <td
-        {...attributes}
-        {...listeners}
-        style={{
-          cursor: isDragging ? "grabbing" : "grab",
-          width: "30px",
-          textAlign: "center",
-          userSelect: "none",
-        }}
-      >
-        ⋮⋮
-      </td>
-      <td>{athlete.start_order}</td>
-      <td>
-        {athlete.full_name}
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      sx={{
+        backgroundColor: isReordering ? "grey.50" : "transparent",
+        "&:hover": { backgroundColor: "grey.50" },
+      }}
+    >
+      <TableCell sx={{ width: 30, textAlign: "center", p: 0.5 }}>
+        <IconButton
+          size="small"
+          {...attributes}
+          {...listeners}
+          sx={{ cursor: isDragging ? "grabbing" : "grab", color: "grey.500" }}
+        >
+          <DragIcon fontSize="small" />
+        </IconButton>
+      </TableCell>
+      <TableCell sx={{ width: 50, textAlign: "center", fontWeight: 500, p: 1 }}>
+        {athlete.start_order}
+      </TableCell>
+      <TableCell sx={{ p: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {athlete.full_name}
+        </Typography>
         {isReordering && (
-          <span className="ms-2 text-muted">
-            <small>(Uppfæri...)</small>
-          </span>
+          <Typography variant="caption" color="warning.main">
+            Uppfærir...
+          </Typography>
         )}
-      </td>
-      <td>{renderCategory()}</td>
-      <td>
-        <button
-          className="btn btn-sm btn-danger"
+      </TableCell>
+      <TableCell sx={{ p: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          {renderCategory()}
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ width: 50, textAlign: "center", p: 0.5 }}>
+        <IconButton
+          size="small"
+          color="error"
           onClick={() => onRemove(athlete)}
           disabled={isReordering}
         >
-          ×
-        </button>
-      </td>
-    </tr>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </TableCell>
+    </TableRow>
   );
 }
 
 function ControlPanelDetails() {
   const navigate = useNavigate();
   const { competitionId } = useParams();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -213,6 +268,7 @@ function ControlPanelDetails() {
     let oldIndex = -1;
     let newIndex = -1;
 
+    // First attempt: use climber_id
     oldIndex = athletes.findIndex(
       (athlete) => athlete.climber_id?.toString() === active.id?.toString()
     );
@@ -220,6 +276,7 @@ function ControlPanelDetails() {
       (athlete) => athlete.climber_id?.toString() === over.id?.toString()
     );
 
+    // Second attempt: use id if climber_id didn't work
     if (oldIndex === -1 || newIndex === -1) {
       oldIndex = athletes.findIndex(
         (athlete) => athlete.id?.toString() === active.id?.toString()
@@ -229,6 +286,7 @@ function ControlPanelDetails() {
       );
     }
 
+    // Third attempt: fallback to start_order based on athlete-index pattern
     if (oldIndex === -1 || newIndex === -1) {
       const activeOrder = active.id?.toString().replace("athlete-", "");
       const overOrder = over.id?.toString().replace("athlete-", "");
@@ -265,7 +323,6 @@ function ControlPanelDetails() {
     console.log(`📍 Moving athlete from position ${oldIndex} to ${newIndex}`);
 
     const reorderedAthletes = arrayMove(athletes, oldIndex, newIndex);
-
     const updatedAthletes = reorderedAthletes.map((athlete, index) => ({
       ...athlete,
       start_order: index + 1,
@@ -605,43 +662,71 @@ function ControlPanelDetails() {
   };
 
   if (loading) {
-    return <div className="container mt-4">Hleður...</div>;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <div className="container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2 className="h3">Skrá keppendur</h2>
-          {competitionTitle && (
-            <p className="text-muted mb-0">{competitionTitle}</p>
-          )}
-        </div>
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-success"
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: 2,
+          }}
+        >
+          <Box>
+            {competitionTitle && (
+              <Typography variant="h4" component="h1">
+                {competitionTitle}
+              </Typography>
+            )}
+          </Box>
+          <Button
+            variant="contained"
+            color="success"
             onClick={handleGoToJudgeDashboard}
-            title="Opna dómaraviðmót"
+            sx={{
+              alignSelf: { xs: "stretch", sm: "auto" },
+              textTransform: "none",
+            }}
           >
             Dómaraviðmót
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
+      </Box>
 
-      <ul className="nav nav-tabs mb-4">
-        {roundNames.map((name) => (
-          <li className="nav-item" key={name}>
-            <button
-              className={`nav-link ${activeRound === name ? "active" : ""}`}
-              onClick={() => setActiveRound(name)}
-            >
-              {name}
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* Round Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs
+          value={activeRound || false}
+          onChange={(e, newValue) => setActiveRound(newValue)}
+          variant={isMobile ? "scrollable" : "standard"}
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
+          {roundNames.map((name) => (
+            <Tab key={name} label={name} value={name} />
+          ))}
+        </Tabs>
+      </Paper>
 
-      <div className="row">
+      {/* Categories - Vertical Layout */}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {getCategoriesForRound().map((cat, idx) => {
           const nextRound = getNextRoundForCategory(cat.category, activeRound);
           const isAdvancing = advancing === `${cat.category}-${activeRound}`;
@@ -652,200 +737,216 @@ function ControlPanelDetails() {
           const showAdvanceButton = nextRound && hasCurrentResults;
 
           return (
-            <div key={idx} className="col-md-6 mb-4">
-              <div className="card">
-                <div className="card-header d-flex justify-content-between align-items-center">
-                  <div className="d-flex align-items-center">
-                    <h5 className="mb-0">{cat.category}</h5>
-                    <span className="badge bg-secondary ms-2">
-                      Keppendur: {cat.athletes.length}/{cat.maxAthletes || "∞"}
-                    </span>
-                  </div>
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => handleAddAthlete(cat.category)}
-                      disabled={cat.isReordering}
+            <Card key={idx} sx={{ width: "100%" }}>
+              {/* Card Header */}
+              <Box sx={{ p: 2, pb: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 2,
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="h6" fontWeight="bold">
+                    {cat.category}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Keppendur: {cat.athletes.length}/{cat.maxAthletes || "∞"}
+                  </Typography>
+                </Box>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => handleAddAthlete(cat.category)}
+                    disabled={cat.isReordering}
+                  >
+                    Keppandi
+                  </Button>
+
+                  {showAdvanceButton && (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="success"
+                      onClick={() =>
+                        handleAdvanceClimbers(cat.category, activeRound)
+                      }
+                      disabled={isAdvancing || cat.isReordering}
                     >
-                      + Keppandi
-                    </button>
-                    {showAdvanceButton && (
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() =>
-                          handleAdvanceClimbers(cat.category, activeRound)
-                        }
-                        disabled={isAdvancing || cat.isReordering}
-                        title={`Flytja bestu keppendur úr ${activeRound} í ${nextRound.round_group_detail.name}`}
-                      >
-                        {isAdvancing
-                          ? "Flyti..."
-                          : `Flytja í ${nextRound.round_group_detail.name}`}
-                      </button>
-                    )}
-                    {nextRound && !hasCurrentResults && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        disabled
-                        title={`Þarf fyrst að skrá niðurstöður fyrir ${activeRound}`}
-                      >
-                        Flytja í {nextRound.round_group_detail.name}
-                      </button>
-                    )}
-                    {!nextRound && (
-                      <small className="text-muted">Síðasta umferð</small>
-                    )}
-                  </div>
-                </div>
-                <div className="card-body">
-                  {cat.athletes.length === 0 ? (
-                    <p className="text-muted">Engir keppendur skráðir</p>
-                  ) : (
-                    <div className="table-responsive">
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={(event) =>
-                          handleDragEnd(event, cat.category)
-                        }
-                      >
-                        <table className="table table-sm">
-                          <thead>
-                            <tr>
-                              <th style={{ width: "30px" }}></th>
-                              <th>Nr.</th>
-                              <th>Nafn</th>
-                              <th>Flokkur</th>
-                              <th></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <SortableContext
-                              items={cat.athletes.map(
-                                (athlete, i) =>
+                      {isAdvancing
+                        ? "Flyti..."
+                        : "Flytja í " + nextRound.round_group_detail.name}
+                    </Button>
+                  )}
+
+                  {nextRound && !hasCurrentResults && (
+                    <Button variant="outlined" size="small" disabled>
+                      Flytja í {nextRound.round_group_detail.name}
+                    </Button>
+                  )}
+                </Box>
+
+                {!nextRound && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 1, display: "block" }}
+                  >
+                    Síðasta umferð
+                  </Typography>
+                )}
+              </Box>
+
+              <Divider />
+
+              {/* Card Content */}
+              <CardContent sx={{ p: 0 }}>
+                {cat.athletes.length === 0 ? (
+                  <Box sx={{ py: 4, textAlign: "center" }}>
+                    <Typography color="text.secondary">
+                      Engir keppendur skráðir
+                    </Typography>
+                  </Box>
+                ) : (
+                  <TableContainer>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleDragEnd(event, cat.category)}
+                    >
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ width: 40 }}></TableCell>
+                            <TableCell
+                              sx={{ textAlign: "center", fontWeight: "bold" }}
+                            >
+                              Nr.
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: "bold" }}>
+                              Nafn
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: "bold" }}>
+                              Flokkur
+                            </TableCell>
+                            <TableCell sx={{ width: 60 }}></TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          <SortableContext
+                            items={cat.athletes.map(
+                              (athlete, i) =>
+                                athlete.climber_id ||
+                                athlete.id ||
+                                `athlete-${i}`
+                            )}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {cat.athletes.map((athlete, i) => (
+                              <SortableAthleteRow
+                                key={
                                   athlete.climber_id ||
                                   athlete.id ||
                                   `athlete-${i}`
-                              )}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              {cat.athletes.map((athlete, i) => (
-                                <SortableAthleteRow
-                                  key={
-                                    athlete.climber_id ||
-                                    athlete.id ||
-                                    `athlete-${i}`
-                                  }
-                                  athlete={athlete}
-                                  index={i}
-                                  isReordering={cat.isReordering}
-                                  onRemove={(athlete) =>
-                                    handleRemoveAthlete(athlete, cat.category)
-                                  }
-                                />
-                              ))}
-                            </SortableContext>
-                          </tbody>
-                        </table>
-                      </DndContext>
-                    </div>
-                  )}
-                </div>
-                {showAdvanceButton && (
-                  <div className="card-footer">
-                    <small className="text-muted">
-                      Flytur úr: {activeRound} →{" "}
-                      {nextRound.round_group_detail.name}
-                    </small>
-                  </div>
+                                }
+                                athlete={athlete}
+                                index={i}
+                                isReordering={cat.isReordering}
+                                onRemove={(athlete) =>
+                                  handleRemoveAthlete(athlete, cat.category)
+                                }
+                              />
+                            ))}
+                          </SortableContext>
+                        </TableBody>
+                      </Table>
+                    </DndContext>
+                  </TableContainer>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           );
         })}
-      </div>
+      </Box>
 
-      {showAddModal && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  Bæta við keppanda - {selectedCategory}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowAddModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <input
-                  type="text"
-                  className="form-control mb-3"
-                  placeholder="Leita að keppanda..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-                  {getFilteredAthletes().length === 0 ? (
-                    <p className="text-muted">Engir keppendur fundust</p>
-                  ) : (
-                    <div className="list-group">
-                      {getFilteredAthletes().map((athlete) => (
-                        <button
-                          key={athlete.id}
-                          className="list-group-item list-group-item-action"
-                          onClick={() => handleSelectAthlete(athlete)}
-                        >
-                          <div className="d-flex justify-content-between">
-                            <div>
-                              <strong>{athlete.user_account?.full_name}</strong>
-                              <br />
-                              <small className="text-muted">
-                                {athlete.category || "–"} •{" "}
-                                {athlete.user_account?.date_of_birth} •{" "}
-                                {athlete.user_account?.gender}
-                              </small>
-                            </div>
-                            <span className="badge bg-primary">Velja</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Hætta við
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add Athlete Modal */}
+      <Dialog
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        maxWidth="md"
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle>Bæta við keppanda - {selectedCategory}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            placeholder="Leita að keppanda..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            sx={{ mb: 2 }}
+            autoFocus
+          />
+          <Paper variant="outlined" sx={{ maxHeight: 400, overflow: "auto" }}>
+            {getFilteredAthletes().length === 0 ? (
+              <Box sx={{ py: 4, textAlign: "center" }}>
+                <Typography color="text.secondary">
+                  Engir keppendur fundust
+                </Typography>
+              </Box>
+            ) : (
+              <List>
+                {getFilteredAthletes().map((athlete) => (
+                  <ListItem key={athlete.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => handleSelectAthlete(athlete)}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle2" fontWeight="medium">
+                          {athlete.user_account?.full_name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {athlete.category || "–"} •{" "}
+                          {athlete.user_account?.date_of_birth} •{" "}
+                          {athlete.user_account?.gender}
+                        </Typography>
+                      </Box>
+                      <Chip label="Velja" color="primary" size="small" />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAddModal(false)}>Hætta við</Button>
+        </DialogActions>
+      </Dialog>
 
-      {/* Judge Link Section - Moved to bottom */}
-      <JudgeLinkSection competitionId={competitionId} />
+      {/* Judge Link Section */}
+      <Box sx={{ mt: 4 }}>
+        <JudgeLinkSection competitionId={competitionId} />
+      </Box>
 
-      <div className="alert alert-info mt-4">
-        <strong>Athugið:</strong> Til að nota "Flytja" takkann þarf að vera
-        búinn að skrá niðurstöður fyrir núverandi umferð. Kerfið flytur
-        sjálfkrafa bestu keppendur út frá stigagjöf í næstu umferð.
-        <br />
-        <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
-        ráslista röðun.
-        <br />
-        <strong>Flokkar:</strong> Sýnir aldursflokk keppenda.
-      </div>
-    </div>
+      {/* Info Alert */}
+      <Alert severity="info" sx={{ mt: 3 }}>
+        <Typography variant="body2">
+          <strong>Athugið:</strong> Til að nota "Flytja" takkann þarf að vera
+          búinn að skrá niðurstöður fyrir núverandi umferð. Kerfið flytur
+          sjálfkrafa bestu keppendur út frá stigagjöf í næstu umferð.
+          <br />
+          <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
+          ráslista röðun.
+        </Typography>
+      </Alert>
+    </Container>
   );
 }
 

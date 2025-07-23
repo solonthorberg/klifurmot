@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
+import {
+  Box,
+  Typography,
+  Button,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 
 function SelectRound({ competitionId, onContinue }) {
   const [roundGroups, setRoundGroups] = useState([]);
   const [competitionTitle, setCompetitionTitle] = useState("");
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -17,7 +25,6 @@ function SelectRound({ competitionId, onContinue }) {
           api.get(`/competitions/competitions/${competitionId}/`),
         ]);
 
-        // Extract unique round groups from the rounds data
         const uniqueGroups = [];
         const seen = new Set();
 
@@ -38,6 +45,8 @@ function SelectRound({ competitionId, onContinue }) {
       } catch (err) {
         console.error(err);
         setError("Ekki tókst að sækja umferðir eða mótsupplýsingar.");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -48,40 +57,29 @@ function SelectRound({ competitionId, onContinue }) {
     onContinue(roundGroupId, roundOrder, roundName);
   };
 
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  if (loading) return <CircularProgress />;
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <div>
-      <h3>{competitionTitle}</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <Box>
+      <Typography variant="h5" sx={{ mb: 3 }}>
+        {competitionTitle}
+      </Typography>
+
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {roundGroups.map((group) => (
-          <div
+          <Button
             key={group.id}
-            style={{
-              border: "1px solid #ccc",
-              padding: "1rem",
-              textAlign: "center",
-              borderRadius: "4px",
-            }}
+            variant="outlined"
+            size="large"
+            onClick={() => handleClick(group.id, group.round_order, group.name)}
+            sx={{ py: 2, textTransform: "none" }}
           >
-            <h4>{group.name}</h4>
-            <button
-              onClick={() =>
-                handleClick(group.id, group.round_order, group.name)
-              }
-              style={{
-                padding: "0.5rem 1rem",
-                background: "#ddd",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              Dæma
-            </button>
-          </div>
+            {group.name}
+          </Button>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 

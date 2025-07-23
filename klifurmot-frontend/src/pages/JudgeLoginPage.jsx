@@ -1,6 +1,20 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import api, { setAuthToken } from '../services/api';
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import api, { setAuthToken } from "../services/api";
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  FormControl,
+  Alert,
+  Paper,
+  CircularProgress,
+  Card,
+  CardContent,
+  Divider,
+} from "@mui/material";
+import { Login as LoginIcon, Check as CheckIcon } from "@mui/icons-material";
 
 function JudgeLoginPage() {
   const { token } = useParams();
@@ -8,16 +22,17 @@ function JudgeLoginPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [judgeInfo, setJudgeInfo] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [judgeEmail, setJudgeEmail] = useState('');
+  const [judgeEmail, setJudgeEmail] = useState("");
   const [loggedInUserId, setLoggedInUserId] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    api.get(`/accounts/judge-links/${token}/`)
-      .then(res => {
+    api
+      .get(`/accounts/judge-links/${token}/`)
+      .then((res) => {
         setJudgeInfo(res.data);
         setLoading(false);
       })
@@ -31,8 +46,9 @@ function JudgeLoginPage() {
     const localToken = localStorage.getItem("token");
     if (localToken) {
       setAuthToken(localToken);
-      api.get("accounts/me/")
-        .then(res => {
+      api
+        .get("accounts/me/")
+        .then((res) => {
           setLoggedInUserId(res.data.user.id);
           setJudgeEmail(res.data.user.email);
           setIsAuthenticated(true);
@@ -78,44 +94,202 @@ function JudgeLoginPage() {
     navigate(`/judge/competition/${judgeInfo?.competition_id}/judge-dashboard`);
   };
 
-  if (loading || checkingAuth) return <p>Hleður...</p>;
-  if (error && !isAuthenticated) return <div><p style={{ color: 'red' }}>{error}</p>{renderLoginForm()}</div>;
+  if (loading || checkingAuth) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={48} />
+        <Typography variant="h6" color="text.secondary">
+          Hleður...
+        </Typography>
+      </Box>
+    );
+  }
 
-  const isCorrectJudge = isAuthenticated && judgeInfo && loggedInUserId === judgeInfo.user_id;
+  if (error && !isAuthenticated) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+          padding: 2,
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            maxWidth: 500,
+            width: "100%",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mb: 3 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Dómarainnköllun
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Þú hefur verið boðin(n) sem dómari á "
+              {judgeInfo?.competition_title || "óþekkt mót"}"
+            </Typography>
+          </Box>
+
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+
+          {renderLoginForm()}
+        </Paper>
+      </Box>
+    );
+  }
+
+  const isCorrectJudge =
+    isAuthenticated && judgeInfo && loggedInUserId === judgeInfo.user_id;
 
   function renderLoginForm() {
     return (
-      <div>
-        <h2>Innskráning fyrir dómara</h2>
-        <p>Þú hefur verið boðin(n) sem dómari á "{judgeInfo?.competition_title || 'óþekkt mót'}".</p>
+      <Box>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ textAlign: "center", mb: 3 }}
+        >
+          Skráðu þig inn til að halda áfram
+        </Typography>
 
-        <form onSubmit={handleLogin}>
-          <label>Netfang:
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          </label>
-          <br />
-          <label>Lykilorð:
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          </label>
-          <br />
-          <button type="submit">Innskrá</button>
-        </form>
-      </div>
+        <Box
+          component="form"
+          onSubmit={handleLogin}
+          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+        >
+          <FormControl fullWidth>
+            <TextField
+              type="email"
+              label="Netfang"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              variant="outlined"
+              fullWidth
+            />
+          </FormControl>
+
+          <FormControl fullWidth>
+            <TextField
+              type="password"
+              label="Lykilorð"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              variant="outlined"
+              fullWidth
+            />
+          </FormControl>
+
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            fullWidth
+            sx={{ mt: 1 }}
+          >
+            Innskrá
+          </Button>
+        </Box>
+      </Box>
     );
   }
 
   if (!isCorrectJudge) {
-    return renderLoginForm();
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+          padding: 2,
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            maxWidth: 500,
+            width: "100%",
+          }}
+        >
+          <Box sx={{ textAlign: "center", mb: 3 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Dómarainnköllun
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Þú hefur verið boðin(n) sem dómari á{" "}
+              {judgeInfo?.competition_title || "óþekkt mót"}
+            </Typography>
+          </Box>
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          {renderLoginForm()}
+        </Paper>
+      </Box>
+    );
   }
 
   return (
-    <div>
-      <h2>Þú ert skráð(ur) inn sem {judgeEmail}</h2>
-      <p>
-        Þú hefur verið boðin(n) sem dómari á <strong>{judgeInfo?.competition_title}</strong>.
-      </p>
-      <button onClick={handleAccept}>Samþykkja</button>
-    </div>
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "60vh",
+        padding: 2,
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          padding: 4,
+          maxWidth: 500,
+          width: "100%",
+        }}
+      >
+        <Box sx={{ textAlign: "center", mb: 4 }}>
+          <CheckIcon sx={{ fontSize: 64, color: "success.main", mb: 2 }} />
+          <Typography variant="h4" component="h1" gutterBottom>
+            Velkomin(n) dómari!
+          </Typography>
+          <Typography>
+            Þú hefur verið boðinn sem dómari á{" "}
+            {judgeInfo?.competition_title || "óþekkt mót"}
+          </Typography>
+        </Box>
+
+        <Button
+          onClick={handleAccept}
+          variant="contained"
+          size="large"
+          fullWidth
+        >
+          Samþykkja
+        </Button>
+      </Paper>
+    </Box>
   );
 }
 

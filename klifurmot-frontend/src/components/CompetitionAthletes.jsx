@@ -74,11 +74,10 @@ function CompetitionAthletes({ competitionId }) {
     <Box>
       <Box
         sx={{
-          mb: 4,
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
           gap: 2,
-          alignItems: "flex-start",
+          mb: 4,
         }}
       >
         <TextField
@@ -89,7 +88,7 @@ function CompetitionAthletes({ competitionId }) {
           fullWidth
         />
 
-        <FormControl sx={{ minWidth: 150 }}>
+        <FormControl sx={{ minWidth: 200 }}>
           <InputLabel id="category-filter-label">Flokkur</InputLabel>
           <Select
             labelId="category-filter-label"

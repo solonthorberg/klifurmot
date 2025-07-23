@@ -1,10 +1,9 @@
-// CreateCompetition.jsx - With External Categories Title
+// CreateCompetition.jsx - With Error Message Above Buttons
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompetitionData } from "../hooks/UseCompetitionData";
 import CompetitionForm from "../components/CompetitionManage/CompetitionForm";
 import CategoryManager from "../components/CompetitionManage/CategoryManager";
-
-import { Box, Typography, Alert, Button, Divider, Stack } from "@mui/material";
+import { Box, Typography, Alert, Button, Divider } from "@mui/material";
 
 function CreateCompetition() {
   const { competitionId } = useParams();
@@ -44,12 +43,6 @@ function CreateCompetition() {
         {competitionId ? `Breyta móti: ${formState.title}` : "Búa til nýtt mót"}
       </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
       <form onSubmit={handleSubmit}>
         <CompetitionForm
           formState={formState}
@@ -77,7 +70,22 @@ function CreateCompetition() {
 
         <Divider sx={{ my: 4 }} />
 
-        <Stack direction="row" spacing={2}>
+        {/* Error message right above the buttons */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* ✅ CHANGED: Centered buttons */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 2,
+            justifyContent: "center", // ✅ Center the buttons
+          }}
+        >
           <Button
             variant="contained"
             color="success"
@@ -94,15 +102,15 @@ function CreateCompetition() {
           </Button>
 
           <Button
-            variant="contained"
-            color="secondary"
+            variant="outlined"
+            color="error"
             type="button"
             onClick={handleCancel}
             disabled={submitting}
           >
             Hætta við
           </Button>
-        </Stack>
+        </Box>
       </form>
     </Box>
   );

@@ -2,7 +2,9 @@ import { Typography } from "@mui/material";
 function About() {
   return (
     <>
-      <Typography>Klifurmót.is er í vinnslu.</Typography>
+      <Typography>
+        Klifurmót.is er í vinnslu. Netfang: solonhelgason@gmail.com
+      </Typography>
     </>
   );
 }

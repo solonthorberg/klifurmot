@@ -91,11 +91,12 @@ function CompetitionResults({ competitionId }) {
 
   return (
     <Box>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        Niðurstöður
-      </Typography>
-
-      <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
+      <Box sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          mb: 4,
+        }}>
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel id="category-label">Flokkur</InputLabel>
           <Select
@@ -164,7 +165,7 @@ function CompetitionResults({ competitionId }) {
                       <TableBody>
                         {round.results.map((athlete, i) => (
                           <TableRow key={i}>
-                            <TableCell align="center">{athlete.rank}</TableCell>
+                            <TableCell align="center" sx={{ width: "50px" }}>{athlete.rank}</TableCell>
                             <TableCell>{athlete.full_name}</TableCell>
                             <TableCell align="center">
                               {athlete.tops}T ({athlete.attempts_top})

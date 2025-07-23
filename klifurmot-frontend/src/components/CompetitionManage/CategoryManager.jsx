@@ -1,4 +1,4 @@
-// CategoryManager.jsx - Using Flex Layout (No Stack)
+// CategoryManager.jsx - With Consistent Delete Icon Styling
 import {
   Card,
   CardContent,
@@ -27,26 +27,32 @@ function CategoryManager({
   handleDeleteRound,
   handleDragRound,
 }) {
+  // Safe filter with null checks
   const visibleCategories = categories.filter(
-    (cat) => !(cat.markedForDeletion && !cat.existingId)
+    (cat) => cat && !(cat.markedForDeletion && !cat.existingId)
   );
 
   const getDraftCounts = () => {
     const totalRounds = categories.reduce((acc, cat) => {
-      if (cat.markedForDeletion) return acc;
-      return acc + cat.rounds.filter((r) => !r.markedForDeletion).length;
+      if (!cat || cat.markedForDeletion) return acc;
+      // Add null checks for rounds
+      const validRounds = (cat.rounds || []).filter(
+        (r) => r && !r.markedForDeletion
+      );
+      return acc + validRounds.length;
     }, 0);
 
     const draftRounds = categories.reduce((acc, cat) => {
-      if (cat.markedForDeletion) return acc;
-      return (
-        acc +
-        cat.rounds.filter((r) => !r.markedForDeletion && !r.existingId).length
+      if (!cat || cat.markedForDeletion) return acc;
+      // Add null checks for rounds
+      const validRounds = (cat.rounds || []).filter(
+        (r) => r && !r.markedForDeletion && !r.existingId
       );
+      return acc + validRounds.length;
     }, 0);
 
     const draftCategories = categories.filter(
-      (cat) => !cat.markedForDeletion && !cat.existingId
+      (cat) => cat && !cat.markedForDeletion && !cat.existingId
     ).length;
 
     return { totalRounds, draftRounds, draftCategories };
@@ -94,107 +100,131 @@ function CategoryManager({
             </Box>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {visibleCategories.map((cat) => (
-                <Card
-                  key={cat.key}
-                  variant="outlined"
-                  sx={{
-                    opacity: cat.markedForDeletion ? 0.7 : 1,
-                    bgcolor: cat.markedForDeletion
-                      ? "error.light"
-                      : "background.paper",
-                  }}
-                >
-                  <CardContent>
-                    <Box
-                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                    >
-                      {/* Category header */}
+              {visibleCategories.map((cat) => {
+                // Safety check for cat
+                if (!cat) return null;
+
+                return (
+                  <Card
+                    key={cat.key}
+                    variant="outlined"
+                    sx={{
+                      opacity: cat.markedForDeletion ? 0.7 : 1,
+                      bgcolor: cat.markedForDeletion
+                        ? "error.light"
+                        : "background.paper",
+                    }}
+                  >
+                    <CardContent>
                       <Box
                         sx={{
                           display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
+                          flexDirection: "column",
+                          gap: 2,
                         }}
                       >
-                        <Box>
-                          <Typography variant="h6">{cat.name}</Typography>
+                        {/* Category header */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Box>
+                            <Typography variant="h6">{cat.name}</Typography>
 
-                          {!cat.markedForDeletion && (
-                            <Typography variant="body2" color="text.secondary">
-                              {
-                                cat.rounds.filter((r) => !r.markedForDeletion)
-                                  .length
-                              }{" "}
-                              umferðir
-                            </Typography>
-                          )}
-                        </Box>
-
-                        <Box sx={{ display: "flex", gap: 1 }}>
-                          {cat.markedForDeletion ? (
-                            <Chip
-                              label="Verður eytt við vistun"
-                              color="error"
-                              variant="outlined"
-                            />
-                          ) : (
-                            <>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                startIcon={<AddIcon />}
-                                onClick={() =>
-                                  handleAddOrUpdateRound(cat.key, null, "open")
-                                }
-                                disabled={submitting}
+                            {!cat.markedForDeletion && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
                               >
-                                Umferð
-                              </Button>
+                                {
+                                  // Safe filter with null checks
+                                  (cat.rounds || []).filter(
+                                    (r) => r && !r.markedForDeletion
+                                  ).length
+                                }{" "}
+                                umferðir
+                              </Typography>
+                            )}
+                          </Box>
 
-                              <Button
-                                size="small"
-                                variant="outlined"
+                          <Box sx={{ display: "flex", gap: 1 }}>
+                            {cat.markedForDeletion ? (
+                              <Chip
+                                label="Verður eytt við vistun"
                                 color="error"
-                                onClick={() => handleDeleteCategory(cat.key)}
-                                disabled={submitting}
-                              >
-                                <DeleteIcon />
-                              </Button>
-                            </>
-                          )}
-                        </Box>
-                      </Box>
+                                variant="outlined"
+                              />
+                            ) : (
+                              <>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() =>
+                                    handleAddOrUpdateRound(
+                                      cat.key,
+                                      null,
+                                      "open"
+                                    )
+                                  }
+                                  disabled={submitting}
+                                >
+                                  Umferð
+                                </Button>
 
-                      {/* Rounds list */}
-                      {!cat.markedForDeletion && (
-                        <>
-                          <Divider />
-                          <RoundList
-                            rounds={cat.rounds}
-                            catKey={cat.key}
-                            submitting={submitting}
-                            handleAddOrUpdateRound={handleAddOrUpdateRound}
-                            handleDeleteRound={handleDeleteRound}
-                            handleDragRound={handleDragRound}
-                          />
-                        </>
-                      )}
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
+                                {/* ✅ UPDATED: Category delete button with consistent styling */}
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="error"
+                                  onClick={() => handleDeleteCategory(cat.key)}
+                                  disabled={submitting}
+                                  sx={{
+                                    minWidth: "auto", // Make it compact like the round delete button
+                                    padding: "6px 8px", // Match the padding style
+                                  }}
+                                  title="Eyða flokki"
+                                >
+                                  <DeleteIcon sx={{ fontSize: "16px" }} />
+                                </Button>
+                              </>
+                            )}
+                          </Box>
+                        </Box>
+
+                        {/* Rounds list */}
+                        {!cat.markedForDeletion && (
+                          <>
+                            <Divider />
+                            <RoundList
+                              rounds={cat.rounds || []} // Safe default
+                              catKey={cat.key}
+                              submitting={submitting}
+                              handleAddOrUpdateRound={handleAddOrUpdateRound}
+                              handleDeleteRound={handleDeleteRound}
+                              handleDragRound={handleDragRound}
+                            />
+                          </>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </Box>
           )}
         </Box>
 
-        {/* Round Modal */}
+        {/* Round Modal - Fixed with safety checks */}
         {visibleCategories.some(
-          (cat) => cat.roundsModal && !cat.markedForDeletion
+          (cat) => cat && cat.roundsModal && !cat.markedForDeletion
         ) &&
           (() => {
             const modalCategory = visibleCategories.find(
-              (cat) => cat.roundsModal
+              (cat) => cat && cat.roundsModal
             );
             return modalCategory ? (
               <RoundModal

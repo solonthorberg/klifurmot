@@ -1,25 +1,3 @@
 
-.custom-modal {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  border: 5px solid red;
-}
-
-.custom-modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 400px;
-  z-index: 1051;
-}
-
-
 
 

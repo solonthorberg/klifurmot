@@ -27,11 +27,18 @@ function Competitions() {
   const fetchCompetitions = async () => {
     try {
       const response = await api.get("competitions/competitions/");
-      setCompetitions(response.data);
+
+      // ✅ FIXED: Filter to only show visible competitions
+      const visibleCompetitions = response.data.filter(
+        (comp) => comp.visible === true
+      );
+      setCompetitions(visibleCompetitions);
 
       const years = [
         ...new Set(
-          response.data.map((comp) => new Date(comp.start_date).getFullYear())
+          visibleCompetitions.map((comp) =>
+            new Date(comp.start_date).getFullYear()
+          )
         ),
       ];
       setAvailableYears(years.sort((a, b) => b - a));

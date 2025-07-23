@@ -4,10 +4,29 @@ import SelectRound from "../components/SelectRound";
 import SelectCategoryAndBoulder from "../components/SelectCategoryAndBoulder";
 import JudgeScoring from "../components/JudgeScoring";
 import api, { setAuthToken } from "../services/api";
+import {
+  Box,
+  Typography,
+  Button,
+  Chip,
+  Alert,
+  CircularProgress,
+  Container,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import {
+  AdminPanelSettings as AdminIcon,
+  ArrowBack as BackIcon,
+  EmojiEvents as CompetitionIcon,
+} from "@mui/icons-material";
 
 function JudgeDashboardPage() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
@@ -162,48 +181,89 @@ function JudgeDashboardPage() {
           />
         );
       default:
-        return <p>Villa: óþekkt skref.</p>;
+        return (
+          <Alert severity="error">
+            <Typography>Villa: óþekkt skref.</Typography>
+          </Alert>
+        );
     }
   };
 
-  if (loading) return <p>Hleður...</p>;
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <CircularProgress size={48} />
+        <Typography variant="h6" color="text.secondary">
+          Hleður dómaraviðmót...
+        </Typography>
+      </Box>
+    );
+  }
+
   if (!authorized) return null;
 
   return (
-    <div className="container-fluid">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex align-items-center">
-          <h2 className="mb-0">Dómaraviðmót</h2>
-          {userRole === "admin" && (
-            <span className="badge bg-primary ms-2">Admin</span>
-          )}
-          {userRole === "judge" && (
-            <span className="badge bg-success ms-2">Dómari</span>
-          )}
-        </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              Dómaraviðmót
+            </Typography>
 
-        {userRole === "admin" && (
-          <div className="d-flex gap-2">
-            <button
-              className="btn btn-outline-secondary"
-              onClick={handleGoToControlPanel}
-            >
-              ← Til baka í stjórnborð
-            </button>
-          </div>
-        )}
-      </div>
+            <Chip
+              label={userRole === "admin" ? "Keppnisstjóri" : "Dómari"}
+              color={userRole === "admin" ? "primary" : "success"}
+              variant="outlined"
+              size="medium"
+            />
+          </Box>
+        </Box>
+      </Box>
 
-      {renderComponent()}
+      {/* Main Content */}
+      <Box sx={{ mb: 4 }}>{renderComponent()}</Box>
 
+      {/* Admin Notice */}
       {userRole === "admin" && (
-        <div className="alert alert-info mt-4">
-          <strong>Admin aðgangur:</strong> Þú hefur aðgang að dómaraviðmóti sem
-          keppnisstjóri. Þú getur skráð niðurstöður og framkvæmt allar
-          dómaraðgerðir.
-        </div>
+        <Alert
+          severity="info"
+          sx={{
+            borderRadius: 2,
+            "& .MuiAlert-message": {
+              width: "100%",
+            },
+          }}
+        >
+          <Typography variant="body2">
+            <Box component="span" fontWeight="bold">
+              Keppnisstjóri aðgangur:
+            </Box>{" "}
+            Þú hefur aðgang að dómaraviðmóti sem keppnisstjóri. Þú getur skráð
+            niðurstöður og framkvæmt allar dómaraðgerðir.
+          </Typography>
+        </Alert>
       )}
-    </div>
+    </Container>
   );
 }
 
