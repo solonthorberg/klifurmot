@@ -1,5 +1,25 @@
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
+import {
+  Box,
+  Typography,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Alert,
+  CircularProgress,
+  IconButton,
+} from "@mui/material";
+import { ArrowBack as BackIcon } from "@mui/icons-material";
 
 function SelectCategoryAndBoulder({
   roundGroupId,
@@ -14,6 +34,7 @@ function SelectCategoryAndBoulder({
   const [athletes, setAthletes] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedBoulderId, setSelectedBoulderId] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -50,6 +71,7 @@ function SelectCategoryAndBoulder({
     if (!selectedBoulderId) return;
 
     const fetchData = async () => {
+      setLoading(true);
       try {
         const startlistRes = await api.get(
           `/scoring/startlist/?competition_id=${competitionId}&category_id=${selectedCategoryId}&round_group_id=${roundGroupId}`
@@ -102,6 +124,8 @@ function SelectCategoryAndBoulder({
         } else {
           console.error("Failed to fetch athletes or scores", err);
         }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -116,78 +140,118 @@ function SelectCategoryAndBoulder({
   ]);
 
   return (
-    <div>
-      <h3>{roundName}</h3>
+    <Box>
+      {/* Header with back button */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+        <IconButton onClick={onBack} sx={{ mr: 2 }} aria-label="Til baka">
+          <BackIcon />
+        </IconButton>
+        <Typography variant="h5">{roundName}</Typography>
+      </Box>
 
-      <select
-        value={selectedCategoryId}
-        onChange={(e) => setSelectedCategoryId(e.target.value)}
-      >
-        <option value="">Flokkur</option>
-        {categories.map((cat) => (
-          <option key={cat.id} value={cat.id}>
-            {cat.category_group_detail.name} - {cat.gender}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={selectedBoulderId}
-        onChange={(e) => setSelectedBoulderId(e.target.value)}
-        disabled={!selectedCategoryId}
-      >
-        <option value="">Leið</option>
-        {boulders.map((b) => (
-          <option key={b.id} value={b.id}>
-            Leið {b.boulder_number}
-          </option>
-        ))}
-      </select>
-
-      {athletes === null && <p>Listi í vinnslu</p>}
-
-      {athletes.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nr.</th>
-              <th>Nafn</th>
-              <th>
-                Leið{" "}
-                {
-                  boulders.find((b) => b.id === parseInt(selectedBoulderId))
-                    ?.boulder_number
-                }
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {athletes.map((athlete) => (
-              <tr
-                key={athlete.climber_id}
-                style={{ cursor: "pointer" }}
-                onClick={() =>
-                  onSelectAthlete(athlete, athlete.boulder_number, athletes)
-                }
-              >
-                <td>{athlete.start_order}</td>
-                <td>{athlete.climber}</td>
-                <td>
-                  {athlete.score.top
-                    ? `1T(${athlete.score.topAttempts})`
-                    : `0T(${athlete.score.topAttempts})`}{" "}
-                  {athlete.score.zone
-                    ? `1Z(${athlete.score.zoneAttempts})`
-                    : `0Z(${athlete.score.zoneAttempts})`}
-                </td>
-              </tr>
+      {/* Selection Controls */}
+      <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Flokkur</InputLabel>
+          <Select
+            value={selectedCategoryId}
+            label="Flokkur"
+            onChange={(e) => setSelectedCategoryId(e.target.value)}
+          >
+            {categories.map((cat) => (
+              <MenuItem key={cat.id} value={cat.id}>
+                {cat.category_group_detail.name} - {cat.gender}
+              </MenuItem>
             ))}
-          </tbody>
-        </table>
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Leið</InputLabel>
+          <Select
+            value={selectedBoulderId}
+            label="Leið"
+            onChange={(e) => setSelectedBoulderId(e.target.value)}
+            disabled={!selectedCategoryId}
+          >
+            {boulders.map((b) => (
+              <MenuItem key={b.id} value={b.id}>
+                Leið {b.boulder_number}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Loading State */}
+      {loading && (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress />
+          <Typography sx={{ ml: 2 }}>Hleður keppendur...</Typography>
+        </Box>
       )}
 
-      <button onClick={onBack}>Til baka</button>
-    </div>
+      {/* No Athletes Message */}
+      {athletes === null && !loading && (
+        <Alert severity="info">Listi í vinnslu</Alert>
+      )}
+
+      {/* Empty Athletes List */}
+      {athletes && athletes.length === 0 && !loading && selectedBoulderId && (
+        <Alert severity="warning">
+          Engir keppendur skráðir í þessa umferð.
+        </Alert>
+      )}
+
+      {/* Athletes Table */}
+      {athletes.length > 0 && (
+        <TableContainer component={Paper} variant="outlined">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: "bold" }}>Nr.</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Nafn</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>
+                  Leið{" "}
+                  {
+                    boulders.find((b) => b.id === parseInt(selectedBoulderId))
+                      ?.boulder_number
+                  }
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {athletes.map((athlete) => (
+                <TableRow
+                  key={athlete.climber_id}
+                  hover
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                    },
+                  }}
+                  onClick={() =>
+                    onSelectAthlete(athlete, athlete.boulder_number, athletes)
+                  }
+                >
+                  <TableCell>{athlete.start_order}</TableCell>
+                  <TableCell>{athlete.climber}</TableCell>
+                  <TableCell>
+                    {athlete.score.top
+                      ? `1T(${athlete.score.topAttempts})`
+                      : `0T(${athlete.score.topAttempts})`}{" "}
+                    {athlete.score.zone
+                      ? `1Z(${athlete.score.zoneAttempts})`
+                      : `0Z(${athlete.score.zoneAttempts})`}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
   );
 }
 

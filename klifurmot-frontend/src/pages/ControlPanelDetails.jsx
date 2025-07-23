@@ -683,14 +683,15 @@ function ControlPanelDetails() {
         <Box
           sx={{
             display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: { xs: "flex-start", sm: "center" },
             gap: 2,
           }}
         >
           <Box>
             {competitionTitle && (
-              <Typography variant="h6" component="h1">
+              <Typography variant="h4" component="h1">
                 {competitionTitle}
               </Typography>
             )}
@@ -698,8 +699,11 @@ function ControlPanelDetails() {
           <Button
             variant="contained"
             color="success"
-            startIcon={<JudgeIcon />}
             onClick={handleGoToJudgeDashboard}
+            sx={{
+              alignSelf: { xs: "stretch", sm: "auto" },
+              textTransform: "none",
+            }}
           >
             Dómaraviðmót
           </Button>
@@ -866,15 +870,6 @@ function ControlPanelDetails() {
                   </TableContainer>
                 )}
               </CardContent>
-
-              {showAdvanceButton && (
-                <Box sx={{ p: 2, pt: 0 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Flytur úr: {activeRound} →{" "}
-                    {nextRound.round_group_detail.name}
-                  </Typography>
-                </Box>
-              )}
             </Card>
           );
         })}
@@ -949,8 +944,6 @@ function ControlPanelDetails() {
           <br />
           <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
           ráslista röðun.
-          <br />
-          <strong>Flokkar:</strong> Sýnir aldursflokk keppenda.
         </Typography>
       </Alert>
     </Container>

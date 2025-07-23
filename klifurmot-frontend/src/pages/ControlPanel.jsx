@@ -165,7 +165,7 @@ function ControlPanel() {
           fullWidth={isMobile}
           sx={{ flexShrink: 0 }}
         >
-          Búa til mót
+          mót
         </Button>
       </Box>
 

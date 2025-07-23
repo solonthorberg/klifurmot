@@ -1,5 +1,41 @@
 import React, { useState, useEffect } from "react";
 import api from "../services/api";
+import dayjs from "dayjs";
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Chip,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  CircularProgress,
+  InputAdornment,
+  Divider,
+} from "@mui/material";
+import { MobileDateTimePicker } from "@mui/x-date-pickers/MobileDateTimePicker";
+import {
+  ContentCopy as CopyIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+  Gavel as JudgeIcon,
+} from "@mui/icons-material";
 
 function JudgeLinkSection({ competitionId }) {
   const [availableJudges, setAvailableJudges] = useState([]);
@@ -15,9 +51,8 @@ function JudgeLinkSection({ competitionId }) {
     fetchAvailableJudges();
     fetchExistingLinks();
     // Set default expiration to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setExpirationDate(tomorrow.toISOString().slice(0, 16)); // Format for datetime-local input
+    const tomorrow = dayjs().add(1, "day");
+    setExpirationDate(tomorrow.format("YYYY-MM-DDTHH:mm"));
   }, []);
 
   const fetchAvailableJudges = async () => {
@@ -38,7 +73,6 @@ function JudgeLinkSection({ competitionId }) {
       setExistingLinks(res.data);
     } catch (err) {
       console.error("Failed to fetch existing links:", err);
-      // For now, set empty array if endpoint doesn't exist
       setExistingLinks([]);
     } finally {
       setIsLoadingLinks(false);
@@ -60,12 +94,8 @@ function JudgeLinkSection({ competitionId }) {
     try {
       const payload = {
         user_id: selectedJudge,
+        expires_at: new Date(expirationDate).toISOString(),
       };
-
-      // Add expiration date if provided
-      if (expirationDate) {
-        payload.expires_at = new Date(expirationDate).toISOString();
-      }
 
       const res = await api.post(
         `/accounts/judge-links/${competitionId}/`,
@@ -74,18 +104,15 @@ function JudgeLinkSection({ competitionId }) {
 
       console.log("Judge link generated:", res.data.judge_link);
 
-      // Show success message if role was assigned
       if (res.data.role_assigned) {
         console.log("Judge role automatically assigned");
       }
 
       // Reset form
       setSelectedJudge("");
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setExpirationDate(tomorrow.toISOString().slice(0, 16));
+      const tomorrow = dayjs().add(1, "day");
+      setExpirationDate(tomorrow.format("YYYY-MM-DDTHH:mm"));
 
-      // Refresh the existing links list
       await fetchExistingLinks();
     } catch (err) {
       console.error("Failed to generate judge link:", err);
@@ -106,7 +133,6 @@ function JudgeLinkSection({ competitionId }) {
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
-      // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement("textarea");
       textArea.value = link;
       document.body.appendChild(textArea);
@@ -124,7 +150,6 @@ function JudgeLinkSection({ competitionId }) {
     }
 
     try {
-      // Updated URL to match the backend pattern
       await api.delete(`/accounts/judge-links/link/${linkId}/`);
       console.log("Judge link deleted");
       await fetchExistingLinks();
@@ -138,11 +163,15 @@ function JudgeLinkSection({ competitionId }) {
     }
   };
 
+  const handleExpirationDateChange = (newValue) => {
+    const dateString = newValue ? newValue.format("YYYY-MM-DDTHH:mm") : "";
+    setExpirationDate(dateString);
+  };
+
   const updateJudgeLink = async (linkId, newExpirationDate) => {
     try {
-      // Updated URL to match the backend pattern
       await api.patch(`/accounts/judge-links/link/${linkId}/`, {
-        expires_at: new Date(newExpirationDate).toISOString(),
+        expires_at: dayjs(newExpirationDate).toISOString(),
       });
       console.log("Judge link updated");
       setEditingLink(null);
@@ -166,173 +195,412 @@ function JudgeLinkSection({ competitionId }) {
     return new Date(expiresAt) < new Date();
   };
 
+  const getStatusChip = (link) => {
+    if (isLinkExpired(link.expires_at)) {
+      return <Chip label="Útrunnin" color="error" size="small" />;
+    } else {
+      return <Chip label="Virk" color="success" size="small" />;
+    }
+  };
+
   return (
-    <div className="card mb-4">
-      <div className="card-header">
-        <h5 className="mb-0">📋 Dómaraslóðir</h5>
-      </div>
-      <div className="card-body">
+    <Card>
+      <CardHeader
+        title={
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography variant="h6" fontWeight="bold">
+              Dómaraslóðir
+            </Typography>
+          </Box>
+        }
+      />
+      <CardContent>
         {/* Create New Judge Link Section */}
-        <div className="row align-items-end mb-4">
-          <div className="col-md-3">
-            <label className="form-label">Veldu dómara:</label>
-            <select
-              className="form-select"
-              value={selectedJudge}
-              onChange={(e) => setSelectedJudge(e.target.value)}
-            >
-              <option value="">-- Veldu dómara --</option>
-              {availableJudges.map((judge) => (
-                <option key={judge.id} value={judge.id}>
-                  {judge.full_name || judge.username} ({judge.email})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="col-md-3">
-            <label className="form-label">Gildistími:</label>
-            <input
-              type="datetime-local"
-              className="form-control"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)} // Prevent past dates
-            />
-          </div>
-          <div className="col-md-3">
-            <button
-              className="btn btn-primary"
+        <Box sx={{ mb: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              justifyContent: "space-between",
+              alignItems: { xs: "flex-start", sm: "end" },
+              gap: 2,
+            }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{
+                  mb: { xs: 0, sm: 0 },
+                  width: "100%",
+                }}
+              >
+                <InputLabel id="judge-select-label">Veldu dómara</InputLabel>
+                <Select
+                  labelId="judge-select-label"
+                  id="judge-select"
+                  value={selectedJudge || ""}
+                  onChange={(e) => setSelectedJudge(e.target.value)}
+                  label="Veldu dómara"
+                  fullWidth
+                  sx={{
+                    textTransform: "none",
+                    width: "100%",
+                  }}
+                >
+                  {availableJudges.map((judge) => (
+                    <MenuItem key={judge.id} value={judge.id}>
+                      {judge.full_name || judge.username}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ minWidth: { xs: "100%", sm: 200 } }}>
+              <MobileDateTimePicker
+                label="Gildistími"
+                value={expirationDate ? dayjs(expirationDate) : null}
+                onChange={handleExpirationDateChange}
+                format="DD/MM/YYYY HH:mm"
+                ampm={false}
+                minDateTime={dayjs()}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    size: "small",
+                    required: true,
+                  },
+                }}
+              />
+            </Box>
+
+            <Button
+              variant="contained"
               onClick={generateJudgeLink}
               disabled={!selectedJudge || !expirationDate || isGenerating}
+              sx={{
+                alignSelf: { xs: "stretch", sm: "auto" },
+                minWidth: { xs: "100%", sm: 120 },
+                textTransform: "none",
+              }}
             >
               {isGenerating ? "Býr til..." : "Búa til slóð"}
-            </button>
-          </div>
-        </div>
+            </Button>
+          </Box>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
 
         {/* Existing Judge Links Section */}
-        <div className="mt-4">
+        <Box>
           {isLoadingLinks ? (
-            <p className="text-muted">Hleður...</p>
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+              <CircularProgress />
+            </Box>
           ) : existingLinks.length === 0 ? (
-            <p className="text-muted">Engar dómaraslóðir til staðar</p>
+            <Typography
+              color="text.secondary"
+              sx={{ textAlign: "center", py: 3 }}
+            >
+              Engar dómaraslóðir til staðar
+            </Typography>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Dómari</th>
-                    <th>Dómaraslóð</th>
-                    <th>Rennur út</th>
-                    <th>Staða</th>
-                    <th>Aðgerðir</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {existingLinks.map((link) => (
-                    <tr key={link.id}>
-                      <td>{getJudgeName(link.user_id)}</td>
-                      <td>
-                        <div className="input-group input-group-sm">
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            value={link.judge_link}
-                            readOnly
-                            style={{ fontSize: "0.75rem" }}
+            // Mobile view - Card layout
+            <Box sx={{ display: { xs: "block", md: "none" } }}>
+              {existingLinks.map((link) => (
+                <Card key={link.id} variant="outlined" sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Dómari
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium">
+                        {getJudgeName(link.user_id)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Dómaraslóð
+                      </Typography>
+                      <TextField
+                        size="small"
+                        value={link.judge_link}
+                        InputProps={{
+                          readOnly: true,
+                          style: { fontSize: "0.75rem" },
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                size="small"
+                                onClick={() => copyToClipboard(link.judge_link)}
+                                title="Afrita slóð"
+                              >
+                                {linkCopied ? (
+                                  <CheckIcon color="success" />
+                                ) : (
+                                  <CopyIcon />
+                                )}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                        fullWidth
+                      />
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Best fyrir
+                      </Typography>
+                      {editingLink === link.id ? (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <MobileDateTimePicker
+                            value={dayjs(link.expires_at)}
+                            onChange={(newValue) => {
+                              link.newExpirationDate = newValue
+                                ? newValue.format("YYYY-MM-DDTHH:mm")
+                                : "";
+                            }}
+                            format="DD/MM/YYYY HH:mm"
+                            ampm={false}
+                            minDateTime={dayjs()}
+                            slotProps={{
+                              textField: {
+                                size: "small",
+                                fullWidth: true,
+                              },
+                            }}
                           />
-                          <button
-                            className="btn btn-outline-secondary btn-sm"
-                            onClick={() => copyToClipboard(link.judge_link)}
-                            title="Afrita slóð"
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() =>
+                              updateJudgeLink(link.id, link.newExpirationDate)
+                            }
+                            title="Vista"
                           >
-                            {linkCopied ? "✅" : "📋"}
-                          </button>
-                        </div>
-                      </td>
-                      <td>
+                            <CheckIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => setEditingLink(null)}
+                            title="Hætta við"
+                          >
+                            <CloseIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Typography variant="body2">
+                            {dayjs(link.expires_at).format("DD/MM/YYYY HH:mm")}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => setEditingLink(link.id)}
+                            title="Breyta gildistíma"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      )}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="subtitle2" color="text.secondary">
+                          Staða
+                        </Typography>
+                        {getStatusChip(link)}
+                      </Box>
+
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => deleteJudgeLink(link.id)}
+                        title="Eyða slóð"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
+
+          {/* Desktop view - Table layout */}
+          {!isLoadingLinks && existingLinks.length > 0 && (
+            <TableContainer
+              component={Paper}
+              variant="outlined"
+              sx={{ display: { xs: "none", md: "block" } }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: "bold" }}>Dómari</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Dómaraslóð
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      Best fyrir
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Staða</TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: "bold",
+                        width: 100,
+                        textAlign: "center",
+                      }}
+                    >
+                      Aðgerðir
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {existingLinks.map((link) => (
+                    <TableRow
+                      key={link.id}
+                      sx={{ "&:hover": { backgroundColor: "grey.50" } }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {getJudgeName(link.user_id)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <TextField
+                            size="small"
+                            value={link.judge_link}
+                            InputProps={{
+                              readOnly: true,
+                              style: { fontSize: "0.75rem" },
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      copyToClipboard(link.judge_link)
+                                    }
+                                    title="Afrita slóð"
+                                  >
+                                    {linkCopied ? (
+                                      <CheckIcon color="success" />
+                                    ) : (
+                                      <CopyIcon />
+                                    )}
+                                  </IconButton>
+                                </InputAdornment>
+                              ),
+                            }}
+                            sx={{ flex: 1 }}
+                          />
+                        </Box>
+                      </TableCell>
+                      <TableCell>
                         {editingLink === link.id ? (
-                          <div className="d-flex gap-1">
-                            <input
-                              type="datetime-local"
-                              className="form-control form-control-sm"
-                              defaultValue={new Date(link.expires_at)
-                                .toISOString()
-                                .slice(0, 16)}
-                              onChange={(e) => {
-                                link.newExpirationDate = e.target.value;
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <MobileDateTimePicker
+                              value={dayjs(link.expires_at)}
+                              onChange={(newValue) => {
+                                link.newExpirationDate = newValue
+                                  ? newValue.format("YYYY-MM-DDTHH:mm")
+                                  : "";
                               }}
-                              min={new Date().toISOString().slice(0, 16)}
+                              format="DD/MM/YYYY HH:mm"
+                              ampm={false}
+                              minDateTime={dayjs()}
+                              slotProps={{
+                                textField: {
+                                  size: "small",
+                                  sx: { minWidth: 200 },
+                                },
+                              }}
                             />
-                            <button
-                              className="btn btn-success btn-sm"
+                            <IconButton
+                              size="small"
+                              color="success"
                               onClick={() =>
                                 updateJudgeLink(link.id, link.newExpirationDate)
                               }
                               title="Vista"
                             >
-                              ✅
-                            </button>
-                            <button
-                              className="btn btn-secondary btn-sm"
+                              <CheckIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="error"
                               onClick={() => setEditingLink(null)}
                               title="Hætta við"
                             >
-                              ❌
-                            </button>
-                          </div>
+                              <CloseIcon />
+                            </IconButton>
+                          </Box>
                         ) : (
-                          <div className="d-flex align-items-center gap-2">
-                            <small>
-                              {new Date(link.expires_at).toLocaleString(
-                                "is-IS"
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Typography variant="body2">
+                              {dayjs(link.expires_at).format(
+                                "DD/MM/YYYY HH:mm"
                               )}
-                            </small>
-                            <button
-                              className="btn btn-sm btn-outline-primary"
+                            </Typography>
+                            <IconButton
+                              size="small"
                               onClick={() => setEditingLink(link.id)}
                               title="Breyta gildistíma"
                             >
-                              ✏️
-                            </button>
-                          </div>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
                         )}
-                      </td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            isLinkExpired(link.expires_at)
-                              ? "bg-danger"
-                              : link.is_used
-                              ? "bg-success"
-                              : "bg-warning"
-                          }`}
-                        >
-                          {isLinkExpired(link.expires_at)
-                            ? "Útrunnin"
-                            : link.is_used
-                            ? "Notuð"
-                            : "Virk"}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-danger btn-sm"
+                      </TableCell>
+                      <TableCell>{getStatusChip(link)}</TableCell>
+                      <TableCell sx={{ textAlign: "center" }}>
+                        <IconButton
+                          size="small"
+                          color="error"
                           onClick={() => deleteJudgeLink(link.id)}
                           title="Eyða slóð"
                         >
-                          🗑️
-                        </button>
-                      </td>
-                    </tr>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </CardContent>
+    </Card>
   );
 }
 
