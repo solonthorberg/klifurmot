@@ -178,6 +178,7 @@ function JudgeDashboardPage() {
             competitionId={competitionId}
             onNext={handleNext}
             onPrevious={handlePrevious}
+            onBack={handleBack}
           />
         );
       default:
