@@ -48,3 +48,10 @@ yarn-error.log*
 klifurhus-frontend/node_modules/
 klifurhus-frontend/dist/
 klifurhus-frontend/build/
+
+# Static files
+staticfiles/
+static/
+
+# Media files  
+media/
