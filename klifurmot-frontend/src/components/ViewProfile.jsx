@@ -1,14 +1,14 @@
-import "./../css/pages/Profile.css";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import FormControl from "@mui/material/FormControl";
+import { Typography } from "@mui/material";
 
 function ViewProfile({ me, onEdit }) {
   const formatDate = (dateString) => {
     if (!dateString) return "–";
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
@@ -26,15 +26,15 @@ function ViewProfile({ me, onEdit }) {
   const DisplayField = ({ children }) => (
     <Box
       sx={{
-        border: '1px solid #c4c4c4',
-        borderRadius: '4px',
-        padding: '16.5px 14px',
-        backgroundColor: '#f5f5f5',
-        fontSize: '16px',
+        border: "1px solid #c4c4c4",
+        borderRadius: "4px",
+        padding: "16.5px 14px",
+        backgroundColor: "#f5f5f5",
+        fontSize: "16px",
         fontFamily: '"Roboto","Helvetica","Arial",sans-serif',
-        color: 'rgba(0, 0, 0, 0.87)',
-        minHeight: '1.45em',
-        lineHeight: '1.45em',
+        color: "rgba(0, 0, 0, 0.87)",
+        minHeight: "1.45em",
+        lineHeight: "1.45em",
       }}
     >
       {children}
@@ -43,35 +43,29 @@ function ViewProfile({ me, onEdit }) {
 
   return (
     <Box maxWidth="sm" sx={{ mx: "auto" }}>
-      <h2>Velkomin(n), {me.user.username}</h2>
-      
+      <Typography textAlign="center" variant="h5">
+        Velkomin(n), {me.user.username}
+      </Typography>
+
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <FormControl fullWidth>
           <label>Fullt nafn</label>
-          <DisplayField>
-            {me.profile?.full_name || "–"}
-          </DisplayField>
+          <DisplayField>{me.profile?.full_name || "–"}</DisplayField>
         </FormControl>
 
         <FormControl fullWidth>
           <label>Netfang</label>
-          <DisplayField>
-            {me.user.email}
-          </DisplayField>
+          <DisplayField>{me.user.email}</DisplayField>
         </FormControl>
 
         <FormControl fullWidth>
           <label>Fæðingardagur</label>
-          <DisplayField>
-            {formatDate(me.profile?.date_of_birth)}
-          </DisplayField>
+          <DisplayField>{formatDate(me.profile?.date_of_birth)}</DisplayField>
         </FormControl>
 
         <FormControl fullWidth>
           <label>Kyn</label>
-          <DisplayField>
-            {formatGender(me.profile?.gender)}
-          </DisplayField>
+          <DisplayField>{formatGender(me.profile?.gender)}</DisplayField>
         </FormControl>
 
         <FormControl fullWidth>

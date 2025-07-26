@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Box,
   Typography,
@@ -80,7 +79,7 @@ function CompetitionOverview({ competition }) {
                 {formatDate(competition.end_date)}
               </Typography>
             </Box>
-
+            {/* Link to sportabler? */}
             <Button
               variant="contained"
               color="primary"

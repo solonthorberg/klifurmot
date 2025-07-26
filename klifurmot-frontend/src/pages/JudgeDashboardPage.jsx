@@ -4,6 +4,7 @@ import SelectRound from "../components/SelectRound";
 import SelectCategoryAndBoulder from "../components/SelectCategoryAndBoulder";
 import JudgeScoring from "../components/JudgeScoring";
 import api, { setAuthToken } from "../services/api";
+import { useNotification } from "../context/NotificationContext";
 import {
   Box,
   Typography,
@@ -12,21 +13,12 @@ import {
   Alert,
   CircularProgress,
   Container,
-  useTheme,
-  useMediaQuery,
 } from "@mui/material";
-import {
-  AdminPanelSettings as AdminIcon,
-  ArrowBack as BackIcon,
-  EmojiEvents as CompetitionIcon,
-} from "@mui/icons-material";
 
 function JudgeDashboardPage() {
   const { competitionId } = useParams();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
+  const { showError } = useNotification();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
@@ -48,69 +40,41 @@ function JudgeDashboardPage() {
 
     setAuthToken(token);
 
-    // Check access - either via judge link OR as admin
     const checkAccess = async () => {
       try {
-        const userResponse = await api.get("accounts/me/");
-        const currentUser = userResponse.data;
+        const rolesResponse = await api.get(
+          `/competitions/roles/?competition_id=${competitionId}`
+        );
+        console.log("Roles response:", rolesResponse.data);
 
-        // Method 1: Judge link access (existing logic)
-        const judgeInfoRaw = localStorage.getItem("judgeInfo");
-        if (judgeInfoRaw) {
-          try {
-            const expectedJudge = JSON.parse(judgeInfoRaw);
-            if (
-              currentUser.user.id === expectedJudge.user_id &&
-              expectedJudge.competition_id === parseInt(competitionId)
-            ) {
-              setAuthorized(true);
-              setUserRole("judge");
-              return;
-            }
-          } catch (err) {
-            console.log("Invalid judge info, checking admin access...");
-          }
+        const hasAdminRole = rolesResponse.data.some(
+          (role) => role.role === "admin"
+        );
+
+        if (hasAdminRole) {
+          setAuthorized(true);
+          setUserRole("admin");
+          setLoading(false);
+          return;
         }
 
-        // Method 2: Admin access - check if user has admin role for this competition
-        try {
-          const rolesResponse = await api.get(
-            `/competitions/roles/?competition_id=${competitionId}`
-          );
+        const hasJudgeRole = rolesResponse.data.some(
+          (role) => role.role === "judge"
+        );
 
-          const hasAdminRole = rolesResponse.data.some(
-            (role) => role.role === "admin"
-          );
-
-          if (hasAdminRole) {
-            setAuthorized(true);
-            setUserRole("admin");
-            return;
-          }
-
-          // Method 3: Check if user has judge role (without judge link)
-          const hasJudgeRole = rolesResponse.data.some(
-            (role) => role.role === "judge"
-          );
-
-          if (hasJudgeRole) {
-            setAuthorized(true);
-            setUserRole("judge");
-            return;
-          }
-        } catch (err) {
-          console.error("Error checking competition roles:", err);
+        if (hasJudgeRole) {
+          setAuthorized(true);
+          setUserRole("judge");
+          setLoading(false);
+          return;
         }
-
-        // No access found
-        console.log("No access found, redirecting...");
-        navigate("/");
       } catch (err) {
-        console.error("Authorization error:", err);
-        navigate("/");
-      } finally {
-        setLoading(false);
+        console.error("Error checking competition roles:", err);
       }
+
+      showError("Þú hefur ekki aðgang að þessu viðmóti");
+      navigate("/controlpanel");
+      setLoading(false);
     };
 
     checkAccess();
@@ -130,10 +94,6 @@ function JudgeDashboardPage() {
 
   const handlePrevious = () => {
     setCurrentAthleteIndex((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleGoToControlPanel = () => {
-    navigate("/controlpanel");
   };
 
   const renderComponent = () => {
@@ -214,7 +174,6 @@ function JudgeDashboardPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header Section */}
       <Box sx={{ mb: 4 }}>
         <Box
           sx={{
@@ -241,10 +200,8 @@ function JudgeDashboardPage() {
         </Box>
       </Box>
 
-      {/* Main Content */}
       <Box sx={{ mb: 4 }}>{renderComponent()}</Box>
 
-      {/* Admin Notice */}
       {userRole === "admin" && (
         <Alert
           severity="info"
@@ -259,8 +216,7 @@ function JudgeDashboardPage() {
             <Box component="span" fontWeight="bold">
               Keppnisstjóri aðgangur:
             </Box>{" "}
-            Þú hefur aðgang að dómaraviðmóti sem keppnisstjóri. Þú getur skráð
-            niðurstöður og framkvæmt allar dómaraðgerðir.
+            Þú hefur aðgang að dómaraviðmóti sem keppnisstjóri.
           </Typography>
         </Alert>
       )}

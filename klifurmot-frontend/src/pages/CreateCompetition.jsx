@@ -1,4 +1,3 @@
-// CreateCompetition.jsx - With Error Message Above Buttons
 import { useNavigate, useParams } from "react-router-dom";
 import { useCompetitionData } from "../hooks/UseCompetitionData";
 import CompetitionForm from "../components/CompetitionManage/CompetitionForm";
@@ -50,7 +49,6 @@ function CreateCompetition() {
           setImage={setImage}
         />
 
-        {/* Categories Title Outside Card */}
         <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
           Flokkar og Umferðir
         </Typography>
@@ -70,20 +68,18 @@ function CreateCompetition() {
 
         <Divider sx={{ my: 4 }} />
 
-        {/* Error message right above the buttons */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        {/* ✅ CHANGED: Centered buttons */}
         <Box
           sx={{
             display: "flex",
             flexDirection: "row",
             gap: 2,
-            justifyContent: "center", // ✅ Center the buttons
+            justifyContent: "center",
           }}
         >
           <Button

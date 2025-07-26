@@ -13,6 +13,7 @@ import JudgeDashboardPage from "../pages/JudgeDashboardPage";
 import ControlPanel from "../pages/ControlPanel";
 import ControlPanelDetails from "../pages/ControlPanelDetails";
 import CreateCompetition from "../pages/CreateCompetition";
+import NotFound from "../pages/NotFound";
 
 function JudgeDashboardPageWrapper() {
   const { competitionId } = useParams();
@@ -50,6 +51,7 @@ function AppRoutes() {
         element={<CreateCompetition />}
       />
       <Route path="/controlpanel/create" element={<CreateCompetition />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

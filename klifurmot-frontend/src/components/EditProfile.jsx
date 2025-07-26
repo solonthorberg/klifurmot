@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import Box from "@mui/material/Box";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
+
+import {
+  Box,
+  TextField,
+  Button,
+  FormControl,
+  Select,
+  MenuItem,
+  Typography,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
 
 function EditProfile({ me, onCancel, onSave }) {
   const [formData, setFormData] = useState({
@@ -65,7 +69,9 @@ function EditProfile({ me, onCancel, onSave }) {
 
   return (
     <Box maxWidth="sm" sx={{ mx: "auto" }}>
-      <h2>Breyta prófíl</h2>
+      <Typography textAlign="center" variant="h5" gutterBottom>
+        Breyta prófíl
+      </Typography>
       {message && <p>{message}</p>}
       <Box
         component="form"
@@ -73,18 +79,17 @@ function EditProfile({ me, onCancel, onSave }) {
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <FormControl fullWidth>
-          <label>Fullt nafn</label>
           <TextField
             name="full_name"
             value={formData.full_name}
             onChange={handleChange}
             required
             variant="outlined"
+            label="Fullt nafn"
           />
         </FormControl>
 
         <FormControl fullWidth>
-          <label>Netfang</label>
           <TextField
             type="email"
             name="email"
@@ -92,11 +97,11 @@ function EditProfile({ me, onCancel, onSave }) {
             onChange={handleChange}
             required
             variant="outlined"
+            label="Netfang"
           />
         </FormControl>
 
         <FormControl fullWidth>
-          <label>Fæðingardagur</label>
           <DatePicker
             value={formData.date_of_birth}
             onChange={handleDateChange}
@@ -105,28 +110,36 @@ function EditProfile({ me, onCancel, onSave }) {
               textField: {
                 fullWidth: true,
                 variant: "outlined",
+                label: "Fæðingardagur",
               },
             }}
           />
         </FormControl>
 
         <FormControl fullWidth required>
-          <label>Kyn</label>
-          <Select name="gender" value={formData.gender} onChange={handleChange}>
-            <MenuItem value="">Veldu kyn</MenuItem>
+          <Select
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            variant="outlined"
+            displayEmpty
+          >
             <MenuItem value="KK">KK</MenuItem>
             <MenuItem value="KVK">KVK</MenuItem>
           </Select>
         </FormControl>
 
         <FormControl fullWidth required>
-          <label>Þjóðerni</label>
           <Select
             name="nationality"
             value={formData.nationality}
             onChange={handleChange}
+            variant="outlined"
+            displayEmpty
           >
-            <MenuItem value="">Veldu</MenuItem>
+            <MenuItem value="" disabled>
+              Veldu þjóð
+            </MenuItem>
             {countries.map((c) => (
               <MenuItem key={c.country_code} value={c.country_code}>
                 {c.name_en}
@@ -136,28 +149,35 @@ function EditProfile({ me, onCancel, onSave }) {
         </FormControl>
 
         <FormControl fullWidth>
-          <label>Hæð (cm)</label>
           <TextField
             type="number"
             name="height_cm"
             value={formData.height_cm}
             onChange={handleChange}
             variant="outlined"
+            label="Hæð (cm)"
           />
         </FormControl>
 
         <FormControl fullWidth>
-          <label>Vænghaf (cm)</label>
           <TextField
             type="number"
             name="wingspan_cm"
             value={formData.wingspan_cm}
             onChange={handleChange}
             variant="outlined"
+            label="Vænghaf (cm)"
           />
         </FormControl>
 
-        <Box sx={{ display: "flex", gap: 2, marginTop: 2, justifyContent: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            marginTop: 2,
+            justifyContent: "center",
+          }}
+        >
           <Button variant="contained" type="submit">
             Vista
           </Button>

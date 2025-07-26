@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import {
@@ -41,11 +41,9 @@ import {
   ListItem,
   ListItemButton,
   Alert,
-  Grid,
   CircularProgress,
   useMediaQuery,
   useTheme,
-  Stack,
   Divider,
   Container,
 } from "@mui/material";
@@ -53,9 +51,9 @@ import {
   DragIndicator as DragIcon,
   Close as CloseIcon,
   Add as AddIcon,
-  Gavel as JudgeIcon,
 } from "@mui/icons-material";
 import JudgeLinkSection from "../components/JudgeLink";
+import { useNotification } from "../context/NotificationContext";
 
 function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
   const {
@@ -135,7 +133,7 @@ function ControlPanelDetails() {
   const { competitionId } = useParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
+  const { showSuccess, showError } = useNotification();
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -247,12 +245,6 @@ function ControlPanelDetails() {
       return;
     }
 
-    console.log("Drag ended:", {
-      activeId: active.id,
-      overId: over.id,
-      category: categoryName,
-    });
-
     const categoryData = getCategoriesForRound().find(
       (cat) => cat.category === categoryName
     );
@@ -263,47 +255,20 @@ function ControlPanelDetails() {
     }
 
     const athletes = [...categoryData.athletes];
-    console.log("Athletes in category before processing:", athletes);
 
     let oldIndex = -1;
     let newIndex = -1;
 
-    // First attempt: use climber_id
     oldIndex = athletes.findIndex(
-      (athlete) => athlete.climber_id?.toString() === active.id?.toString()
+      (athlete) => athlete.id?.toString() === active.id?.toString()
     );
     newIndex = athletes.findIndex(
-      (athlete) => athlete.climber_id?.toString() === over.id?.toString()
+      (athlete) => athlete.id?.toString() === over.id?.toString()
     );
 
-    // Second attempt: use id if climber_id didn't work
     if (oldIndex === -1 || newIndex === -1) {
-      oldIndex = athletes.findIndex(
-        (athlete) => athlete.id?.toString() === active.id?.toString()
-      );
-      newIndex = athletes.findIndex(
-        (athlete) => athlete.id?.toString() === over.id?.toString()
-      );
+      return;
     }
-
-    // Third attempt: fallback to start_order based on athlete-index pattern
-    if (oldIndex === -1 || newIndex === -1) {
-      const activeOrder = active.id?.toString().replace("athlete-", "");
-      const overOrder = over.id?.toString().replace("athlete-", "");
-      oldIndex = athletes.findIndex(
-        (athlete) => athlete.start_order?.toString() === activeOrder
-      );
-      newIndex = athletes.findIndex(
-        (athlete) => athlete.start_order?.toString() === overOrder
-      );
-    }
-
-    console.log("Found indices:", {
-      oldIndex,
-      newIndex,
-      activeId: active.id,
-      overId: over.id,
-    });
 
     if (oldIndex === -1 || newIndex === -1) {
       console.error("Could not find athlete indices", {
@@ -319,8 +284,6 @@ function ControlPanelDetails() {
       });
       return;
     }
-
-    console.log(`📍 Moving athlete from position ${oldIndex} to ${newIndex}`);
 
     const reorderedAthletes = arrayMove(athletes, oldIndex, newIndex);
     const updatedAthletes = reorderedAthletes.map((athlete, index) => ({
@@ -352,7 +315,7 @@ function ControlPanelDetails() {
     try {
       const athletesPayload = updatedAthletes.map((athlete, index) => {
         const climberId = athlete.climber_id || athlete.id;
-        console.log(`🏃‍♂️ Athlete ${index + 1}:`, {
+        console.log(`Athlete ${index + 1}:`, {
           name: athlete.full_name,
           climber_id: climberId,
           start_order: index + 1,
@@ -396,7 +359,7 @@ function ControlPanelDetails() {
         errorMsg += `: ${err.response.data.errors.join(", ")}`;
       }
 
-      alert(errorMsg);
+      showError("Ekki tókst að uppfæra röðun");
     } finally {
       setStartlist((prevStartlist) =>
         prevStartlist.map((cat) => {
@@ -440,7 +403,7 @@ function ControlPanelDetails() {
     );
 
     if (currentRoundIndex === -1) {
-      alert("Gat ekki fundið núverandi umferð.");
+      showError("Gat ekki fundið núverandi umferð.");
       return;
     }
 
@@ -448,7 +411,7 @@ function ControlPanelDetails() {
     const nextRound = categoryRounds[currentRoundIndex + 1];
 
     if (!nextRound) {
-      alert("Engin næsta umferð til að flytja í.");
+      showError("Engin næsta umferð til að flytja í");
       return;
     }
 
@@ -467,7 +430,7 @@ function ControlPanelDetails() {
       if (response.data.status === "ok") {
         const message = `Tókst að flytja ${response.data.advanced} keppendur úr ${currentRoundName} í ${nextRound.round_group_detail.name}!`;
         console.log("SUCCESS:", message);
-        alert(message);
+        showSuccess(message);
 
         await fetchStartlist();
         await fetchResults();
@@ -476,13 +439,14 @@ function ControlPanelDetails() {
       } else {
         const errorMsg = `Villa: ${response.data.message || "Óþekkt villa"}`;
         console.error("Advance failed:", response.data);
-        alert(errorMsg);
+        showError("Villa, tókst ekki að flytja keppendur");
       }
     } catch (err) {
       console.error("ERROR during advance:", err);
       const errorMessage =
         err.response?.data?.detail || "Ekki tókst að flytja keppendur.";
-      alert(`Villa: ${errorMessage}`);
+      console.log(errorMessage);
+      showError("Ekki tókst að flytja keppendur");
     } finally {
       setAdvancing(null);
     }
@@ -501,17 +465,13 @@ function ControlPanelDetails() {
 
       console.log("Remove payload:", payload);
 
-      const res = await api.post("/competitions/remove-athlete/", payload);
+      await api.post("/competitions/remove-athlete/", payload);
 
       console.log(`${athlete.full_name} removed from ${category}`);
       await fetchStartlist();
     } catch (err) {
       console.error("Failed to remove athlete:", err.response?.data || err);
-      alert(
-        `Ekki tókst að fjarlægja keppanda: ${
-          err.response?.data?.detail || err.message
-        }`
-      );
+      showError("Ekki tókst að fjarlægja keppanda");
     }
   };
 
@@ -552,11 +512,7 @@ function ControlPanelDetails() {
       setShowAddModal(false);
     } catch (err) {
       console.error("Failed to register athlete:", err.response?.data || err);
-      alert(
-        `Ekki tókst að skrá keppanda: ${
-          err.response?.data?.detail || err.message
-        }`
-      );
+      showError("Ekki tókst að skrá keppanda");
     }
   };
 
@@ -678,7 +634,6 @@ function ControlPanelDetails() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
-      {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Box
           sx={{
@@ -710,7 +665,6 @@ function ControlPanelDetails() {
         </Box>
       </Box>
 
-      {/* Round Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
           value={activeRound || false}
@@ -725,7 +679,6 @@ function ControlPanelDetails() {
         </Tabs>
       </Paper>
 
-      {/* Categories - Vertical Layout */}
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {getCategoriesForRound().map((cat, idx) => {
           const nextRound = getNextRoundForCategory(cat.category, activeRound);
@@ -738,7 +691,6 @@ function ControlPanelDetails() {
 
           return (
             <Card key={idx} sx={{ width: "100%" }}>
-              {/* Card Header */}
               <Box sx={{ p: 2, pb: 1 }}>
                 <Box
                   sx={{
@@ -757,7 +709,6 @@ function ControlPanelDetails() {
                   </Typography>
                 </Box>
 
-                {/* Action Buttons */}
                 <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
                   <Button
                     variant="contained"
@@ -791,21 +742,10 @@ function ControlPanelDetails() {
                     </Button>
                   )}
                 </Box>
-
-                {!nextRound && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
-                  >
-                    Síðasta umferð
-                  </Typography>
-                )}
               </Box>
 
               <Divider />
 
-              {/* Card Content */}
               <CardContent sx={{ p: 0 }}>
                 {cat.athletes.length === 0 ? (
                   <Box sx={{ py: 4, textAlign: "center" }}>
@@ -875,7 +815,6 @@ function ControlPanelDetails() {
         })}
       </Box>
 
-      {/* Add Athlete Modal */}
       <Dialog
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -930,12 +869,10 @@ function ControlPanelDetails() {
         </DialogActions>
       </Dialog>
 
-      {/* Judge Link Section */}
       <Box sx={{ mt: 4 }}>
         <JudgeLinkSection competitionId={competitionId} />
       </Box>
 
-      {/* Info Alert */}
       <Alert severity="info" sx={{ mt: 3 }}>
         <Typography variant="body2">
           <strong>Athugið:</strong> Til að nota "Flytja" takkann þarf að vera

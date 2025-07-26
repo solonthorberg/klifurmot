@@ -57,21 +57,6 @@ function AthletesDetails() {
     return `${day}/${month}/${year}`;
   };
 
-  const calculateAge = (dateString) => {
-    if (!dateString) return null;
-    const birthDate = new Date(dateString);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      age--;
-    }
-    return age;
-  };
-
   const formatNationality = (nationality) => {
     if (!nationality) return "–";
     if (typeof nationality === "object") {
@@ -98,8 +83,6 @@ function AthletesDetails() {
       </Box>
     );
   }
-
-  const age = calculateAge(athlete.date_of_birth);
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", mt: 3 }}>
@@ -130,7 +113,7 @@ function AthletesDetails() {
           >
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Aldur: {age || "–"}
+                Aldur: {athlete.age || "–"}
               </Typography>
               <Typography variant="body2" color="textSecondary">
                 Hæð: {athlete.height_cm ? `${athlete.height_cm} cm` : "–"}

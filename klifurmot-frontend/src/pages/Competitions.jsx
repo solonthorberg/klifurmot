@@ -28,7 +28,6 @@ function Competitions() {
     try {
       const response = await api.get("competitions/competitions/");
 
-      // ✅ FIXED: Filter to only show visible competitions
       const visibleCompetitions = response.data.filter(
         (comp) => comp.visible === true
       );

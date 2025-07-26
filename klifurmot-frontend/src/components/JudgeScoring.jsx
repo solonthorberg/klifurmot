@@ -5,7 +5,6 @@ import {
   Typography,
   Button,
   Paper,
-  Grid,
   IconButton,
   Dialog,
   DialogContent,
@@ -20,7 +19,15 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 
-function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNext, onPrevious, onBack }) {
+function JudgeScoring({
+  athlete,
+  boulderNumber,
+  roundOrder,
+  competitionId,
+  onNext,
+  onPrevious,
+  onBack,
+}) {
   const [score, setScore] = useState({
     zoneAttempts: 0,
     topAttempts: 0,
@@ -43,10 +50,12 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
             boulder_number: boulderNumber,
             competition_id: competitionId,
             climber_id: athlete.climber_id,
-            category_id: athlete.category_id
-          }
+            category_id: athlete.category_id,
+          },
         });
-        const current = res.data.find(item => item.climber === athlete.climber_id);
+        const current = res.data.find(
+          (item) => item.climber === athlete.climber_id
+        );
         if (current) {
           setScore({
             zoneAttempts: current.attempts_zone || 0,
@@ -123,7 +132,7 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
   };
 
   const handleEditChange = (field, delta) => {
-    setTempScore(prev => {
+    setTempScore((prev) => {
       let newZone = prev.zoneAttempts;
       let newTop = prev.topAttempts;
 
@@ -142,10 +151,11 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
         zoneAttempts: newZone,
         topAttempts: newTop,
         gotZone: prev.gotZone && newZone > 0,
-        gotTop: prev.gotTop && newTop > 0
+        gotTop: prev.gotTop && newTop > 0,
       };
 
-      if (updated.gotZone && updated.zoneAttempts === 0) updated.zoneAttempts = 1;
+      if (updated.gotZone && updated.zoneAttempts === 0)
+        updated.zoneAttempts = 1;
       if (updated.gotTop && updated.topAttempts === 0) updated.topAttempts = 1;
 
       return updated;
@@ -153,7 +163,7 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
   };
 
   const toggleBooleanField = (field) => {
-    setTempScore(prev => {
+    setTempScore((prev) => {
       const updated = { ...prev };
 
       if (field === "gotZone") {
@@ -186,7 +196,6 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
 
   return (
     <Box sx={{ width: "100%", p: 2 }}>
-      {/* Go Back Button */}
       <Box sx={{ mb: 2 }}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -202,21 +211,19 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
         </Button>
       </Box>
 
-      {/* Athlete Header */}
-      <Typography 
-        variant="h6" 
-        component="h2" 
-        sx={{ 
-          textAlign: "center", 
+      <Typography
+        variant="h6"
+        component="h2"
+        sx={{
+          textAlign: "center",
           mb: 3,
           fontWeight: 400,
-          color: "text.primary"
+          color: "text.primary",
         }}
       >
         ({athlete.start_order}) {athlete.climber}
       </Typography>
 
-      {/* Route Card */}
       <Paper
         variant="outlined"
         sx={{
@@ -228,7 +235,6 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
           width: "100%",
         }}
       >
-        {/* Route Header */}
         <Box
           sx={{
             display: "flex",
@@ -246,27 +252,28 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
               setEditMode(true);
             }}
             size="medium"
-            sx={{ 
+            sx={{
               p: 1,
               bgcolor: "grey.100",
               "&:hover": {
                 bgcolor: "grey.200",
-              }
+              },
             }}
           >
             <EditIcon />
           </IconButton>
         </Box>
 
-        {/* Score Grid */}
-        <Box sx={{ 
-          display: "flex", 
-          justifyContent: "center", 
-          gap: 4, 
-          mb: 4,
-          width: "100%",
-          px: 2,
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 4,
+            mb: 4,
+            width: "100%",
+            px: 2,
+          }}
+        >
           <Box sx={{ textAlign: "center", flex: 1, maxWidth: 200 }}>
             <Typography
               variant="body1"
@@ -399,14 +406,15 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
           </Box>
         </Box>
 
-        {/* Action Buttons */}
-        <Box sx={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          gap: 2,
-          maxWidth: 400,
-          mx: "auto"
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            maxWidth: 400,
+            mx: "auto",
+          }}
+        >
           <Button
             variant="contained"
             size="large"
@@ -494,7 +502,6 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
         </Box>
       </Paper>
 
-      {/* Navigation Buttons - 50/50 split */}
       <Box sx={{ display: "flex", gap: 1, width: "100%" }}>
         <Button
           variant="contained"
@@ -548,7 +555,6 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
         </Button>
       </Box>
 
-      {/* Edit Modal */}
       <Dialog
         open={editMode}
         onClose={() => setEditMode(false)}
@@ -576,13 +582,15 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
             </Typography>
           </Box>
 
-          <Box sx={{ 
-            display: "flex", 
-            justifyContent: "center", 
-            gap: 6, 
-            mb: 4,
-            width: "100%"
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 6,
+              mb: 4,
+              width: "100%",
+            }}
+          >
             <Box sx={{ textAlign: "center", minWidth: 120 }}>
               <Typography
                 variant="body1"
@@ -594,22 +602,24 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
               >
                 Tilraunir Zone
               </Typography>
-              <Box sx={{ 
-                display: "flex", 
-                flexDirection: "column", 
-                alignItems: "center", 
-                gap: 2
-              }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
                 <IconButton
                   onClick={() => handleEditChange("zoneAttempts", 1)}
                   size="large"
-                  sx={{ 
-                    bgcolor: "grey.100", 
-                    width: 48, 
+                  sx={{
+                    bgcolor: "grey.100",
+                    width: 48,
                     height: 48,
                     "&:hover": {
                       bgcolor: "grey.200",
-                    }
+                    },
                   }}
                 >
                   <ArrowUpIcon fontSize="large" />
@@ -637,23 +647,25 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
                 <IconButton
                   onClick={() => handleEditChange("zoneAttempts", -1)}
                   size="large"
-                  sx={{ 
-                    bgcolor: "grey.100", 
-                    width: 48, 
+                  sx={{
+                    bgcolor: "grey.100",
+                    width: 48,
                     height: 48,
                     "&:hover": {
                       bgcolor: "grey.200",
-                    }
+                    },
                   }}
                 >
                   <ArrowDownIcon fontSize="large" />
                 </IconButton>
-                <Box sx={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  mt: 2 
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mt: 2,
+                  }}
+                >
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -676,11 +688,11 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
                       />
                     }
                     label={
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
+                      <Typography
+                        variant="body1"
+                        sx={{
                           fontWeight: 500,
-                          color: tempScore.gotTop ? "#bdbdbd" : "text.primary"
+                          color: tempScore.gotTop ? "#bdbdbd" : "text.primary",
                         }}
                       >
                         Zone náð
@@ -703,22 +715,24 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
               >
                 Tilraunir Topp
               </Typography>
-              <Box sx={{ 
-                display: "flex", 
-                flexDirection: "column", 
-                alignItems: "center", 
-                gap: 2
-              }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
                 <IconButton
                   onClick={() => handleEditChange("topAttempts", 1)}
                   size="large"
-                  sx={{ 
-                    bgcolor: "grey.100", 
-                    width: 48, 
+                  sx={{
+                    bgcolor: "grey.100",
+                    width: 48,
                     height: 48,
                     "&:hover": {
                       bgcolor: "grey.200",
-                    }
+                    },
                   }}
                 >
                   <ArrowUpIcon fontSize="large" />
@@ -746,23 +760,25 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
                 <IconButton
                   onClick={() => handleEditChange("topAttempts", -1)}
                   size="large"
-                  sx={{ 
-                    bgcolor: "grey.100", 
-                    width: 48, 
+                  sx={{
+                    bgcolor: "grey.100",
+                    width: 48,
                     height: 48,
                     "&:hover": {
                       bgcolor: "grey.200",
-                    }
+                    },
                   }}
                 >
                   <ArrowDownIcon fontSize="large" />
                 </IconButton>
-                <Box sx={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  mt: 2 
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mt: 2,
+                  }}
+                >
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -781,11 +797,11 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
                       />
                     }
                     label={
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
+                      <Typography
+                        variant="body1"
+                        sx={{
                           fontWeight: 500,
-                          color: "text.primary"
+                          color: "text.primary",
                         }}
                       >
                         Topp náð
@@ -798,13 +814,15 @@ function JudgeScoring({ athlete, boulderNumber, roundOrder, competitionId, onNex
             </Box>
           </Box>
 
-          <Box sx={{ 
-            display: "flex", 
-            gap: 2, 
-            justifyContent: "center",
-            maxWidth: 400,
-            mx: "auto"
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              justifyContent: "center",
+              maxWidth: 400,
+              mx: "auto",
+            }}
+          >
             <Button
               onClick={() => setEditMode(false)}
               variant="outlined"

@@ -40,13 +40,11 @@ function SelectCategoryAndBoulder({
     const token = localStorage.getItem("token");
     if (token) setAuthToken(token);
 
-    // Fetch categories for this competition
     api
       .get(
         `/competitions/competition-categories/?competition_id=${competitionId}`
       )
       .then((res) => {
-        // Filter categories for this specific competition
         const competitionCategories = res.data.filter(
           (cat) => cat.competition === parseInt(competitionId)
         );
@@ -58,7 +56,6 @@ function SelectCategoryAndBoulder({
   useEffect(() => {
     if (!selectedCategoryId) return;
 
-    // Fetch boulders for the selected category and round group
     api
       .get(
         `/competitions/boulders/?competition_id=${competitionId}&category_id=${selectedCategoryId}&round_group_id=${roundGroupId}`
@@ -141,7 +138,6 @@ function SelectCategoryAndBoulder({
 
   return (
     <Box>
-      {/* Header with back button */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
         <IconButton onClick={onBack} sx={{ mr: 2 }} aria-label="Til baka">
           <BackIcon />
@@ -149,7 +145,6 @@ function SelectCategoryAndBoulder({
         <Typography variant="h5">{roundName}</Typography>
       </Box>
 
-      {/* Selection Controls */}
       <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Flokkur</InputLabel>
@@ -183,7 +178,6 @@ function SelectCategoryAndBoulder({
         </FormControl>
       </Box>
 
-      {/* Loading State */}
       {loading && (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
@@ -191,19 +185,16 @@ function SelectCategoryAndBoulder({
         </Box>
       )}
 
-      {/* No Athletes Message */}
       {athletes === null && !loading && (
         <Alert severity="info">Listi í vinnslu</Alert>
       )}
 
-      {/* Empty Athletes List */}
       {athletes && athletes.length === 0 && !loading && selectedBoulderId && (
         <Alert severity="warning">
           Engir keppendur skráðir í þessa umferð.
         </Alert>
       )}
 
-      {/* Athletes Table */}
       {athletes.length > 0 && (
         <TableContainer component={Paper} variant="outlined">
           <Table>

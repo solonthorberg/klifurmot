@@ -1,20 +1,18 @@
 import axios from "axios";
 import config from "../config/Environment";
 
-// Create axios instance
 const api = axios.create({
   baseURL: config.API_BASE_URL || "/api",
   timeout: config.API_TIMEOUT || 30000,
-  withCredentials: true, // 🧠 Important for CSRF/session cookies
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     "X-Requested-With": "XMLHttpRequest",
   },
-  xsrfCookieName: "csrftoken", // 👈 Django's CSRF cookie name
-  xsrfHeaderName: "X-CSRFToken", // 👈 Header Django expects
+  xsrfCookieName: "csrftoken",
+  xsrfHeaderName: "X-CSRFToken",
 });
 
-// Request interceptor for token auth
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -26,7 +24,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for global error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -38,7 +35,6 @@ api.interceptors.response.use(
   }
 );
 
-// Helper function to set token manually
 export const setAuthToken = (token) => {
   if (token) {
     localStorage.setItem("token", token);

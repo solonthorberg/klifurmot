@@ -1,4 +1,3 @@
-// CompetitionForm.jsx - Using MUI MobileDateTimePicker (Fixed)
 import React from "react";
 import {
   Box,
@@ -40,11 +39,9 @@ function CompetitionForm({ formState, setFormField, setImage }) {
     isEditMode,
   } = formState;
 
-  // Convert string dates to dayjs objects for DateTimePicker
   const startDateValue = startDate ? dayjs(startDate) : null;
   const endDateValue = endDate ? dayjs(endDate) : null;
 
-  // Handle date changes and convert back to string format
   const handleStartDateChange = (newValue) => {
     const dateString = newValue ? newValue.format("YYYY-MM-DDTHH:mm") : "";
     setFormField("startDate", dateString);
@@ -65,7 +62,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             gap: 2,
           }}
         >
-          {/* Competition Title */}
           <TextField
             fullWidth
             required
@@ -76,7 +72,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             placeholder="T.d. Íslandsmeistaramót (ár)"
           />
 
-          {/* Location */}
           <TextField
             fullWidth
             required
@@ -87,7 +82,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             placeholder="T.d. Klifurhúsið - Ármúli 21/23"
           />
 
-          {/* Start Date */}
           <MobileDateTimePicker
             label="Byrjunardagur og tími *"
             value={startDateValue}
@@ -103,7 +97,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             }}
           />
 
-          {/* End Date */}
           <MobileDateTimePicker
             label="Lokadagur og tími *"
             value={endDateValue}
@@ -120,7 +113,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             }}
           />
 
-          {/* Description */}
           <TextField
             fullWidth
             multiline
@@ -132,7 +124,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             placeholder="Lýstu mótinu, skráningu, reglum, verðlaunum og öðrum mikilvægum upplýsingum..."
           />
 
-          {/* Image Upload Section */}
           <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Button
               component="label"
@@ -151,7 +142,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             </Button>
           </Box>
 
-          {/* Visibility Setting */}
           <FormControlLabel
             control={
               <Switch
