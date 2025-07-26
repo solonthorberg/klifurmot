@@ -8,8 +8,8 @@ import {
   createCompetition,
   updateCompetition,
   uploadImage,
-} from "../components/CompetitionManage/CompetitionAPI";
-import { reorderList } from "../components/CompetitionManage/CompetitionUtils";
+} from "./CompetitionAPI";
+import { reorderList } from "./CompetitionUtils";
 
 export function useCompetitionData({ competitionId }) {
   const navigate = useNavigate();
