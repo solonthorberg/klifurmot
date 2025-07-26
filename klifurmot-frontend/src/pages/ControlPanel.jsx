@@ -20,6 +20,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../services/api";
+import { useNotification } from "../context/NotificationContext";
 
 function ControlPanel() {
   const [competitions, setCompetitions] = useState([]);
@@ -34,9 +35,9 @@ function ControlPanel() {
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
-  // Mobile detection
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { showSuccess, showError } = useNotification();
 
   const fetchCompetitions = async () => {
     try {
@@ -76,16 +77,15 @@ function ControlPanel() {
         `/competitions/competitions/${deleteDialog.competition.id}/`
       );
 
-      // Remove from local state
       setCompetitions((prev) =>
         prev.filter((comp) => comp.id !== deleteDialog.competition.id)
       );
 
-      // Close dialog
       setDeleteDialog({ open: false, competition: null });
+      showSuccess("Tókst að eyða mótinu!");
     } catch (error) {
       console.error("Error deleting competition:", error);
-      alert("Ekki tókst að eyða mótinu. Reyndu aftur.");
+      showError("Ekki tókst að eyða mótinu");
     } finally {
       setDeleting(false);
     }
@@ -116,7 +116,6 @@ function ControlPanel() {
         Stjórnborð
       </Typography>
 
-      {/* Mobile-responsive control section */}
       <Box
         sx={{
           display: "flex",
@@ -205,7 +204,6 @@ function ControlPanel() {
                   }}
                 >
                   {comp.title}
-                  {/* ✅ FIXED: Added both edit and delete buttons */}
                   <Box sx={{ display: "flex", gap: 0.5 }}>
                     <IconButton
                       size="small"
@@ -234,7 +232,6 @@ function ControlPanel() {
                 </Typography>
               </Box>
 
-              {/* Mobile-optimized button */}
               <Button
                 variant="contained"
                 color="success"
@@ -246,14 +243,13 @@ function ControlPanel() {
                   flexShrink: 0,
                 }}
               >
-                SKRÁ KEPPENDUR
+                Skrá Keppendur
               </Button>
             </Paper>
           ))}
         </Box>
       )}
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialog.open}
         onClose={handleDeleteCancel}
@@ -263,12 +259,12 @@ function ControlPanel() {
         <DialogTitle id="delete-dialog-title">Staðfesta eyðingu</DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Ertu viss um að þú viljir eyða mótinu "
-            {deleteDialog.competition?.title}"?
+            Ertu viss um að þú viljir eyða mótinu{" "}
+            {deleteDialog.competition?.title}?
             <br />
             <br />
-            <strong>Viðvörun:</strong> Þessi aðgerð er endanleg og mun eyða öllu
-            tengt mótinu, þar á meðal flokkum, umferðum og niðurstöðum.
+            Þessi aðgerð er endanleg og mun eyða öllu tengt mótinu, þar á meðal
+            flokkum, umferðum og niðurstöðum.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

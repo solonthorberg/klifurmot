@@ -10,11 +10,8 @@ import {
   Alert,
   Paper,
   CircularProgress,
-  Card,
-  CardContent,
-  Divider,
 } from "@mui/material";
-import { Login as LoginIcon, Check as CheckIcon } from "@mui/icons-material";
+import { Check as CheckIcon } from "@mui/icons-material";
 
 function JudgeLoginPage() {
   const { token } = useParams();

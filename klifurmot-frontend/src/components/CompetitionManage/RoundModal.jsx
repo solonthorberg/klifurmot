@@ -1,6 +1,4 @@
-// RoundModal.jsx - Clean Version Without Draft Messages
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import {
   Dialog,
   DialogTitle,
@@ -34,7 +32,6 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
         const response = await api.get("/competitions/round-groups/");
         setRoundGroups(response.data);
 
-        // If editing existing round, populate fields
         if (existingRound) {
           setFormData({
             roundGroupId: existingRound.round_group_id?.toString() || "",
@@ -58,7 +55,6 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
       [field]: event.target.value,
     }));
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
@@ -111,7 +107,6 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
         _id: existingRound?._id || `round-${Date.now()}-${Math.random()}`,
       };
 
-      // If editing, preserve existing properties
       if (existingRound) {
         round.existingId = existingRound.existingId;
       }
@@ -151,7 +146,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
               <Select
                 value={formData.roundGroupId}
                 onChange={handleChange("roundGroupId")}
-                disabled={isEditMode} // Don't allow changing round type when editing
+                disabled={isEditMode}
                 label="Umferð"
               >
                 {roundGroups.map((rg) => (

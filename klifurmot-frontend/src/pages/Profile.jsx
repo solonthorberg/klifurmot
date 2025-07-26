@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
 import EditProfile from "../components/EditProfile";
 import ViewProfile from "../components/ViewProfile";
-import "./../css/pages/Profile.css";
 
 function Profile() {
   const [me, setMe] = useState(null);

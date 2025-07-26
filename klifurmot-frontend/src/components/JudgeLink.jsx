@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
 import dayjs from "dayjs";
 import {
@@ -34,7 +34,6 @@ import {
   Edit as EditIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  Gavel as JudgeIcon,
 } from "@mui/icons-material";
 
 function JudgeLinkSection({ competitionId }) {
@@ -50,7 +49,6 @@ function JudgeLinkSection({ competitionId }) {
   useEffect(() => {
     fetchAvailableJudges();
     fetchExistingLinks();
-    // Set default expiration to tomorrow
     const tomorrow = dayjs().add(1, "day");
     setExpirationDate(tomorrow.format("YYYY-MM-DDTHH:mm"));
   }, []);
@@ -108,7 +106,6 @@ function JudgeLinkSection({ competitionId }) {
         console.log("Judge role automatically assigned");
       }
 
-      // Reset form
       setSelectedJudge("");
       const tomorrow = dayjs().add(1, "day");
       setExpirationDate(tomorrow.format("YYYY-MM-DDTHH:mm"));
@@ -215,7 +212,6 @@ function JudgeLinkSection({ competitionId }) {
         }
       />
       <CardContent>
-        {/* Create New Judge Link Section */}
         <Box sx={{ mb: 4 }}>
           <Box
             sx={{
@@ -292,7 +288,6 @@ function JudgeLinkSection({ competitionId }) {
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Existing Judge Links Section */}
         <Box>
           {isLoadingLinks ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
@@ -306,7 +301,6 @@ function JudgeLinkSection({ competitionId }) {
               Engar dómaraslóðir til staðar
             </Typography>
           ) : (
-            // Mobile view - Card layout
             <Box sx={{ display: { xs: "block", md: "none" } }}>
               {existingLinks.map((link) => (
                 <Card key={link.id} variant="outlined" sx={{ mb: 2 }}>
@@ -441,7 +435,6 @@ function JudgeLinkSection({ competitionId }) {
             </Box>
           )}
 
-          {/* Desktop view - Table layout */}
           {!isLoadingLinks && existingLinks.length > 0 && (
             <TableContainer
               component={Paper}

@@ -1,4 +1,3 @@
-// src/hooks/useWebSocket.jsx
 import { useEffect, useRef, useState, useCallback } from "react";
 import config, { debugLog } from "../config/Environment";
 
@@ -31,13 +30,12 @@ const useWebSocket = (path, options = {}) => {
 
   const connect = useCallback(() => {
     try {
-      // Clean up existing connection
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         socketRef.current.close();
       }
 
       const wsUrl = config.getWebSocketUrl(path);
-      debugLog(`🔌 Connecting to WebSocket: ${wsUrl}`);
+      debugLog(`Connecting to WebSocket: ${wsUrl}`);
 
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
@@ -93,7 +91,6 @@ const useWebSocket = (path, options = {}) => {
           onClose(event);
         }
 
-        // Handle reconnection
         if (
           shouldReconnectRef.current &&
           reconnectAttemptsRef.current < reconnectAttempts &&
@@ -149,7 +146,6 @@ const useWebSocket = (path, options = {}) => {
     }
   }, []);
 
-  // Set up connection and cleanup
   useEffect(() => {
     shouldReconnectRef.current = reconnect;
     connect();

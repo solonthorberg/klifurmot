@@ -15,7 +15,6 @@ import { Button } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-// SortableRoundItem component for drag and drop
 function SortableRoundItem({ id, children }) {
   const {
     attributes,
@@ -49,10 +48,9 @@ function RoundList({
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
 
-  // Filter out deleted rounds for display
   const activeRounds = rounds.filter((r) => r && !r.markedForDeletion);
 
-  console.log("🔍 RoundList filtering:", {
+  console.log("RoundList filtering:", {
     totalRounds: rounds.length,
     activeRounds: activeRounds.length,
     rounds: rounds.map((r) => ({
@@ -101,12 +99,10 @@ function RoundList({
                     cursor: "pointer",
                   }}
                 >
-                  {/* Drag handle and content */}
                   <div
                     style={{ display: "flex", alignItems: "center", flex: 1 }}
                     {...listeners}
                   >
-                    {/* Drag handle */}
                     <div
                       style={{
                         padding: "0.25rem",
@@ -119,14 +115,12 @@ function RoundList({
                       ⋮⋮
                     </div>
 
-                    {/* Round Info */}
                     <span>
                       {round.name} – {round.athlete_count} keppendur –{" "}
                       {round.boulder_count} leiðir
                     </span>
                   </div>
 
-                  {/* ✅ UPDATED: Material-UI Button components with variant="contained" */}
                   <div style={{ display: "flex", gap: "0.25rem" }}>
                     <Button
                       variant="contained"
@@ -164,8 +158,6 @@ function RoundList({
               )}
             </SortableRoundItem>
           ))}
-
-          {/* Removed deleted rounds display - they are now completely hidden */}
         </div>
       </SortableContext>
     </DndContext>

@@ -13,9 +13,9 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
       try {
         const res = await api.get("/competitions/category-groups/");
         setCategories(res.data);
-        console.log("📡 Fetched category groups:", res.data);
+        console.log("Fetched category groups:", res.data);
       } catch (err) {
-        console.error("❌ Failed to fetch category groups:", err);
+        console.error("Failed to fetch category groups:", err);
       } finally {
         setLoading(false);
       }
@@ -25,17 +25,15 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
   }, [show]);
 
   const handleCategorySelect = (category) => {
-    console.log("🟢 Selected category:", category);
+    console.log("Selected category:", category);
 
-    // Call the parent handler to add the category
     onSelectCategory({
       id: category.id,
       name: category.name,
-      categoryGroupId: category.id, // Add this for the UseCompetitionData hook
+      categoryGroupId: category.id,
       is_default: category.is_default || false,
     });
 
-    // Close the modal after selection
     onClose();
   };
 
@@ -53,7 +51,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
         justifyContent: "center",
         zIndex: 1000,
       }}
-      onClick={onClose} // Close when clicking backdrop
+      onClick={onClose}
     >
       <div
         className="custom-modal-content"
@@ -66,7 +64,7 @@ function CategoryModal({ show, onClose, onSelectCategory }) {
           maxHeight: "80vh",
           overflow: "auto",
         }}
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking content
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           style={{

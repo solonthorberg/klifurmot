@@ -18,6 +18,42 @@ class GetClimberViewSet(viewsets.ModelViewSet):
     serializer_class = ClimberSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    def _add_age_data(self, climber_data):
+        if 'user_account' in climber_data and climber_data['user_account']:
+            user_account = climber_data['user_account']
+            if 'date_of_birth' in user_account and user_account['date_of_birth']:
+                birth_date_str = user_account['date_of_birth']
+                birth_date = date.fromisoformat(birth_date_str) if isinstance(birth_date_str, str) else birth_date_str
+                age = calculate_age(birth_date)
+                
+                user_account['age'] = age
+                if age is not None:
+                    user_account['age_category'] = get_age_based_category(age)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
+        self._add_age_data(data)
+        return Response(data)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = serializer.data
+            for climber_data in data:
+                self._add_age_data(climber_data)
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        for climber_data in data:
+            self._add_age_data(climber_data)
+        return Response(data)
+
 
 class CompetitionRegistrationViewSet(viewsets.ModelViewSet):
     queryset = CompetitionRegistration.objects.all()
@@ -101,7 +137,7 @@ def GetAthleteDetail(request, pk):
     return Response({
         "id": athlete.id,
         "full_name": athlete.full_name,
-        "date_of_birth": athlete.date_of_birth,
+        "age": age,
         "height_cm": athlete.height_cm,
         "wingspan_cm": athlete.wingspan_cm,
         "gender": athlete.gender,

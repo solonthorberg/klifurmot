@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import api from "../services/api";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -11,12 +11,12 @@ import ListItemButton from "@mui/material/ListItemButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import InputAdornment from "@mui/material/InputAdornment";
-import SearchIcon from '@mui/icons-material/Search';
+import SearchIcon from "@mui/icons-material/Search";
 
 function Athletes() {
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchAthletes = async () => {
     try {
@@ -33,26 +33,14 @@ function Athletes() {
     fetchAthletes();
   }, []);
 
-  const calculateAge = (dateString) => {
-    if (!dateString) return null;
-    const birthDate = new Date(dateString);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const filteredAthletes = athletes.filter(climber => {
-    const fullName = climber.user_account?.full_name || '';
+  const filteredAthletes = athletes.filter((climber) => {
+    const fullName = climber.user_account?.full_name || "";
     return fullName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, textAlign: 'center' }}>
+      <Container maxWidth="md" sx={{ mt: 4, textAlign: "center" }}>
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Hleður inn keppendur...
@@ -62,18 +50,18 @@ function Athletes() {
   }
 
   return (
-    <Box maxWidth="md" sx={{ mx: "auto", textAlign: 'center' }}>
+    <Box maxWidth="md" sx={{ mx: "auto", textAlign: "center" }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Keppendur
       </Typography>
-      
+
       <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
           variant="outlined"
           placeholder="Leita..."
           value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -87,16 +75,22 @@ function Athletes() {
 
       {filteredAthletes.length === 0 ? (
         <Typography variant="body1" color="textSecondary" sx={{ mt: 3 }}>
-          {searchQuery ? 'Engir keppendur fundust.' : 'Engir keppendur skráðir.'}
+          {searchQuery
+            ? "Engir keppendur fundust."
+            : "Engir keppendur skráðir."}
         </Typography>
       ) : (
-        <List sx={{ bgcolor: 'background.paper' }}>
-          {filteredAthletes.map(climber => {
-            const age = calculateAge(climber.user_account?.date_of_birth);
-            const nationality = climber.user_account?.nationality?.country_code || '';
-            
+        <List sx={{ bgcolor: "background.paper" }}>
+          {filteredAthletes.map((climber) => {
+            const nationality =
+              climber.user_account?.nationality?.country_code || "";
+
             return (
-              <ListItem key={climber.id} disablePadding sx={{ borderBottom: '1px solid #e0e0e0' }}>
+              <ListItem
+                key={climber.id}
+                disablePadding
+                sx={{ borderBottom: "1px solid #e0e0e0" }}
+              >
                 <ListItemButton
                   component={Link}
                   to={`/athletes/${climber.user_account?.id}`}
@@ -105,12 +99,15 @@ function Athletes() {
                   <ListItemText
                     primary={
                       <Typography variant="h6">
-                        {climber.user_account?.full_name || 'Nafn vantar'}
+                        {climber.user_account?.full_name || "Nafn vantar"}
                       </Typography>
                     }
                     secondary={
                       <Typography variant="body2" color="textSecondary">
-                        {nationality} • {age ? `${age} ára` : 'Aldur óþekktur'}
+                        {nationality} •{" "}
+                        {climber.user_account.age
+                          ? `${climber.user_account.age} ára`
+                          : "Aldur óþekktur"}
                       </Typography>
                     }
                   />
