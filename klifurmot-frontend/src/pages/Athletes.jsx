@@ -105,7 +105,8 @@ function Athletes() {
                     secondary={
                       <Typography variant="body2" color="textSecondary">
                         {nationality} •{" "}
-                        {climber.user_account.age
+                        {climber.user_account.age &&
+                        climber.user_account.age > 0
                           ? `${climber.user_account.age} ára`
                           : "Aldur óþekktur"}
                       </Typography>
