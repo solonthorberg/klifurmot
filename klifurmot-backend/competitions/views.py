@@ -9,8 +9,12 @@ from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration, Climber
 from collections import defaultdict
 from scoring.models import ClimberRoundScore, RoundResult, Climb
+from django.conf import settings
 from django.db.models import Max
 from django.db import transaction
+from django.core.files.storage import default_storage
+import os
+import uuid
 from accounts.permissions import (
     IsAdminOrReadOnly,
     IsAuthenticatedOrReadOnly,
@@ -26,6 +30,8 @@ from .serializers import (
     CompetitionSerializer, CategoryGroupSerializer, CompetitionCategorySerializer, RoundGroupSerializer,
     RoundSerializer, BoulderSerializer, JudgeBoulderAssignmentSerializer
 )
+
+
 
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
@@ -692,16 +698,13 @@ def GetUserCompetitionRoles(request):
     if not competition_id:
         return Response({"detail": "competition_id is required"}, status=400)
     
-    # If no user_id provided, use current user
     if not user_id:
         user_id = request.user.id
     
     try:
-        # Get user's profile
         if int(user_id) == request.user.id:
             user_profile = request.user.profile
         else:
-            # Only allow admins to check other users' roles
             if not request.user.profile.is_admin:
                 return Response({"detail": "Permission denied"}, status=403)
             user_profile = UserAccount.objects.get(user_id=user_id)
@@ -717,3 +720,51 @@ def GetUserCompetitionRoles(request):
         return Response({"detail": "User not found"}, status=404)
     except Exception as e:
         return Response({"detail": str(e)}, status=500)        
+    
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_image(request):
+    """Upload competition image"""
+    if 'image' not in request.FILES:
+        return Response(
+            {"detail": "No image file provided"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    image_file = request.FILES['image']
+    
+    max_size = 5 * 1024 * 1024
+    if image_file.size > max_size:
+        return Response(
+            {"detail": "Image file too large. Maximum size is 5MB"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+    if image_file.content_type not in allowed_types:
+        return Response(
+            {"detail": "Invalid image format. Allowed: JPEG, PNG, WebP"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        file_extension = os.path.splitext(image_file.name)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = f"competitions/{unique_filename}"
+        
+        saved_path = default_storage.save(file_path, image_file)
+        
+        image_url = default_storage.url(saved_path)
+        
+        return Response({
+            "image_url": image_url,
+            "filename": unique_filename
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response(
+            {"detail": f"Failed to upload image: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )    
