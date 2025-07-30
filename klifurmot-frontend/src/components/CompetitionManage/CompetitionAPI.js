@@ -57,14 +57,12 @@ export async function updateCompetition(id, payload) {
 export async function uploadImage(formData) {
   try {
     const res = await api.post("/competitions/upload_image/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data.image_url;
   } catch (error) {
-    console.error("Failed to upload image:", error);
-    throw new Error("Ekki tókst að hlaða upp mynd");
+    console.error("Failed to upload competition image:", error);
+    throw new Error("Ekki tókst að hlaða upp keppnismynd");
   }
 }
 
