@@ -297,9 +297,7 @@ export function useCompetitionData({ competitionId }) {
       };
 
       if (formState.image) {
-        competitionPayload.image = await uploadImage(formState.image);
-      } else if (formState.currentImageUrl) {
-        competitionPayload.image = formState.currentImageUrl;
+        const imageUrl = await uploadImage(formState.image);
       }
 
       const competition = competitionId
