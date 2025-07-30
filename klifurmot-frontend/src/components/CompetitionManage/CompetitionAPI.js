@@ -54,8 +54,11 @@ export async function updateCompetition(id, payload) {
   }
 }
 
-export async function uploadImage(formData) {
+export async function uploadImage(imageFile) {
   try {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
     const res = await api.post("/competitions/upload_image/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
