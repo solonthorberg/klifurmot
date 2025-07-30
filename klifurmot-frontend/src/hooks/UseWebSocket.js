@@ -138,7 +138,7 @@ const useWebSocket = (path, options = {}) => {
   const sendMessage = useCallback((data) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       const message = typeof data === "string" ? data : JSON.stringify(data);
-      debugLog("📤 Sending WebSocket message:", message);
+      debugLog("Sending WebSocket message:", message);
       socketRef.current.send(message);
     } else {
       console.error("Cannot send message: WebSocket is not connected");
