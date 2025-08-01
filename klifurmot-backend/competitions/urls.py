@@ -5,7 +5,7 @@ from .views import (
     RoundViewSet, BoulderViewSet, JudgeBoulderAssignmentViewSet,
     AssignRoleView, GetCompetitionAthletes, GetCompetitionBoulders,
     GetCompetitionStartlist, GetCompetitionResults, RoundGroupViewSet,
-    RegisterAthleteView, RemoveAthleteView, UpdateStartOrderView, GetUserCompetitionRoles, upload_image
+    RegisterAthleteView, RemoveAthleteView, UpdateStartOrderView, GetUserCompetitionRoles
 )
 
 router = DefaultRouter()
