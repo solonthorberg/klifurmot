@@ -34,9 +34,11 @@ export async function fetchRounds(competitionId) {
   }
 }
 
-export async function createCompetition(payload) {
+export async function createCompetition(formData) {
   try {
-    const res = await api.post("/competitions/competitions/", payload);
+    const res = await api.post("/competitions/competitions/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data;
   } catch (error) {
     console.error("Failed to create competition:", error);
