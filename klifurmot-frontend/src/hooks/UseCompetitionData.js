@@ -7,7 +7,6 @@ import {
   fetchRounds,
   createCompetition,
   updateCompetition,
-  uploadImage,
 } from "../components/CompetitionManage/CompetitionAPI";
 import { reorderList } from "../components/CompetitionManage/CompetitionUtils";
 
@@ -287,22 +286,21 @@ export function useCompetitionData({ competitionId }) {
     try {
       validateForm();
 
-      const competitionPayload = {
-        title: formState.title,
-        start_date: formState.startDate,
-        end_date: formState.endDate,
-        location: formState.location,
-        description: formState.description,
-        visible: formState.visible,
-      };
+      const formData = new FormData();
+      formData.append("title", formState.title);
+      formData.append("start_date", formState.startDate);
+      formData.append("end_date", formState.endDate);
+      formData.append("location", formState.location);
+      formData.append("description", formState.description);
+      formData.append("visible", formState.visible);
 
       if (formState.image) {
-        const imageUrl = await uploadImage(formState.image);
+        formData.append("image", formState.image);
       }
 
       const competition = competitionId
-        ? await updateCompetition(competitionId, competitionPayload)
-        : await createCompetition(competitionPayload);
+        ? await updateCompetition(competitionId, formData)
+        : await createCompetition(formData);
 
       await processCategoriesAndRounds(competition.id);
       navigate(-1);
