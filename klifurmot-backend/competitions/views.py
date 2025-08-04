@@ -45,35 +45,11 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(start_date__year=int(year))
         return qs
 
-    # Add this method to debug the issue
-    def update(self, request, *args, **kwargs):
-        print("=== UPDATE DEBUG ===")
-        print("Content type:", request.content_type)
-        print("Files:", request.FILES)
-        print("Data:", request.data)
-        
-        # Check if image is in the request
-        if 'image' in request.FILES:
-            print("Image found:", request.FILES['image'])
-            print("Image size:", request.FILES['image'].size)
-        else:
-            print("No image in request")
-            
-        # Call the parent update method
-        try:
-            response = super().update(request, *args, **kwargs)
-            print("Update successful")
-            return response
-        except Exception as e:
-            print("Update failed:", str(e))
-            raise
-
     def perform_create(self, serializer):
         competition = serializer.save(
             created_by=self.request.user, 
             last_modified_by=self.request.user
         )
-        # Auto-assign admin role
         if not hasattr(self.request.user, 'profile'):
             profile = UserAccount.objects.create(
                 user=self.request.user,
