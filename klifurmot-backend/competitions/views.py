@@ -9,12 +9,8 @@ from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration, Climber
 from collections import defaultdict
 from scoring.models import ClimberRoundScore, RoundResult, Climb
-from django.conf import settings
 from django.db.models import Max
 from django.db import transaction
-from django.core.files.storage import default_storage
-import os
-import uuid
 from accounts.permissions import (
     IsAdminOrReadOnly,
     IsAuthenticatedOrReadOnly,
@@ -44,6 +40,51 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
         if year and year.isdigit():
             qs = qs.filter(start_date__year=int(year))
         return qs
+
+    def update(self, request, *args, **kwargs):
+        """Fixed update method with proper error handling and debugging"""
+        print("=== UPDATE DEBUG ===")
+        print("Content type:", request.content_type)
+        print("Files:", request.FILES)
+        print("Data keys:", list(request.data.keys()) if hasattr(request.data, 'keys') else 'No keys')
+        
+        if 'image' in request.FILES:
+            print("Image found:", request.FILES['image'])
+            print("Image size:", request.FILES['image'].size)
+        else:
+            print("No image in request")
+            
+        try:
+            instance = self.get_object()
+            old_image = instance.image
+            
+            response = super().update(request, *args, **kwargs)
+            
+            if 'image' in request.FILES and old_image:
+                try:
+                    if old_image != instance.image:
+                        old_image.delete(save=False)
+                        print(f"Deleted old image: {old_image}")
+                except Exception as img_error:
+                    print(f"Error deleting old image: {img_error}")
+            
+            print("Update successful")
+            return response
+            
+        except Exception as e:
+            print("Update failed:", str(e))
+            import traceback
+            print("Full traceback:")
+            traceback.print_exc()
+            
+            return Response(
+                {"detail": f"Failed to update competition: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def perform_update(self, serializer):
+        """Override perform_update to set last_modified_by"""
+        serializer.save(last_modified_by=self.request.user)
 
     def perform_create(self, serializer):
         competition = serializer.save(
