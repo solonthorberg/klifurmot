@@ -170,7 +170,6 @@ STORAGES = {
     },
 }
 
-AWS_DEFAULT_ACL = 'public-read'
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
@@ -185,6 +184,10 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] if os.path.exists(os.path.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AWS_S3_FILE_OVERWRITE = False
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_ADDRESSING_STYLE = 'virtual'
 
 REDIS_URL = config('REDIS_URL', default=None)
 
