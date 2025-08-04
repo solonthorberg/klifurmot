@@ -46,12 +46,15 @@ export async function createCompetition(formData) {
   }
 }
 
-export async function updateCompetition(id, payload) {
+export async function updateCompetition(id, formData) {
   try {
-    const res = await api.patch(`/competitions/competitions/${id}/`, payload);
+    const res = await api.patch(`/competitions/competitions/${id}/`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data;
   } catch (error) {
     console.error("Failed to update competition:", error);
+    console.error("Response data:", error.response?.data);
     throw new Error("Ekki tókst að uppfæra mót");
   }
 }
