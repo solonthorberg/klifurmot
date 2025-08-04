@@ -61,7 +61,7 @@ function CompetitionOverview({ competition }) {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary">
-                    No image available
+                    Engin mynd í boði
                   </Typography>
                 </Box>
               )}

@@ -8,6 +8,8 @@ import {
   Container,
   CircularProgress,
   Alert,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import CompetitionOverview from "../components/CompetitionOverview";
@@ -31,6 +33,8 @@ function CompetitionDetails() {
   const [competition, setCompetition] = useState(null);
   const [activeTab, setActiveTab] = useState("competition");
   const [error, setError] = useState("");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     const fetchCompetition = async () => {
@@ -124,7 +128,7 @@ function CompetitionDetails() {
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
-          variant="scrollable"
+          variant={isMobile ? "scrollable" : "standard"}
           scrollButtons="auto"
           aria-label="competition tabs"
           textColor="primary"

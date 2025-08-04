@@ -155,15 +155,33 @@ function Competitions() {
                 border: "1px solid #e0e0e0",
               }}
             >
-              <CardMedia
-                component="img"
-                sx={{ width: 120, height: 100, objectFit: "cover" }}
-                image={
-                  comp.image ||
-                  "https://via.placeholder.com/120x100?text=No+Image"
-                }
-                alt={comp.title}
-              />
+              {comp.image ? (
+                <CardMedia
+                  component="img"
+                  sx={{ width: 100, height: 100, objectFit: "cover" }}
+                  image={comp.image}
+                  alt={comp.title}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#f0f0f0",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    align="center"
+                  >
+                    Engin mynd í boði
+                  </Typography>
+                </Box>
+              )}
               <CardContent sx={{ flex: 1 }}>
                 <Typography variant="h6">{comp.title}</Typography>
                 <Typography variant="body2" color="textSecondary">

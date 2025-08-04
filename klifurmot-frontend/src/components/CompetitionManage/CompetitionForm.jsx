@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Box,
   TextField,
@@ -10,7 +9,6 @@ import {
   Button,
   styled,
   IconButton,
-  Chip,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -143,16 +141,21 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
           />
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Typography variant="h6">Mynd</Typography>
+            <Typography variant="h6" align="center">
+              Mynd
+            </Typography>
 
             {hasCurrentImage && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Chip
-                  icon={<ImageIcon />}
-                  label={currentImageName || "Núverandi mynd"}
-                  variant="outlined"
-                  color="primary"
-                />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                }}
+              >
+                <ImageIcon color="action" />
+                <Typography>{currentImageName || "Núverandi mynd"}</Typography>
                 <IconButton
                   onClick={handleDeleteImage}
                   color="error"
@@ -165,13 +168,16 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
             )}
 
             {image && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Chip
-                  icon={<ImageIcon />}
-                  label={`Ný mynd: ${image.name}`}
-                  variant="filled"
-                  color="success"
-                />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                }}
+              >
+                <ImageIcon color="success" />
+                <Typography color="success.main">{`Ný mynd: ${image.name}`}</Typography>
                 <IconButton
                   onClick={() => setImage(null)}
                   color="error"
