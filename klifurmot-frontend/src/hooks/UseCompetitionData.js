@@ -139,6 +139,14 @@ export function useCompetitionData({ competitionId }) {
     setFormState((prev) => ({ ...prev, image }));
   };
 
+  const deleteImage = () => {
+    setFormState((prev) => ({
+      ...prev,
+      image: null,
+      currentImageUrl: "",
+    }));
+  };
+
   const setShowCategoryModal = (show) => {
     setFormState((prev) => ({ ...prev, showCategoryModal: show }));
   };
@@ -296,6 +304,8 @@ export function useCompetitionData({ competitionId }) {
 
       if (formState.image) {
         formData.append("image", formState.image);
+      } else if (formState.currentImageUrl === "") {
+        formData.append("image", "");
       }
 
       const competition = competitionId
@@ -417,6 +427,7 @@ export function useCompetitionData({ competitionId }) {
     error,
     setFormField,
     setImage,
+    deleteImage,
     setShowCategoryModal,
     setError,
     handleAddCategory,
