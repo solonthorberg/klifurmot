@@ -42,7 +42,7 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
         return qs
 
     def update(self, request, *args, **kwargs):
-        """Fixed update method with proper error handling and debugging"""
+        """Simplified update method - signals handle image cleanup"""
         print("=== UPDATE DEBUG ===")
         print("Content type:", request.content_type)
         print("Files:", request.FILES)
@@ -55,19 +55,7 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
             print("No image in request")
             
         try:
-            instance = self.get_object()
-            old_image = instance.image
-            
             response = super().update(request, *args, **kwargs)
-            
-            if 'image' in request.FILES and old_image:
-                try:
-                    if old_image != instance.image:
-                        old_image.delete(save=False)
-                        print(f"Deleted old image: {old_image}")
-                except Exception as img_error:
-                    print(f"Error deleting old image: {img_error}")
-            
             print("Update successful")
             return response
             
