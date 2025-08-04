@@ -22,6 +22,7 @@ function CreateCompetition() {
     error,
     setFormField,
     setImage,
+    deleteImage,
     setShowCategoryModal,
     setError,
     handleAddCategory,
@@ -47,6 +48,7 @@ function CreateCompetition() {
           formState={formState}
           setFormField={setFormField}
           setImage={setImage}
+          deleteImage={deleteImage}
         />
 
         <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>

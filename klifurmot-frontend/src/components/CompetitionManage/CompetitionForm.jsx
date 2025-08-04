@@ -9,8 +9,12 @@ import {
   CardContent,
   Button,
   styled,
+  IconButton,
+  Chip,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ImageIcon from "@mui/icons-material/Image";
 import dayjs from "dayjs";
 import { MobileDateTimePicker } from "@mui/x-date-pickers/MobileDateTimePicker";
 
@@ -26,7 +30,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-function CompetitionForm({ formState, setFormField, setImage }) {
+function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
   const {
     title,
     currentImageUrl,
@@ -36,7 +40,6 @@ function CompetitionForm({ formState, setFormField, setImage }) {
     description,
     visible,
     image,
-    isEditMode,
   } = formState;
 
   const startDateValue = startDate ? dayjs(startDate) : null;
@@ -51,6 +54,21 @@ function CompetitionForm({ formState, setFormField, setImage }) {
     const dateString = newValue ? newValue.format("YYYY-MM-DDTHH:mm") : "";
     setFormField("endDate", dateString);
   };
+
+  const getImageName = (imageUrl) => {
+    if (!imageUrl) return null;
+    const parts = imageUrl.split("/");
+    return parts[parts.length - 1];
+  };
+
+  const handleDeleteImage = () => {
+    if (deleteImage) {
+      deleteImage();
+    }
+  };
+
+  const currentImageName = getImageName(currentImageUrl);
+  const hasCurrentImage = currentImageUrl && !image;
 
   return (
     <Card>
@@ -124,22 +142,64 @@ function CompetitionForm({ formState, setFormField, setImage }) {
             placeholder="Lýstu mótinu, skráningu, reglum, verðlaunum og öðrum mikilvægum upplýsingum..."
           />
 
-          <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <Button
-              component="label"
-              role={undefined}
-              variant="contained"
-              tabIndex={-1}
-              startIcon={<CloudUploadIcon />}
-              size="medium"
-            >
-              {image ? `Ný mynd valin: ${image.name}` : "Mynd"}
-              <VisuallyHiddenInput
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImage(e.target.files[0])}
-              />
-            </Button>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Typography variant="h6">Mynd</Typography>
+
+            {hasCurrentImage && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Chip
+                  icon={<ImageIcon />}
+                  label={currentImageName || "Núverandi mynd"}
+                  variant="outlined"
+                  color="primary"
+                />
+                <IconButton
+                  onClick={handleDeleteImage}
+                  color="error"
+                  size="small"
+                  title="Eyða mynd"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            )}
+
+            {image && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Chip
+                  icon={<ImageIcon />}
+                  label={`Ný mynd: ${image.name}`}
+                  variant="filled"
+                  color="success"
+                />
+                <IconButton
+                  onClick={() => setImage(null)}
+                  color="error"
+                  size="small"
+                  title="Afturkalla val"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            )}
+
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Button
+                component="label"
+                role={undefined}
+                variant="contained"
+                tabIndex={-1}
+                startIcon={<CloudUploadIcon />}
+                size="medium"
+              >
+                {hasCurrentImage ? "Breyta mynd" : "Velja mynd"}
+                <VisuallyHiddenInput
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImage(e.target.files[0])}
+                />
+              </Button>
+            </Box>
           </Box>
 
           <FormControlLabel
