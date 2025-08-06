@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { AuthRoleContext } from "../context/AuthRoleContext";
 import api from "../services/api";
 import {
   DndContext,
@@ -131,12 +132,18 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
 function ControlPanelDetails() {
   const navigate = useNavigate();
   const { competitionId } = useParams();
+  
+  // Authentication hook for competition-specific access
+  const { authorized, loading: authLoading, userRole } = AuthRoleContext(competitionId);
+  
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { showSuccess, showError } = useNotification();
+  
+  // Component state
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [availableAthletes, setAvailableAthletes] = useState([]);
@@ -148,13 +155,33 @@ function ControlPanelDetails() {
 
   const sensors = useSensors(useSensor(PointerSensor));
 
+  // Combined loading state
+  const isLoading = authLoading || dataLoading;
+
+  // Fetch all data when authorized
   useEffect(() => {
-    fetchCompetitionDetails();
-    fetchStartlist();
-    fetchAvailableAthletes();
-    fetchRounds();
-    fetchResults();
-  }, [competitionId]);
+    if (authorized && !authLoading) {
+      fetchAllData();
+    }
+  }, [authorized, authLoading, competitionId]);
+
+  const fetchAllData = async () => {
+    try {
+      setDataLoading(true);
+      await Promise.all([
+        fetchCompetitionDetails(),
+        fetchStartlist(),
+        fetchAvailableAthletes(),
+        fetchRounds(),
+        fetchResults(),
+      ]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      showError("Villa kom upp við að hlaða gögnum");
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const fetchCompetitionDetails = async () => {
     try {
@@ -167,7 +194,6 @@ function ControlPanelDetails() {
 
   const fetchStartlist = async () => {
     try {
-      setLoading(true);
       const res = await api.get(
         `/competitions/competitions/${competitionId}/startlist/`
       );
@@ -197,8 +223,6 @@ function ControlPanelDetails() {
       }
     } catch (err) {
       console.error("Failed to load startlist:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -617,23 +641,35 @@ function ControlPanelDetails() {
     return categoryRounds[currentRoundIndex + 1] || null;
   };
 
-  if (loading) {
+  // Loading state - show while checking authorization or loading data
+  if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "60vh",
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "60vh",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <CircularProgress size={48} />
+          <Typography variant="h6" color="text.secondary">
+            {authLoading ? "Athuga aðgang..." : "Hleður keppnisstjórn..."}
+          </Typography>
+        </Box>
+      </Container>
     );
   }
 
+  // If not authorized, return null (AuthRoleContext handles redirect)
+  if (!authorized) return null;
+
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
+      {/* Header with role badge */}
       <Box sx={{ mb: 4 }}>
         <Box
           sx={{
@@ -644,12 +680,18 @@ function ControlPanelDetails() {
             gap: 2,
           }}
         >
-          <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {competitionTitle && (
               <Typography variant="h4" component="h1">
                 {competitionTitle}
               </Typography>
             )}
+            <Chip
+              label={userRole === "admin" ? "Keppnisstjóri" : "Dómari"}
+              color={userRole === "admin" ? "primary" : "success"}
+              variant="outlined"
+              size="medium"
+            />
           </Box>
           <Button
             variant="contained"
@@ -882,6 +924,47 @@ function ControlPanelDetails() {
           ráslista röðun.
         </Typography>
       </Alert>
+
+      {/* Role-specific access info */}
+      {userRole === "admin" && (
+        <Alert
+          severity="success"
+          sx={{
+            borderRadius: 2,
+            mt: 2,
+            "& .MuiAlert-message": {
+              width: "100%",
+            },
+          }}
+        >
+          <Typography variant="body2">
+            <Box component="span" fontWeight="bold">
+              Keppnisstjóri aðgangur:
+            </Box>{" "}
+            Þú hefur fullan aðgang að stjórnun þessarar keppni.
+          </Typography>
+        </Alert>
+      )}
+
+      {userRole === "judge" && (
+        <Alert
+          severity="info"
+          sx={{
+            borderRadius: 2,
+            mt: 2,
+            "& .MuiAlert-message": {
+              width: "100%",
+            },
+          }}
+        >
+          <Typography variant="body2">
+            <Box component="span" fontWeight="bold">
+              Dómari aðgangur:
+            </Box>{" "}
+            Þú hefur skoðunaraðgang að þessari keppni.
+          </Typography>
+        </Alert>
+      )}
     </Container>
   );
 }
