@@ -671,7 +671,6 @@ function ControlPanelDetails() {
           onChange={(e, newValue) => setActiveRound(newValue)}
           variant={isMobile ? "scrollable" : "standard"}
           scrollButtons="auto"
-          allowScrollButtonsMobile
         >
           {roundNames.map((name) => (
             <Tab key={name} label={name} value={name} />

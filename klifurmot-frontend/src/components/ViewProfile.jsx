@@ -1,7 +1,9 @@
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import FormControl from "@mui/material/FormControl";
-import { Typography } from "@mui/material";
+import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
+import PersonIcon from "@mui/icons-material/Person";
 
 function ViewProfile({ me, onEdit }) {
   const formatDate = (dateString) => {
@@ -43,6 +45,19 @@ function ViewProfile({ me, onEdit }) {
 
   return (
     <Box maxWidth="sm" sx={{ mx: "auto" }}>
+      <Avatar
+        src={me.profile?.profile_picture || undefined}
+        sx={{
+          width: 150,
+          height: 150,
+          mx: "auto",
+          mb: 2,
+          bgcolor: "grey.300",
+        }}
+      >
+        {!me.profile?.profile_picture && <PersonIcon sx={{ fontSize: 80 }} />}
+      </Avatar>
+
       <Typography textAlign="center" variant="h5">
         Velkomin(n), {me.user.username}
       </Typography>

@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import {
   Box,
   TextField,
@@ -10,13 +10,16 @@ import {
   Button,
   styled,
   IconButton,
-  Chip,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ImageIcon from "@mui/icons-material/Image";
+import CompressIcon from "@mui/icons-material/Compress";
 import dayjs from "dayjs";
 import { MobileDateTimePicker } from "@mui/x-date-pickers/MobileDateTimePicker";
+import { compressCompetitionImage } from "../../utils/ImageCompression";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -42,6 +45,10 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
     image,
   } = formState;
 
+  // New state for compression
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionError, setCompressionError] = useState(null);
+
   const startDateValue = startDate ? dayjs(startDate) : null;
   const endDateValue = endDate ? dayjs(endDate) : null;
 
@@ -64,7 +71,36 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
   const handleDeleteImage = () => {
     if (deleteImage) {
       deleteImage();
+      // Reset compression state when deleting image
+      setCompressionError(null);
     }
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsCompressing(true);
+    setCompressionError(null);
+
+    try {
+      // Compress the image
+      const result = await compressCompetitionImage(file);
+
+      // Set the compressed image
+      setImage(result.file);
+    } catch (error) {
+      setCompressionError(error.message || "Villa við að þjappa mynd");
+      // Fall back to original image if compression fails
+      setImage(file);
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const handleRemoveNewImage = () => {
+    setImage(null);
+    setCompressionError(null);
   };
 
   const currentImageName = getImageName(currentImageUrl);
@@ -143,16 +179,21 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
           />
 
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Typography variant="h6">Mynd</Typography>
+            <Typography variant="h6" align="center">
+              Mynd
+            </Typography>
 
             {hasCurrentImage && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Chip
-                  icon={<ImageIcon />}
-                  label={currentImageName || "Núverandi mynd"}
-                  variant="outlined"
-                  color="primary"
-                />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                }}
+              >
+                <ImageIcon color="action" />
+                <Typography>{currentImageName || "Núverandi mynd"}</Typography>
                 <IconButton
                   onClick={handleDeleteImage}
                   color="error"
@@ -164,23 +205,60 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
               </Box>
             )}
 
-            {image && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Chip
-                  icon={<ImageIcon />}
-                  label={`Ný mynd: ${image.name}`}
-                  variant="filled"
-                  color="success"
-                />
-                <IconButton
-                  onClick={() => setImage(null)}
-                  color="error"
-                  size="small"
-                  title="Afturkalla val"
+            {image && !isCompressing && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
                 >
-                  <DeleteIcon />
-                </IconButton>
+                  <ImageIcon color="success" />
+                  <Typography color="success.main">{`Ný mynd: ${image.name}`}</Typography>
+                  <IconButton
+                    onClick={handleRemoveNewImage}
+                    color="error"
+                    size="small"
+                    title="Afturkalla val"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
               </Box>
+            )}
+
+            {isCompressing && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1,
+                  py: 2,
+                }}
+              >
+                <CircularProgress size={30} />
+                <Typography variant="body2" color="textSecondary">
+                  Þjappa mynd...
+                </Typography>
+              </Box>
+            )}
+
+            {compressionError && (
+              <Alert
+                severity="warning"
+                onClose={() => setCompressionError(null)}
+              >
+                {compressionError}
+              </Alert>
             )}
 
             <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -189,14 +267,18 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
                 role={undefined}
                 variant="contained"
                 tabIndex={-1}
-                startIcon={<CloudUploadIcon />}
+                startIcon={
+                  isCompressing ? <CompressIcon /> : <CloudUploadIcon />
+                }
                 size="medium"
+                disabled={isCompressing}
               >
                 {hasCurrentImage ? "Breyta mynd" : "Velja mynd"}
                 <VisuallyHiddenInput
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setImage(e.target.files[0])}
+                  onChange={handleImageChange}
+                  disabled={isCompressing}
                 />
               </Button>
             </Box>

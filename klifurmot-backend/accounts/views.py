@@ -43,6 +43,7 @@ def SerializeUserResponse(user, token=None):
             "is_admin": profile.is_admin if profile else False,
             "height_cm": profile.height_cm if profile else None,
             "wingspan_cm": profile.wingspan_cm if profile else None,
+            "profile_picture": (profile.profile_picture.url if profile and profile.profile_picture else None),
         } if profile else None
     }
 
@@ -89,6 +90,11 @@ def Me(request):
     profile = getattr(user, 'profile', None)
 
     if request.method == 'PATCH':
+        print("=== PROFILE UPDATE DEBUG ===")
+        print("Content type:", request.content_type)
+        print("Files:", request.FILES)
+        print("Data keys:", list(request.data.keys()) if hasattr(request.data, 'keys') else 'No keys')
+
         data = request.data
 
         if profile:
@@ -100,11 +106,19 @@ def Me(request):
             profile.nationality_id = data.get('nationality', profile.nationality_id)
             profile.height_cm = data.get('height_cm', profile.height_cm)
             profile.wingspan_cm = data.get('wingspan_cm', profile.wingspan_cm)
-            profile.save()
+
+            if 'profile_picture' in request.data:
+                if 'profile_picture' in request.FILES:
+                    profile.profile_picture = request.FILES['profile_picture']
+                elif request.data.get('profile_picture') == '':
+                    profile.profile_picture.delete(save=False)
+                    profile.profile_picture = None
+
+
+        profile.save()
 
         user.email = data.get('email', user.email)
         user.save()
-
 
     token, _ = Token.objects.get_or_create(user=user)
     return Response(SerializeUserResponse(user, token))

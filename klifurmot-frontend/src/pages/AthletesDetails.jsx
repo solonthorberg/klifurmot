@@ -57,14 +57,6 @@ function AthletesDetails() {
     return `${day}/${month}/${year}`;
   };
 
-  const formatNationality = (nationality) => {
-    if (!nationality) return "–";
-    if (typeof nationality === "object") {
-      return nationality.name_en || nationality.country_code;
-    }
-    return nationality;
-  };
-
   if (error) {
     return (
       <Box maxWidth="lg" sx={{ mx: "auto", mt: 3 }}>
@@ -89,15 +81,16 @@ function AthletesDetails() {
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: "center" }}>
           <Avatar
+            src={athlete.profile_picture || undefined}
             sx={{
-              width: 80,
-              height: 80,
+              width: 150,
+              height: 150,
               mx: "auto",
               mb: 2,
               bgcolor: "grey.300",
             }}
           >
-            <PersonIcon sx={{ fontSize: 40 }} />
+            {!athlete.profile_picture && <PersonIcon sx={{ fontSize: 80 }} />}
           </Avatar>
 
           <Typography variant="h4" component="h1" gutterBottom>

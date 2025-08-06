@@ -116,7 +116,9 @@ def GetAthleteDetail(request, pk):
     gender = athlete.gender
     category = f"{CATEGORY_LABELS.get(group_name, group_name)} {GENDER_LABELS.get(gender, gender)}"
 
-    registrations = CompetitionRegistration.objects.filter(climber=climber).select_related("competition", "competition_category__category_group")
+    registrations = CompetitionRegistration.objects.filter(
+        climber=climber
+    ).select_related("competition", "competition_category__category_group")
 
     competitions_result = []
     for reg in registrations:
@@ -129,10 +131,7 @@ def GetAthleteDetail(request, pk):
             "results": results
         })
 
-    wins = 0
-    for reg in registrations:
-        wins += CalculateWins(reg.competition, climber)
-        
+    wins = sum(CalculateWins(reg.competition, climber) for reg in registrations)
 
     return Response({
         "id": athlete.id,
@@ -143,7 +142,9 @@ def GetAthleteDetail(request, pk):
         "gender": athlete.gender,
         "nationality": athlete.nationality.name_local if athlete.nationality else "–",
         "category": category,
+        "profile_picture": athlete.profile_picture.url if athlete.profile_picture else None,
         "competitions_count": registrations.count(),
         "wins_count": wins,
         "competition_results": competitions_result
     })
+
