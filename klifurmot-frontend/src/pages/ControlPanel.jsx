@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthRoleContext } from "../context/AuthRoleContext";
+import { UseCompetitionPermissions } from "../hooks/UseCompetitionPermissions";
 import {
   Box,
   Button,
@@ -15,6 +17,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  CircularProgress,
+  Container,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -22,9 +26,119 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import api from "../services/api";
 import { useNotification } from "../context/NotificationContext";
 
+function CompetitionItem({ competition, onDelete, navigate, isMobile }) {
+  const {
+    canEdit,
+    canDelete,
+    loading: permissionsLoading,
+  } = UseCompetitionPermissions(competition.id);
+
+  const handleEdit = () => {
+    navigate(`/controlpanel/edit/${competition.id}`);
+  };
+
+  const handleDelete = () => {
+    onDelete(competition);
+  };
+
+  const handleManage = () => {
+    navigate(`/controlpanel/${competition.id}`);
+  };
+
+  const getCreatorName = () => {
+    if (competition.created_by_full_name) {
+      return competition.created_by_full_name;
+    }
+    if (competition.created_by_username) {
+      return competition.created_by_username;
+    }
+    return "Óþekktur";
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        display: "flex",
+        flexDirection: { xs: "column", sm: "row" },
+        justifyContent: { xs: "flex-start", sm: "space-between" },
+        alignItems: { xs: "stretch", sm: "center" },
+        p: { xs: 2, sm: 2 },
+        gap: { xs: 2, sm: 1 },
+      }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <Typography
+          variant="h6"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          {competition.title}
+          <Box sx={{ display: "flex", gap: 0.5 }}>
+            {canEdit && (
+              <IconButton
+                size="small"
+                onClick={handleEdit}
+                title="Breyta móti"
+                disabled={permissionsLoading}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            )}
+            {canDelete && (
+              <IconButton
+                size="small"
+                onClick={handleDelete}
+                color="error"
+                title="Eyða móti"
+                disabled={permissionsLoading}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        </Typography>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {new Date(competition.start_date).toLocaleDateString("is-IS")} –{" "}
+          {new Date(competition.end_date).toLocaleDateString("is-IS")}
+          <span style={{ marginLeft: 10 }}>
+            {" "}
+            Stofnað af: {getCreatorName()}
+          </span>
+        </Typography>
+      </Box>
+
+      <Button
+        variant="contained"
+        color="success"
+        onClick={handleManage}
+        fullWidth={isMobile}
+        sx={{
+          minWidth: { xs: "auto", sm: "140px" },
+          py: { xs: 1.5, sm: 1 },
+          flexShrink: 0,
+        }}
+      >
+        Skrá Keppendur
+      </Button>
+    </Paper>
+  );
+}
+
 function ControlPanel() {
+  const { authorized, loading: authLoading } = AuthRoleContext();
+
   const [competitions, setCompetitions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [year, setYear] = useState("");
   const [availableYears, setAvailableYears] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -39,6 +153,8 @@ function ControlPanel() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { showSuccess, showError } = useNotification();
 
+  const isLoading = authLoading || dataLoading;
+
   const fetchCompetitions = async () => {
     try {
       const response = await api.get("competitions/competitions/");
@@ -51,14 +167,17 @@ function ControlPanel() {
       setAvailableYears(years.sort((a, b) => b - a));
     } catch (error) {
       console.error("Error fetching competitions:", error);
+      showError("Villa kom upp við að hlaða mótum");
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCompetitions();
-  }, []);
+    if (authorized && !authLoading) {
+      fetchCompetitions();
+    }
+  }, [authorized, authLoading]);
 
   const handleCreateCompetition = () => {
     navigate("/controlpanel/create");
@@ -85,7 +204,11 @@ function ControlPanel() {
       showSuccess("Tókst að eyða mótinu!");
     } catch (error) {
       console.error("Error deleting competition:", error);
-      showError("Ekki tókst að eyða mótinu");
+      if (error.response?.status === 403) {
+        showError("Þú hefur ekki heimild til að eyða þessu móti");
+      } else {
+        showError("Ekki tókst að eyða mótinu");
+      }
     } finally {
       setDeleting(false);
     }
@@ -105,150 +228,130 @@ function ControlPanel() {
     return matchesQuery && matchesYear;
   });
 
+  if (isLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "60vh",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <CircularProgress size={48} />
+          <Typography variant="h6" color="text.secondary">
+            {authLoading ? "Athuga aðgang..." : "Hleður mótum..."}
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!authorized) return null;
+
   return (
-    <Box
-      sx={{
-        maxWidth: "800px",
-        margin: "0 auto",
-      }}
-    >
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Stjórnborð
-      </Typography>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "center" },
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              Stjórnborð
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
       <Box
         sx={{
-          display: "flex",
-          gap: 2,
-          mb: 3,
-          flexDirection: { xs: "column", sm: "row" },
-          flexWrap: "wrap",
+          maxWidth: "800px",
+          margin: "0 auto",
         }}
       >
-        <TextField
-          label="Leita"
-          variant="outlined"
-          size="small"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          fullWidth={isMobile}
-          sx={{ flex: 1 }}
-        />
-
-        <TextField
-          label="Ár"
-          variant="outlined"
-          size="small"
-          select
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          fullWidth={isMobile}
+        <Box
           sx={{
-            minWidth: { xs: "100%", sm: 120 },
-            flexShrink: 0,
+            display: "flex",
+            gap: 2,
+            mb: 3,
+            flexDirection: { xs: "column", sm: "row" },
+            flexWrap: "wrap",
           }}
         >
-          <MenuItem value="">Allt</MenuItem>
-          {availableYears.map((yr) => (
-            <MenuItem key={yr} value={yr.toString()}>
-              {yr}
-            </MenuItem>
-          ))}
-        </TextField>
+          <TextField
+            label="Leita"
+            variant="outlined"
+            size="small"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            fullWidth={isMobile}
+            sx={{ flex: 1 }}
+          />
 
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleCreateCompetition}
-          startIcon={<AddIcon />}
-          fullWidth={isMobile}
-          sx={{ flexShrink: 0 }}
-        >
-          mót
-        </Button>
-      </Box>
+          <TextField
+            label="Ár"
+            variant="outlined"
+            size="small"
+            select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            fullWidth={isMobile}
+            sx={{
+              minWidth: { xs: "100%", sm: 120 },
+              flexShrink: 0,
+            }}
+          >
+            <MenuItem value="">Allt</MenuItem>
+            {availableYears.map((yr) => (
+              <MenuItem key={yr} value={yr.toString()}>
+                {yr}
+              </MenuItem>
+            ))}
+          </TextField>
 
-      {loading ? (
-        <Typography>Hleð mótum...</Typography>
-      ) : filteredCompetitions.length === 0 ? (
-        <Typography color="text.secondary">
-          Engin mót fundust með þessum leitarskilyrðum.
-        </Typography>
-      ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {filteredCompetitions.map((comp) => (
-            <Paper
-              key={comp.id}
-              variant="outlined"
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                justifyContent: { xs: "flex-start", sm: "space-between" },
-                alignItems: { xs: "stretch", sm: "center" },
-                p: { xs: 2, sm: 2 },
-                gap: { xs: 2, sm: 1 },
-              }}
-            >
-              <Box
-                sx={{
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  {comp.title}
-                  <Box sx={{ display: "flex", gap: 0.5 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() => navigate(`/controlpanel/edit/${comp.id}`)}
-                      title="Breyta móti"
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteClick(comp)}
-                      color="error"
-                      title="Eyða móti"
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
-                >
-                  {new Date(comp.start_date).toLocaleDateString("is-IS")} –{" "}
-                  {new Date(comp.end_date).toLocaleDateString("is-IS")}
-                </Typography>
-              </Box>
-
-              <Button
-                variant="contained"
-                color="success"
-                onClick={() => navigate(`/controlpanel/${comp.id}`)}
-                fullWidth={isMobile}
-                sx={{
-                  minWidth: { xs: "auto", sm: "140px" },
-                  py: { xs: 1.5, sm: 1 },
-                  flexShrink: 0,
-                }}
-              >
-                Skrá Keppendur
-              </Button>
-            </Paper>
-          ))}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCreateCompetition}
+            startIcon={<AddIcon />}
+            fullWidth={isMobile}
+            sx={{ flexShrink: 0 }}
+          >
+            Nýtt mót
+          </Button>
         </Box>
-      )}
+
+        {filteredCompetitions.length === 0 ? (
+          <Typography
+            color="text.secondary"
+            sx={{ textAlign: "center", py: 4 }}
+          >
+            Engin mót fundust með þessum leitarskilyrðum.
+          </Typography>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {filteredCompetitions.map((comp) => (
+              <CompetitionItem
+                key={comp.id}
+                competition={comp}
+                onDelete={handleDeleteClick}
+                navigate={navigate}
+                isMobile={isMobile}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
 
       <Dialog
         open={deleteDialog.open}
@@ -286,7 +389,7 @@ function ControlPanel() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 }
 
