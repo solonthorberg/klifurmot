@@ -164,6 +164,25 @@ function Register() {
           </Alert>
         )}
 
+        <Box sx={{ display: "flex", justifyContent: "center", m: 3 }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSignup}
+            onError={() => {
+              const errorMessage = "Google nýskráning mistókst";
+              setError(errorMessage);
+              showError(errorMessage);
+            }}
+            size="large"
+            width="100%"
+            text="signup_with"
+          />
+        </Box>
+
+        <Divider sx={{ my: 3 }}>
+          <Typography variant="body2" color="textSecondary">
+            eða
+          </Typography>
+        </Divider>
         <Box
           component="form"
           onSubmit={handleSubmit}
@@ -279,10 +298,9 @@ function Register() {
           <Typography
             variant="body1"
             sx={{
-              mt: 2,
-              mb: 1.5,
+              textAlign: "center",
               fontWeight: "medium",
-              color: "text.primary",
+              color: "text.secondary",
             }}
           >
             Valfrjálsar upplýsingar:
@@ -321,26 +339,6 @@ function Register() {
           >
             Skrá Aðgang
           </Button>
-        </Box>
-
-        <Divider sx={{ my: 3 }}>
-          <Typography variant="body2" color="textSecondary">
-            eða
-          </Typography>
-        </Divider>
-
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
-          <GoogleLogin
-            onSuccess={handleGoogleSignup}
-            onError={() => {
-              const errorMessage = "Google nýskráning mistókst";
-              setError(errorMessage);
-              showError(errorMessage);
-            }}
-            size="large"
-            width="100%"
-            text="signup_with"
-          />
         </Box>
 
         <Typography
