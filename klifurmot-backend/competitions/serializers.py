@@ -2,10 +2,18 @@ from rest_framework import serializers
 from .models import Competition, CategoryGroup, CompetitionCategory, CompetitionRound, Boulder, JudgeBoulderAssignment, RoundGroup
 
 class CompetitionSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)    
     class Meta:
         model = Competition
         fields = '__all__'
         read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
+    
+    def get_created_by_full_name(self, obj):
+        if obj.created_by and hasattr(obj.created_by, 'profile'):
+            return obj.created_by.profile.full_name
+        elif obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        return None
 
 class CategoryGroupSerializer(serializers.ModelSerializer):
     class Meta:

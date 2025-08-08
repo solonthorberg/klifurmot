@@ -14,6 +14,7 @@ from django.db import transaction
 from accounts.permissions import (
     IsAdminOrReadOnly,
     IsAuthenticatedOrReadOnly,
+    IsCompetitionAdminOrReadOnly,
 )
 
 from athletes.utils import get_age_based_category
@@ -32,7 +33,7 @@ from .serializers import (
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly]
 
     def get_queryset(self):
         qs = Competition.objects.all()
