@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { GoogleLogin } from "@react-oauth/google";
 import {
   Box,
   TextField,
@@ -12,6 +15,7 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  Divider,
 } from "@mui/material";
 import { MobileDatePicker } from "@mui/x-date-pickers";
 
@@ -33,6 +37,8 @@ function Register() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const [success, setSuccess] = useState("");
+  const { login } = useAuth();
+  const { showSuccess, showError } = useNotification();
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -90,6 +96,7 @@ function Register() {
 
       await api.post("accounts/register/", submitData);
       setSuccess("Skráning tókst! Vinsamlegast skráðu þig inn.");
+      showSuccess("Skráning tókst! Vinsamlegast skráðu þig inn.");
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -102,6 +109,24 @@ function Register() {
         "Skráning mistókst.";
       console.error("Registration failed:", err.response?.data);
       setError(msg);
+      showError(msg);
+    }
+  };
+
+  const handleGoogleSignup = async (credentialResponse) => {
+    const idToken = credentialResponse.credential;
+    setError("");
+    try {
+      const res = await api.post("accounts/google-login/", { token: idToken });
+      const { token } = res.data;
+      login(token);
+      showSuccess("Nýskráning með Google tókst!");
+      navigate("/profile");
+    } catch (err) {
+      console.error("Google signup error:", err.response?.data || err.message);
+      const errorMessage = "Google nýskráning mistókst";
+      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -251,6 +276,18 @@ function Register() {
             </Select>
           </FormControl>
 
+          <Typography
+            variant="body1"
+            sx={{
+              mt: 2,
+              mb: 1.5,
+              fontWeight: "medium",
+              color: "text.primary",
+            }}
+          >
+            Valfrjálsar upplýsingar:
+          </Typography>
+
           <FormControl fullWidth>
             <TextField
               type="number"
@@ -284,6 +321,26 @@ function Register() {
           >
             Skrá Aðgang
           </Button>
+        </Box>
+
+        <Divider sx={{ my: 3 }}>
+          <Typography variant="body2" color="textSecondary">
+            eða
+          </Typography>
+        </Divider>
+
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSignup}
+            onError={() => {
+              const errorMessage = "Google nýskráning mistókst";
+              setError(errorMessage);
+              showError(errorMessage);
+            }}
+            size="large"
+            width="100%"
+            text="signup_with"
+          />
         </Box>
 
         <Typography
