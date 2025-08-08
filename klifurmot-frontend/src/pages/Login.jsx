@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
 import api from "../services/api";
 import { GoogleLogin } from "@react-oauth/google";
 import {
@@ -11,27 +12,37 @@ import {
   FormControl,
   Alert,
   Paper,
-  Divider
+  Divider,
 } from "@mui/material";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleLogin = async () => {
+    if (isLoading || !email || !password) return;
+
+    setIsLoading(true);
     setError("");
+
     try {
       const res = await api.post("accounts/login/", { email, password });
       const { token } = res.data;
       login(token);
       navigate("/profile");
     } catch (err) {
-      console.error("Login error:", err.response?.data || err.message);
-      setError("Innskráning mistókst. Athugaðu netfang og lykilorð.");
+      let errorMessage =
+        "Rangt netfang eða lykilorð. Vinsamlegast athugaðu hvort þú hafir slegið rétt inn og reyndu aftur.";
+
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -44,8 +55,9 @@ function Login() {
       login(token);
       navigate("/profile");
     } catch (err) {
-      console.error("Google login error:", err.response?.data || err.message);
-      setError("Google innskráning mistókst");
+      const errorMessage = "Google innskráning mistókst";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
     }
   };
 
@@ -77,20 +89,16 @@ function Login() {
           </Alert>
         )}
 
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-        >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <FormControl fullWidth>
             <TextField
               type="email"
               label="Netfang"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
               variant="outlined"
               fullWidth
+              disabled={isLoading}
             />
           </FormControl>
 
@@ -100,20 +108,26 @@ function Login() {
               label="Lykilorð"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
               variant="outlined"
               fullWidth
+              disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleLogin();
+                }
+              }}
             />
           </FormControl>
 
           <Button
-            type="submit"
+            onClick={handleLogin}
             variant="contained"
             size="large"
             fullWidth
+            disabled={isLoading || !email || !password}
             sx={{ mt: 1 }}
           >
-            Innskrá
+            {isLoading ? "Innskrái..." : "Innskrá"}
           </Button>
         </Box>
 
@@ -126,7 +140,11 @@ function Login() {
         <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
           <GoogleLogin
             onSuccess={handleGoogleLogin}
-            onError={() => setError("Google login mistókst")}
+            onError={() => {
+              const errorMessage = "Google login mistókst";
+              setError(errorMessage);
+              showNotification(errorMessage, "error");
+            }}
             size="large"
             width="100%"
           />

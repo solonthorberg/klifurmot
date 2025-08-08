@@ -104,8 +104,15 @@ def Me(request):
             if dob:
                 profile.date_of_birth = parse_date(dob)
             profile.nationality_id = data.get('nationality', profile.nationality_id)
-            profile.height_cm = data.get('height_cm', profile.height_cm)
-            profile.wingspan_cm = data.get('wingspan_cm', profile.wingspan_cm)
+            
+            height_cm = data.get('height_cm')
+            wingspan_cm = data.get('wingspan_cm')
+            
+            if height_cm is not None:
+                profile.height_cm = int(height_cm) if height_cm and str(height_cm).strip() != '' else None
+            
+            if wingspan_cm is not None:
+                profile.wingspan_cm = int(wingspan_cm) if wingspan_cm and str(wingspan_cm).strip() != '' else None
 
             if 'profile_picture' in request.data:
                 if 'profile_picture' in request.FILES:
@@ -113,7 +120,6 @@ def Me(request):
                 elif request.data.get('profile_picture') == '':
                     profile.profile_picture.delete(save=False)
                     profile.profile_picture = None
-
 
         profile.save()
 
@@ -171,30 +177,35 @@ def GoogleLogin(request):
     except ValueError:
         return Response({"detail": "Invalid Google token"}, status=401)
 
+# In accounts/views.py, replace the Register function with this updated version:
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def Register(request):
     data = request.data
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    password2 = data.get('password2')
-    full_name = data.get('full_name', '').strip()
+    username = data.get("username")
+    email = data.get("email")
+    password = data.get("password")
+    password2 = data.get("password2")
+    full_name = data.get("full_name")
 
-    if not username or not email or not password:
-        return Response({"detail": "Username, email, and password are required."}, status=400)
+    if not all([email, password, password2, full_name]):
+        return Response({"detail": "Missing required fields"}, status=400)
+    
     if password != password2:
-        return Response({"detail": "Passwords do not match."}, status=400)
-    if not full_name:
-        return Response({"detail": "Full name is required."}, status=400)
+        return Response({"detail": "Passwords do not match"}, status=400)
+    
     try:
         validate_email(email)
     except ValidationError:
         return Response({"detail": "Invalid email address."}, status=400)
+        
     if len(password) < 8:
         return Response({"detail": "Password must be at least 8 characters long."}, status=400)
+        
     if User.objects.filter(username=username).exists():
         return Response({"detail": "Username already exists."}, status=400)
+        
     if User.objects.filter(email=email).exists():
         return Response({"detail": "Email already exists."}, status=400)
 
@@ -204,8 +215,13 @@ def Register(request):
     profile.gender = data.get('gender')
     profile.date_of_birth = parse_date(data.get('date_of_birth')) if data.get('date_of_birth') else None
     profile.nationality_id = data.get('nationality')
-    profile.height_cm = data.get('height_cm')
-    profile.wingspan_cm = data.get('wingspan_cm')
+    
+    height_cm = data.get('height_cm')
+    wingspan_cm = data.get('wingspan_cm')
+    
+    profile.height_cm = int(height_cm) if height_cm and str(height_cm).strip() != '' else None
+    profile.wingspan_cm = int(wingspan_cm) if wingspan_cm and str(wingspan_cm).strip() != '' else None
+    
     profile.save()
 
     token, _ = Token.objects.get_or_create(user=user)

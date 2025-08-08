@@ -110,10 +110,7 @@ function CompetitionItem({ competition, onDelete, navigate, isMobile }) {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
           {new Date(competition.start_date).toLocaleDateString("is-IS")} –{" "}
           {new Date(competition.end_date).toLocaleDateString("is-IS")}
-          <span style={{ marginLeft: 10 }}>
-            {" "}
-            Stofnað af: {getCreatorName()}
-          </span>
+          <span style={{ marginLeft: 10 }}> Stofnandi: {getCreatorName()}</span>
         </Typography>
       </Box>
 
