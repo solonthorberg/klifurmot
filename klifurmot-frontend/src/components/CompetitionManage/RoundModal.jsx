@@ -12,6 +12,9 @@ import {
   MenuItem,
   Box,
   CircularProgress,
+  FormControlLabel,
+  Switch,
+  Typography,
 } from "@mui/material";
 import api from "../../services/api";
 
@@ -23,6 +26,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
     roundGroupId: "",
     athleteCount: "",
     boulderCount: "",
+    selfScoring: false,
   });
   const [errors, setErrors] = useState({});
 
@@ -37,6 +41,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
             roundGroupId: existingRound.round_group_id?.toString() || "",
             athleteCount: existingRound.athlete_count?.toString() || "",
             boulderCount: existingRound.boulder_count?.toString() || "",
+            selfScoring: existingRound.self_scoring || false,
           });
         }
       } catch (err) {
@@ -61,6 +66,13 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
         [field]: "",
       }));
     }
+  };
+
+  const handleSwitchChange = (field) => (event) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: event.target.checked,
+    }));
   };
 
   const validateForm = () => {
@@ -104,6 +116,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
         name: selectedRoundGroup.name,
         athlete_count: parseInt(formData.athleteCount),
         boulder_count: parseInt(formData.boulderCount),
+        self_scoring: formData.selfScoring,
         _id: existingRound?._id || `round-${Date.now()}-${Math.random()}`,
       };
 
@@ -186,6 +199,22 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
               helperText={errors.boulderCount}
               inputProps={{ min: 1, max: 20 }}
             />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.selfScoring}
+                  onChange={handleSwitchChange("selfScoring")}
+                  color="primary"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1">Self scoring round</Typography>
+                </Box>
+              }
+            />
+            
           </Box>
         )}
       </DialogContent>
