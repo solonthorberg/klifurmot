@@ -44,7 +44,7 @@ class RoundSerializer(serializers.ModelSerializer):
         model = CompetitionRound
         fields = ['id', 'competition_category', 'competition_category_detail', 'round_group', 
                   'round_group_detail', 'round_order', 'climbers_advance', 'boulder_count', 
-                  'completed', 'start_date', 'end_date', 'is_default', 'created_by', 
+                  'completed', 'start_date', 'end_date', 'is_self_scoring', 'is_default', 'created_by', 
                   'created_at', 'last_modified_at', 'last_modified_by', 'deleted']
         read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
         extra_kwargs = {

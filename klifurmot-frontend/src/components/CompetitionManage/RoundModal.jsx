@@ -30,6 +30,19 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
   });
   const [errors, setErrors] = useState({});
 
+  const setFormField = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
+
   useEffect(() => {
     const fetchRoundGroups = async () => {
       try {
@@ -41,7 +54,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
             roundGroupId: existingRound.round_group_id?.toString() || "",
             athleteCount: existingRound.athlete_count?.toString() || "",
             boulderCount: existingRound.boulder_count?.toString() || "",
-            selfScoring: existingRound.self_scoring || false,
+            selfScoring: existingRound.is_self_scoring ?? false,
           });
         }
       } catch (err) {
@@ -50,46 +63,20 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
         setLoading(false);
       }
     };
-
     fetchRoundGroups();
   }, [existingRound]);
 
-  const handleChange = (field) => (event) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
-    }
-  };
-
-  const handleSwitchChange = (field) => (event) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: event.target.checked,
-    }));
-  };
-
   const validateForm = () => {
     const newErrors = {};
-
     if (!formData.roundGroupId) {
       newErrors.roundGroupId = "Veldu umferð";
     }
-
     if (!formData.athleteCount || parseInt(formData.athleteCount) < 1) {
       newErrors.athleteCount = "Sláðu inn gilt fjölda keppenda (1 eða fleiri)";
     }
-
     if (!formData.boulderCount || parseInt(formData.boulderCount) < 1) {
       newErrors.boulderCount = "Sláðu inn gilt fjölda leiða (1 eða fleiri)";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,34 +87,25 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
     }
 
     setSaving(true);
-
     try {
-      const selectedRoundGroup = roundGroups.find(
-        (rg) => rg.id === parseInt(formData.roundGroupId)
-      );
-
-      if (!selectedRoundGroup) {
-        setErrors({ roundGroupId: "Ógildur umferðarflokkur" });
-        return;
-      }
-
-      const round = {
-        round_group_id: selectedRoundGroup.id,
-        name: selectedRoundGroup.name,
+      const roundPayload = {
+        round_group_id: formData.roundGroupId,
+        name: roundGroups.find(
+          (rg) => rg.id.toString() === formData.roundGroupId
+        )?.name,
         athlete_count: parseInt(formData.athleteCount),
         boulder_count: parseInt(formData.boulderCount),
-        self_scoring: formData.selfScoring,
-        _id: existingRound?._id || `round-${Date.now()}-${Math.random()}`,
+        is_self_scoring: formData.selfScoring,
       };
 
-      if (existingRound) {
-        round.existingId = existingRound.existingId;
+      if (isEditMode) {
+        roundPayload._id = existingRound._id;
+        roundPayload.roundId = existingRound.roundId;
       }
 
-      onSelectRound(round);
-    } catch (err) {
-      console.error("Error creating round:", err);
-      setErrors({ general: "Villa kom upp við að búa til umferð" });
+      onSelectRound(roundPayload);
+    } catch (error) {
+      console.error("Error saving round:", error);
     } finally {
       setSaving(false);
     }
@@ -146,7 +124,6 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
       <DialogTitle>
         {isEditMode ? "Breyta umferð" : "Búa til nýja umferð"}
       </DialogTitle>
-
       <DialogContent>
         {loading ? (
           <Box display="flex" justifyContent="center" py={3}>
@@ -158,7 +135,7 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
               <InputLabel>Umferð</InputLabel>
               <Select
                 value={formData.roundGroupId}
-                onChange={handleChange("roundGroupId")}
+                onChange={(e) => setFormField("roundGroupId", e.target.value)}
                 disabled={isEditMode}
                 label="Umferð"
               >
@@ -177,34 +154,33 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
                 </Box>
               )}
             </FormControl>
-
             <TextField
               fullWidth
               label="Fjöldi keppenda"
               type="number"
               value={formData.athleteCount}
-              onChange={handleChange("athleteCount")}
+              onChange={(e) => setFormField("athleteCount", e.target.value)}
               error={!!errors.athleteCount}
               helperText={errors.athleteCount}
               inputProps={{ min: 1, max: 100 }}
             />
-
             <TextField
               fullWidth
               label="Fjöldi leiða"
               type="number"
               value={formData.boulderCount}
-              onChange={handleChange("boulderCount")}
+              onChange={(e) => setFormField("boulderCount", e.target.value)}
               error={!!errors.boulderCount}
               helperText={errors.boulderCount}
               inputProps={{ min: 1, max: 20 }}
             />
-
             <FormControlLabel
               control={
                 <Switch
                   checked={formData.selfScoring}
-                  onChange={handleSwitchChange("selfScoring")}
+                  onChange={(e) =>
+                    setFormField("selfScoring", e.target.checked)
+                  }
                   color="primary"
                 />
               }
@@ -214,16 +190,13 @@ function RoundModal({ existingRound, onClose, onSelectRound }) {
                 </Box>
               }
             />
-            
           </Box>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose} disabled={saving} color="secondary">
           Hætta við
         </Button>
-
         <Button
           onClick={handleConfirm}
           disabled={loading || saving}

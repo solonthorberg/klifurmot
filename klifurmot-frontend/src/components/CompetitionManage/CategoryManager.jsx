@@ -153,11 +153,7 @@ function CategoryManager({
                                   variant="contained"
                                   startIcon={<AddIcon />}
                                   onClick={() =>
-                                    handleAddOrUpdateRound(
-                                      cat.key,
-                                      null,
-                                      "open"
-                                    )
+                                    handleAddOrUpdateRound(cat.key, null, "add")
                                   }
                                   disabled={submitting}
                                 >
@@ -210,10 +206,11 @@ function CategoryManager({
         ) &&
           (() => {
             const modalCategory = visibleCategories.find(
-              (cat) => cat && cat.roundsModal
+              (cat) => cat && cat.roundsModal && !cat.markedForDeletion
             );
             return modalCategory ? (
               <RoundModal
+                key={modalCategory.roundToEdit?._id}
                 existingRound={modalCategory.roundToEdit}
                 onClose={() =>
                   handleAddOrUpdateRound(modalCategory.key, null, "close")

@@ -33,7 +33,7 @@ from .serializers import (
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [IsCompetitionAdminOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
         qs = Competition.objects.all()
@@ -48,6 +48,7 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
         print("Content type:", request.content_type)
         print("Files:", request.FILES)
         print("Data keys:", list(request.data.keys()) if hasattr(request.data, 'keys') else 'No keys')
+        
         
         if 'image' in request.FILES:
             print("Image found:", request.FILES['image'])
@@ -101,17 +102,16 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
 class CategoryGroupViewSet(viewsets.ModelViewSet):
     queryset = CategoryGroup.objects.all()
     serializer_class = CategoryGroupSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
 class RoundGroupViewSet(viewsets.ModelViewSet):
     queryset = RoundGroup.objects.all()
     serializer_class = RoundGroupSerializer
-    permission_classes = [AllowAny]
-
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
     
     def get_queryset(self):
         queryset = CompetitionCategory.objects.all()
@@ -122,20 +122,16 @@ class CompetitionCategoryViewSet(viewsets.ModelViewSet):
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
-        # For detail views (GET/PUT/PATCH/DELETE /rounds/ID/), return all rounds
-        # The ViewSet will handle individual lookups by ID
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             return CompetitionRound.objects.all()
         
-        # For list views (GET /rounds/), filter by competition_id if provided
         competition_id = self.request.query_params.get('competition_id')
         if competition_id:
             return CompetitionRound.objects.filter(competition_category__competition_id=competition_id)
         
-        # If no competition_id provided for list view, return empty queryset
         return CompetitionRound.objects.none()
 
     def perform_create(self, serializer):
@@ -147,7 +143,7 @@ class RoundViewSet(viewsets.ModelViewSet):
 class BoulderViewSet(viewsets.ModelViewSet):
     queryset = Boulder.objects.all()
     serializer_class = BoulderSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Boulder.objects.all()
@@ -178,7 +174,7 @@ class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 class AssignRoleView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def post(self, request, competition_id):
         if not hasattr(request.user, 'profile') or not CompetitionRole.objects.filter(
@@ -208,10 +204,6 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from datetime import date
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
