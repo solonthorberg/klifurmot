@@ -8,7 +8,6 @@ import { useNotification } from "../context/NotificationContext";
 import {
   Box,
   Typography,
-  Button,
   Chip,
   Alert,
   CircularProgress,
@@ -173,7 +172,7 @@ function JudgeDashboardPage() {
   if (!authorized) return null;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Box
           sx={{
@@ -220,7 +219,7 @@ function JudgeDashboardPage() {
           </Typography>
         </Alert>
       )}
-    </Container>
+    </Box>
   );
 }
 

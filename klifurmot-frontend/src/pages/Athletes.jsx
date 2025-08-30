@@ -21,7 +21,9 @@ function Athletes() {
   const fetchAthletes = async () => {
     try {
       const response = await api.get("athletes/climbers");
-      setAthletes(response.data);
+      // Only keep athletes with a user_account
+      const filtered = response.data.filter((climber) => climber.user_account);
+      setAthletes(filtered);
     } catch (error) {
       console.error("Error fetching athletes:", error);
     } finally {
@@ -33,8 +35,9 @@ function Athletes() {
     fetchAthletes();
   }, []);
 
+  // Filter by search query
   const filteredAthletes = athletes.filter((climber) => {
-    const fullName = climber.user_account?.full_name || "";
+    const fullName = climber.user_account.full_name || "";
     return fullName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -82,8 +85,8 @@ function Athletes() {
       ) : (
         <List sx={{ bgcolor: "background.paper" }}>
           {filteredAthletes.map((climber) => {
-            const nationality =
-              climber.user_account?.nationality?.country_code || "";
+            const { user_account } = climber;
+            const nationality = user_account.nationality?.country_code || "";
 
             return (
               <ListItem
@@ -93,21 +96,20 @@ function Athletes() {
               >
                 <ListItemButton
                   component={Link}
-                  to={`/athletes/${climber.user_account?.id}`}
+                  to={`/athletes/${user_account.id}`}
                   sx={{ py: 2 }}
                 >
                   <ListItemText
                     primary={
                       <Typography variant="h6">
-                        {climber.user_account?.full_name || "Nafn vantar"}
+                        {user_account.full_name || "Nafn vantar"}
                       </Typography>
                     }
                     secondary={
                       <Typography variant="body2" color="textSecondary">
                         {nationality} •{" "}
-                        {climber.user_account.age &&
-                        climber.user_account.age > 0
-                          ? `${climber.user_account.age} ára`
+                        {user_account.age && user_account.age > 0
+                          ? `${user_account.age} ára`
                           : "Aldur óþekktur"}
                       </Typography>
                     }

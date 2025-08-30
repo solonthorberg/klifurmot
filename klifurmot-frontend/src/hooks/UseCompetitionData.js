@@ -8,6 +8,7 @@ import {
   createCompetition,
   updateCompetition,
 } from "../components/CompetitionManage/CompetitionAPI";
+import { generateKey } from "../components/CompetitionManage/CompetitionUtils";
 import { reorderList } from "../components/CompetitionManage/CompetitionUtils";
 
 export function useCompetitionData({ competitionId }) {
@@ -204,7 +205,16 @@ export function useCompetitionData({ competitionId }) {
           if (isUpdate) {
             updatedRounds = cat.rounds.map((r) =>
               r._id === roundData._id
-                ? { ...r, ...roundData, modified: true }
+                ? { 
+                    ...r, 
+                    // Only update the fields that RoundModal actually handles
+                    round_group_id: roundData.round_group_id,
+                    athlete_count: roundData.athlete_count,
+                    boulder_count: roundData.boulder_count,
+                    is_self_scoring: roundData.is_self_scoring,
+                    name: roundData.name,
+                    modified: true 
+                  }
                 : r
             );
           } else {

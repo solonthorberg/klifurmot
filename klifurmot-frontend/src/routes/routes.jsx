@@ -15,6 +15,7 @@ import ControlPanelDetails from "../pages/ControlPanelDetails";
 import CreateCompetition from "../pages/CreateCompetition";
 import NotFound from "../pages/NotFound";
 import Unauthorized from "../pages/Unauthorized";
+import SelfScoring from "../pages/SelfScoring";
 import ProtectedRoute from "./ProtectedRoutes";
 
 function JudgeDashboardPageWrapper() {
@@ -35,17 +36,25 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-      
+
       {/* Protected routes - require authentication */}
-      <Route 
-        path="/profile" 
+      <Route
+        path="/profile"
         element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
-        } 
+        }
       />
-      
+      <Route
+        path="/competitions/:competitionId/self-scoring"
+        element={
+          <ProtectedRoute>
+            <SelfScoring />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Judge routes - require authentication */}
       <Route path="/judge/login/:token" element={<JudgeLoginPage />} />
       <Route
@@ -56,7 +65,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      
+
       {/* Admin-only routes - require admin privileges */}
       <Route
         path="/admin/competition/:competitionId/judge-dashboard"
@@ -66,13 +75,19 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      
+
       {/* Control panel routes - handle their own authorization */}
       <Route path="/controlpanel" element={<ControlPanel />} />
-      <Route path="/controlpanel/:competitionId" element={<ControlPanelDetails />} />
-      <Route path="/controlpanel/edit/:competitionId" element={<CreateCompetition />} />
+      <Route
+        path="/controlpanel/:competitionId"
+        element={<ControlPanelDetails />}
+      />
+      <Route
+        path="/controlpanel/edit/:competitionId"
+        element={<CreateCompetition />}
+      />
       <Route path="/controlpanel/create" element={<CreateCompetition />} />
-      
+
       {/* 404 route */}
       <Route path="*" element={<NotFound />} />
     </Routes>

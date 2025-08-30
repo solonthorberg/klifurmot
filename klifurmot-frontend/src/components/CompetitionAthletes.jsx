@@ -18,7 +18,7 @@ import {
 import api from "../services/api";
 
 const getFlagEmoji = (countryCode) => {
-  if (!countryCode) return "🌐";
+  if (!countryCode) return "";
   return countryCode.replace(/./g, (char) =>
     String.fromCodePoint(char.charCodeAt(0) + 127397)
   );
