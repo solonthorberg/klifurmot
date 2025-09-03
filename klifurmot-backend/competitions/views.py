@@ -33,7 +33,7 @@ from .serializers import (
 class GetCompetitionViewSet(viewsets.ModelViewSet):
     queryset = Competition.objects.all()
     serializer_class = CompetitionSerializer
-    permission_classes = [IsCompetitionAdminOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
         qs = Competition.objects.all()
@@ -48,6 +48,7 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
         print("Content type:", request.content_type)
         print("Files:", request.FILES)
         print("Data keys:", list(request.data.keys()) if hasattr(request.data, 'keys') else 'No keys')
+        
         
         if 'image' in request.FILES:
             print("Image found:", request.FILES['image'])
@@ -101,17 +102,16 @@ class GetCompetitionViewSet(viewsets.ModelViewSet):
 class CategoryGroupViewSet(viewsets.ModelViewSet):
     queryset = CategoryGroup.objects.all()
     serializer_class = CategoryGroupSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
 class RoundGroupViewSet(viewsets.ModelViewSet):
     queryset = RoundGroup.objects.all()
     serializer_class = RoundGroupSerializer
-    permission_classes = [AllowAny]
-
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 class CompetitionCategoryViewSet(viewsets.ModelViewSet):
     queryset = CompetitionCategory.objects.all()
     serializer_class = CompetitionCategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
     
     def get_queryset(self):
         queryset = CompetitionCategory.objects.all()
@@ -122,20 +122,16 @@ class CompetitionCategoryViewSet(viewsets.ModelViewSet):
 
 class RoundViewSet(viewsets.ModelViewSet):
     serializer_class = RoundSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
-        # For detail views (GET/PUT/PATCH/DELETE /rounds/ID/), return all rounds
-        # The ViewSet will handle individual lookups by ID
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             return CompetitionRound.objects.all()
         
-        # For list views (GET /rounds/), filter by competition_id if provided
         competition_id = self.request.query_params.get('competition_id')
         if competition_id:
             return CompetitionRound.objects.filter(competition_category__competition_id=competition_id)
         
-        # If no competition_id provided for list view, return empty queryset
         return CompetitionRound.objects.none()
 
     def perform_create(self, serializer):
@@ -147,7 +143,7 @@ class RoundViewSet(viewsets.ModelViewSet):
 class BoulderViewSet(viewsets.ModelViewSet):
     queryset = Boulder.objects.all()
     serializer_class = BoulderSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Boulder.objects.all()
@@ -178,7 +174,7 @@ class JudgeBoulderAssignmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 class AssignRoleView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdminOrReadOnly, IsAdminOrReadOnly]
 
     def post(self, request, competition_id):
         if not hasattr(request.user, 'profile') or not CompetitionRole.objects.filter(
@@ -208,10 +204,6 @@ class AssignRoleView(APIView):
 
         return Response({"detail": f"Assigned role '{role}' to user {target_user_id}."}, status=200)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from datetime import date
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -232,27 +224,40 @@ def GetCompetitionAthletes(request, pk):
 
     for reg in registrations:
         climber = reg.climber
-        user = getattr(climber, "user_account", None)
-        if not user:
-            continue
-
-        birth_date = user.date_of_birth
-        if birth_date:
-            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-            age_category = get_age_based_category(age)
+        
+        if climber.is_simple_athlete:
+            full_name = climber.simple_name
+            gender = climber.simple_gender or "–"
+            age_category = f"{climber.simple_age} ára" if climber.simple_age else "–"
+            nationality = "–"
         else:
-            age_category = "–"
+            user = getattr(climber, "user_account", None)
+            if not user:
+                continue
+
+            full_name = user.full_name
+            gender = user.gender or "–"
+            
+            birth_date = user.date_of_birth
+            if birth_date:
+                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                age_category = get_age_based_category(age)
+            else:
+                age_category = "–"
+                
+            nationality = user.nationality.country_code if user.nationality else "–"
 
         category_group = reg.competition_category.category_group.name
-        gender = reg.competition_category.gender
-        category_name = f"{category_group} {gender}"
+        category_gender = reg.competition_category.gender
+        category_name = f"{category_group} {category_gender}"
 
         athlete_data = {
             "id": climber.id,
-            "full_name": user.full_name,
-            "gender": user.gender or "–",
+            "full_name": full_name,
+            "gender": gender,
             "age_category": age_category,
-            "nationality": user.nationality.country_code if user.nationality else "–",
+            "nationality": nationality,
+            "is_simple_athlete": climber.is_simple_athlete
         }
 
         grouped.setdefault(category_name, []).append(athlete_data)
@@ -338,23 +343,32 @@ def GetCompetitionStartlist(request, pk):
 
         for result in results:
             climber = result.climber
-            ua = climber.user_account
-            user = ua.user
-            full_name = ua.full_name or user.username
-
-            birth_date = ua.date_of_birth
-            if birth_date:
-                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-                age_category = get_age_based_category(age)
+            
+            # Handle both simple athletes and regular athletes
+            if climber.is_simple_athlete:
+                full_name = climber.simple_name
+                age_category = f"{climber.simple_age} ára" if climber.simple_age else "–"
             else:
-                age_category = "–"
+                ua = climber.user_account
+                if not ua:
+                    continue
+                user = ua.user
+                full_name = ua.full_name or user.username
+
+                birth_date = ua.date_of_birth
+                if birth_date:
+                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                    age_category = get_age_based_category(age)
+                else:
+                    age_category = "–"
 
             athlete_data = {
                 "climber_id": climber.id,
                 "id": climber.id,
                 "start_order": result.start_order,
                 "full_name": full_name,
-                "age_category": age_category
+                "age_category": age_category,
+                "is_simple_athlete": climber.is_simple_athlete
             }
             
             athletes.append(athlete_data)
@@ -408,8 +422,14 @@ def GetCompetitionResults(request, pk):
 
         for rank, score in enumerate(scores, start=1):
             climber = score.climber
-            user = climber.user_account.user
-            full_name = user.get_full_name() or user.username
+            
+            if climber.is_simple_athlete:
+                full_name = climber.simple_name
+            else:
+                user = climber.user_account.user if climber.user_account else None
+                if not user:
+                    continue
+                full_name = user.get_full_name() or user.username
 
             climbs = Climb.objects.filter(climber=climber, boulder__round=rnd)
             total_top_attempts = sum(c.attempts_top for c in climbs if c.top_reached)
@@ -421,7 +441,8 @@ def GetCompetitionResults(request, pk):
                 "tops": score.tops,
                 "zones": score.zones,
                 "attempts_top": total_top_attempts,
-                "attempts_zone": total_zone_attempts
+                "attempts_zone": total_zone_attempts,
+                "is_simple_athlete": climber.is_simple_athlete
             })
 
     result = [
@@ -479,6 +500,14 @@ class RegisterAthleteView(APIView):
             
             climber = Climber.objects.get(id=climber_id)
             
+            # Get climber name (works for both simple and regular athletes)
+            if climber.is_simple_athlete:
+                climber_name = climber.simple_name
+            elif climber.user_account:
+                climber_name = climber.user_account.full_name
+            else:
+                climber_name = "Unknown"
+            
             existing_round_result = RoundResult.objects.filter(
                 round=round_obj, 
                 climber=climber
@@ -486,7 +515,7 @@ class RegisterAthleteView(APIView):
             
             if existing_round_result:
                 return Response(
-                    {"detail": f"{climber.user_account.full_name} is already in {round_name}"}, 
+                    {"detail": f"{climber_name} is already in {round_name}"}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -521,7 +550,7 @@ class RegisterAthleteView(APIView):
                 )
                 
                 return Response({
-                    "detail": f"{climber.user_account.full_name} hefur verið skráð(ur) með númer {round_result.start_order}",
+                    "detail": f"{climber_name} hefur verið skráð(ur) með númer {round_result.start_order}",
                     "registration_id": registration.id,
                     "round_result_id": round_result.id,
                     "start_order": round_result.start_order
@@ -751,3 +780,118 @@ def GetUserCompetitionRoles(request):
     except Exception as e:
         return Response({"detail": str(e)}, status=500)        
     
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def SelfScoring(request):
+    """Get's boulder list for a self scoring round"""
+    competition_id = request.query_params.get('competition_id')
+    user_id = request.query_params.get('user_id')
+
+    if not competition_id:
+        return Response({"detail": "competition_id is required"}, status=400)
+    
+    if not user_id:
+        user_id = request.user.id
+
+    try:
+        competition = Competition.objects.get(id=competition_id, deleted=False)
+        
+        user_account = UserAccount.objects.get(id=user_id)
+        climber = Climber.objects.get(user_account=user_account)
+        
+        # Get self-scoring rounds where this climber is actually registered to participate
+        registered_round_ids = RoundResult.objects.filter(
+            climber=climber,
+            round__competition_category__competition=competition
+        ).values_list('round', flat=True)
+        
+        self_scoring_rounds = CompetitionRound.objects.filter(
+            id__in=registered_round_ids,
+            is_self_scoring=True,
+            deleted=False
+        ).select_related('competition_category', 'round_group')
+        
+        rounds_data = []
+        for round_obj in self_scoring_rounds:
+            boulders = Boulder.objects.filter(
+                round=round_obj,
+                deleted=False
+            ).order_by('boulder_number')
+            
+            rounds_data.append({
+                "round": {
+                    "id": round_obj.id,
+                    "round_order": round_obj.round_order,
+                    "round_group": round_obj.round_group.name,
+                    "category": f"{round_obj.competition_category.category_group.name} {round_obj.competition_category.gender}",
+                    "category_id": round_obj.competition_category.id,
+                    "boulder_count": round_obj.boulder_count
+                },
+                "boulders": BoulderSerializer(boulders, many=True).data
+            })
+        
+        response_data = {
+            "competition": {
+                "id": competition.id,
+                "title": competition.title
+            },
+            "climber": {
+                "id": climber.id,
+                "name": user_account.full_name
+            },
+            "rounds": rounds_data
+        }
+        
+        return Response(response_data)
+        
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found"}, status=404)
+    except UserAccount.DoesNotExist:
+        return Response({"detail": "User not found"}, status=404)
+    except Climber.DoesNotExist:
+        return Response({"detail": "Climber profile not found"}, status=404)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def SelfScoringBoulders(request):
+    """Get boulder list for a specific self scoring round"""
+    round_id = request.query_params.get('round_id')
+    
+    if not round_id:
+        return Response({"detail": "round_id is required"}, status=400)
+    
+    try:
+        # Get the round and verify it's a self-scoring round
+        round_obj = CompetitionRound.objects.get(id=round_id, deleted=False)
+        
+        if not round_obj.is_self_scoring:
+            return Response({"detail": "This round is not enabled for self-scoring"}, status=400)
+        
+        # Get all boulders for this round
+        boulders = Boulder.objects.filter(
+            round=round_obj, 
+            deleted=False
+        ).order_by('boulder_number')
+        
+        serializer = BoulderSerializer(boulders, many=True)
+        
+        response_data = {
+            "round": {
+                "id": round_obj.id,
+                "round_order": round_obj.round_order,
+                "round_group": round_obj.round_group.name,
+                "competition": round_obj.competition_category.competition.title,
+                "category": f"{round_obj.competition_category.category_group.name} {round_obj.competition_category.gender}"
+            },
+            "boulders": serializer.data
+        }
+        
+        return Response(response_data)
+        
+    except CompetitionRound.DoesNotExist:
+        return Response({"detail": "Round not found"}, status=404)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=500)

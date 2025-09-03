@@ -8,6 +8,7 @@ import {
   createCompetition,
   updateCompetition,
 } from "../components/CompetitionManage/CompetitionAPI";
+import { generateKey } from "../components/CompetitionManage/CompetitionUtils";
 import { reorderList } from "../components/CompetitionManage/CompetitionUtils";
 
 export function useCompetitionData({ competitionId }) {
@@ -70,10 +71,10 @@ export function useCompetitionData({ competitionId }) {
           categoryMap[groupId] = {
             id: groupId,
             name: groupName,
-            key: `cat-${groupId}-${Date.now()}`,
-            rounds: [],
             existingCategories: [category],
+            rounds: [],
             markedForDeletion: false,
+            key: `${groupId}-${Date.now()}-${Math.random()}`,
           };
         } else {
           categoryMap[groupId].existingCategories.push(category);
@@ -112,6 +113,7 @@ export function useCompetitionData({ competitionId }) {
               name: round.round_group_detail?.name,
               athlete_count: round.climbers_advance || round.max_athletes || 0,
               boulder_count: round.boulder_count || 0,
+              is_self_scoring: round.is_self_scoring ?? false,
               _id: `existing-${round.id}-${idx}`,
               roundId: round.id,
               order: round.round_order,
@@ -174,58 +176,66 @@ export function useCompetitionData({ competitionId }) {
     setFormState((prev) => ({ ...prev, showCategoryModal: false }));
   };
 
-  const handleAddOrUpdateRound = (categoryKey, round, action) => {
+  const handleAddOrUpdateRound = (categoryKey, roundData, action) => {
     setCategoryState((prev) =>
       prev.map((cat) => {
-        if (cat.key !== categoryKey) return cat;
-
-        switch (action) {
-          case "save":
-            if (!round) return cat;
-            const editing = cat.roundToEdit;
-            const updatedRounds = [...cat.rounds];
-
-            if (editing && typeof editing.index === "number") {
-              updatedRounds[editing.index] = {
-                ...round,
-                _id: editing._id,
-                roundId: editing.roundId,
-                markedForDeletion: false,
-                modified: true,
-              };
-            } else {
-              updatedRounds.push({
-                ...round,
-                _id: `new-${Date.now()}-${Math.random()}`,
-                roundId: null,
-                markedForDeletion: false,
-              });
-            }
-
-            return {
-              ...cat,
-              rounds: updatedRounds,
-              roundsModal: false,
-              roundToEdit: null,
-            };
-
-          case "edit":
-            const roundIndex = cat.rounds.findIndex((r) => r._id === round._id);
-            return {
-              ...cat,
-              roundsModal: true,
-              roundToEdit: { ...round, index: roundIndex },
-            };
-
-          case "open":
-            return { ...cat, roundsModal: true, roundToEdit: null };
-
-          case "close":
-            return { ...cat, roundsModal: false, roundToEdit: null };
-
-          default:
-            return cat;
+        if (cat.key !== categoryKey) {
+          return { ...cat, roundsModal: false, roundToEdit: null };
         }
+
+        if (action === "edit") {
+          return { ...cat, roundsModal: true, roundToEdit: roundData };
+        }
+
+        if (action === "add") {
+          return { ...cat, roundsModal: true, roundToEdit: null };
+        }
+
+        if (action === "close") {
+          return { ...cat, roundsModal: false, roundToEdit: null };
+        }
+
+        if (action === "save") {
+          const isUpdate =
+            roundData &&
+            roundData._id &&
+            cat.rounds.some((r) => r._id === roundData._id);
+
+          let updatedRounds;
+          if (isUpdate) {
+            updatedRounds = cat.rounds.map((r) =>
+              r._id === roundData._id
+                ? { 
+                    ...r, 
+                    // Only update the fields that RoundModal actually handles
+                    round_group_id: roundData.round_group_id,
+                    athlete_count: roundData.athlete_count,
+                    boulder_count: roundData.boulder_count,
+                    is_self_scoring: roundData.is_self_scoring,
+                    name: roundData.name,
+                    modified: true 
+                  }
+                : r
+            );
+          } else {
+            const newRound = {
+              ...roundData,
+              _id: generateKey(), // Using your utility function
+              order: cat.rounds.filter((r) => !r.markedForDeletion).length,
+              markedForDeletion: false,
+            };
+            updatedRounds = [...cat.rounds, newRound];
+          }
+
+          return {
+            ...cat,
+            rounds: updatedRounds,
+            roundsModal: false,
+            roundToEdit: null,
+          };
+        }
+
+        return cat;
       })
     );
   };
@@ -395,6 +405,7 @@ export function useCompetitionData({ competitionId }) {
         climbers_advance: parseInt(round.athlete_count) || 0,
         boulder_count: parseInt(round.boulder_count) || 0,
         round_order: i + 1,
+        is_self_scoring: Boolean(round.is_self_scoring),
       };
 
       if (round.roundId && round.modified) {

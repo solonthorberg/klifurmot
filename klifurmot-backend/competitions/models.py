@@ -57,6 +57,7 @@ class CompetitionRound(models.Model):
     completed = models.BooleanField(default=False)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
+    is_self_scoring = models.BooleanField(default=False)
     is_default = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     created_at = models.DateTimeField(default=timezone.now)

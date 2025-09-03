@@ -1,6 +1,6 @@
 from datetime import date
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -19,21 +19,53 @@ class GetClimberViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def _add_age_data(self, climber_data):
-        if 'user_account' in climber_data and climber_data['user_account']:
-            user_account = climber_data['user_account']
-            if 'date_of_birth' in user_account and user_account['date_of_birth']:
-                birth_date_str = user_account['date_of_birth']
-                birth_date = date.fromisoformat(birth_date_str) if isinstance(birth_date_str, str) else birth_date_str
-                age = calculate_age(birth_date)
-                
-                user_account['age'] = age
-                if age is not None:
-                    user_account['age_category'] = get_age_based_category(age)
+        """Add age and age_category data to climber response"""
+        if climber_data.get('is_simple_athlete', False):
+            # Handle simple athletes
+            if 'simple_age' in climber_data and climber_data['simple_age']:
+                age = climber_data['simple_age']
+                climber_data['age'] = age
+                climber_data['age_category'] = get_age_based_category(age)
+        else:
+            # Handle regular athletes with user accounts
+            if 'user_account' in climber_data and climber_data['user_account']:
+                user_account = climber_data['user_account']
+                if 'date_of_birth' in user_account and user_account['date_of_birth']:
+                    birth_date_str = user_account['date_of_birth']
+                    birth_date = date.fromisoformat(birth_date_str) if isinstance(birth_date_str, str) else birth_date_str
+                    age = calculate_age(birth_date)
+                    
+                    user_account['age'] = age
+                    if age is not None:
+                        user_account['age_category'] = get_age_based_category(age)
+
+    def _format_climber_data(self, climber_instance):
+        """Format climber data to include both simple and regular athlete info"""
+        if climber_instance.is_simple_athlete:
+            return {
+                'id': climber_instance.id,
+                'is_simple_athlete': True,
+                'simple_name': climber_instance.simple_name,
+                'simple_age': climber_instance.simple_age,
+                'simple_gender': climber_instance.simple_gender,
+                'user_account': None,
+                'created_at': climber_instance.created_at,
+                'last_modified_at': climber_instance.last_modified_at
+            }
+        else:
+            # Use the regular serializer for full user account athletes
+            serializer = self.get_serializer(climber_instance)
+            return serializer.data
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        data = serializer.data
+        
+        if instance.is_simple_athlete:
+            data = self._format_climber_data(instance)
+        else:
+            serializer = self.get_serializer(instance)
+            data = serializer.data
+            
         self._add_age_data(data)
         return Response(data)
 
@@ -42,16 +74,19 @@ class GetClimberViewSet(viewsets.ModelViewSet):
         page = self.paginate_queryset(queryset)
         
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            data = serializer.data
-            for climber_data in data:
+            data = []
+            for climber in page:
+                climber_data = self._format_climber_data(climber)
                 self._add_age_data(climber_data)
+                data.append(climber_data)
             return self.get_paginated_response(data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        data = serializer.data
-        for climber_data in data:
+        data = []
+        for climber in queryset:
+            climber_data = self._format_climber_data(climber)
             self._add_age_data(climber_data)
+            data.append(climber_data)
+            
         return Response(data)
 
 
@@ -148,3 +183,45 @@ def GetAthleteDetail(request, pk):
         "competition_results": competitions_result
     })
 
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_simple_athlete(request):
+    """Allow admin to create simple athlete with just name, age, and gender"""
+    #if not request.user.is_staff: 
+    #    return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+    
+    data = request.data
+    name = data.get('name', '').strip()
+    age = data.get('age')
+    gender = data.get('gender')
+    
+    if not all([name, age, gender]):
+        return Response({"detail": "Name, age, and gender are required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if gender not in ['KK', 'KVK']:
+        return Response({"detail": "Gender must be 'KK' or 'KVK'"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        age = int(age)
+        if age < 1 or age > 100:
+            return Response({"detail": "Age must be between 1 and 100"}, status=status.HTTP_400_BAD_REQUEST)
+    except ValueError:
+        return Response({"detail": "Age must be a valid number"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    climber = Climber.objects.create(
+        simple_name=name,
+        simple_age=age,
+        simple_gender=gender,
+        is_simple_athlete=True,
+        created_by=request.user,
+        last_modified_by=request.user
+    )
+    
+    return Response({
+        "detail": f"Athlete {name} created successfully",
+        "climber_id": climber.id,
+        "name": name,
+        "age": age,
+        "gender": gender
+    }, status=status.HTTP_201_CREATED)

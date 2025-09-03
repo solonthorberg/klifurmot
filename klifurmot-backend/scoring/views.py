@@ -178,14 +178,25 @@ class StartListView(APIView):
         else:
             return Response({"detail": "Missing round_id or (competition_id, category_id, round_group_id)."}, status=400)
 
-        data = [
-            {
-                "climber": result.climber.user_account.full_name,
-                "climber_id": result.climber.id,
-                "start_order": result.start_order
-            }
-            for result in start_list
-        ]
+        data = []
+        for result in start_list:
+            climber = result.climber
+            if getattr(climber, "is_simple_athlete", False):
+                name = climber.simple_name
+                gender = climber.simple_gender
+                age_category = getattr(climber, "age_category", None)
+            else:
+                name = getattr(climber.user_account, "full_name", None)
+                gender = getattr(climber.user_account, "gender", None)
+                age_category = getattr(climber.user_account, "age_category", None)
+
+            data.append({
+                "climber": name,
+                "climber_id": climber.id,
+                "start_order": result.start_order,
+                "gender": gender,
+                "age_category": age_category,
+            })
         return Response(data)
 
 class ResultsView(APIView):

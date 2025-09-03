@@ -36,8 +36,11 @@ def FormatCompetitionResults(competition_id):
                 full_name = (
                     result.climber.user_account.full_name
                     if result.climber.user_account and result.climber.user_account.full_name
+                    else result.climber.simple_name
+                    if result.climber.simple_name
                     else "Name unknown"
                 )
+
                 formatted_results.append({
                     "rank": result.rank,
                     "full_name": full_name,

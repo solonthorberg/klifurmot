@@ -45,7 +45,6 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
     image,
   } = formState;
 
-  // New state for compression
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionError, setCompressionError] = useState(null);
 
@@ -71,7 +70,6 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
   const handleDeleteImage = () => {
     if (deleteImage) {
       deleteImage();
-      // Reset compression state when deleting image
       setCompressionError(null);
     }
   };
@@ -84,14 +82,11 @@ function CompetitionForm({ formState, setFormField, setImage, deleteImage }) {
     setCompressionError(null);
 
     try {
-      // Compress the image
       const result = await compressCompetitionImage(file);
 
-      // Set the compressed image
       setImage(result.file);
     } catch (error) {
       setCompressionError(error.message || "Villa við að þjappa mynd");
-      // Fall back to original image if compression fails
       setImage(file);
     } finally {
       setIsCompressing(false);

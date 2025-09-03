@@ -7,6 +7,7 @@ import {
   Button,
   Divider,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 
@@ -20,11 +21,17 @@ const formatDate = (dateString) => {
 };
 
 function CompetitionOverview({ competition }) {
+  const navigate = useNavigate();
+
   if (!competition) {
     return (
       <Typography variant="body1">Sæki upplýsingar um mótið...</Typography>
     );
   }
+
+  const handleSelfScoringClick = () => {
+    navigate(`/competitions/${competition.id}/self-scoring`);
+  };
 
   return (
     <Card sx={{ p: 3 }}>
@@ -79,14 +86,15 @@ function CompetitionOverview({ competition }) {
                 {formatDate(competition.end_date)}
               </Typography>
             </Box>
-            {/* Link to sportabler? */}
+            {/* Self-scoring button */}
             <Button
               variant="contained"
               color="primary"
               fullWidth
               sx={{ mt: 2, textTransform: "none" }}
+              onClick={handleSelfScoringClick}
             >
-              Taka þátt?
+              Sjálfsstigagjöf
             </Button>
           </Box>
         </Grid>

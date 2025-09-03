@@ -54,6 +54,7 @@ import {
   Add as AddIcon,
 } from "@mui/icons-material";
 import JudgeLinkSection from "../components/JudgeLink";
+import QuickAddAthlete from "../components/QuickAddAthlete";
 import { useNotification } from "../context/NotificationContext";
 
 function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
@@ -132,14 +133,18 @@ function SortableAthleteRow({ athlete, index, onRemove, isReordering }) {
 function ControlPanelDetails() {
   const navigate = useNavigate();
   const { competitionId } = useParams();
-  
+
   // Authentication hook for competition-specific access
-  const { authorized, loading: authLoading, userRole } = AuthRoleContext(competitionId);
-  
+  const {
+    authorized,
+    loading: authLoading,
+    userRole,
+  } = AuthRoleContext(competitionId);
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { showSuccess, showError } = useNotification();
-  
+
   // Component state
   const [startlist, setStartlist] = useState([]);
   const [activeRound, setActiveRound] = useState(null);
@@ -522,6 +527,7 @@ function ControlPanelDetails() {
         category: selectedCategory,
         round: activeRound,
         climber: athlete.id,
+        is_simple: athlete.is_simple_athlete || false,
       };
 
       console.log("Register athlete payload:", payload);
@@ -586,10 +592,13 @@ function ControlPanelDetails() {
     const gender = selectedCategory.includes("KVK") ? "KVK" : "KK";
 
     return availableAthletes.filter((athlete) => {
-      const nameMatch = athlete.user_account?.full_name
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const genderMatch = athlete.user_account?.gender === gender;
+      const name = athlete.user_account?.full_name || athlete.simple_name || "";
+      const athleteGender =
+        athlete.user_account?.gender || athlete.simple_gender;
+
+      const nameMatch = name.toLowerCase().includes(searchQuery.toLowerCase());
+      const genderMatch = athleteGender === gender;
+
       return nameMatch && genderMatch;
     });
   };
@@ -889,12 +898,16 @@ function ControlPanelDetails() {
                     >
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="subtitle2" fontWeight="medium">
-                          {athlete.user_account?.full_name}
+                          {athlete.user_account?.full_name ||
+                            athlete.simple_name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {athlete.category || "–"} •{" "}
-                          {athlete.user_account?.date_of_birth} •{" "}
-                          {athlete.user_account?.gender}
+                          {athlete.age_category || "–"} •
+                          {athlete.user_account?.date_of_birth ||
+                            `${athlete.simple_age} ára`}{" "}
+                          •
+                          {athlete.user_account?.gender ||
+                            athlete.simple_gender}
                         </Typography>
                       </Box>
                       <Chip label="Velja" color="primary" size="small" />
@@ -912,6 +925,10 @@ function ControlPanelDetails() {
 
       <Box sx={{ mt: 4 }}>
         <JudgeLinkSection competitionId={competitionId} />
+      </Box>
+
+      <Box sx={{ mt: 4 }}>
+        <QuickAddAthlete />
       </Box>
 
       <Alert severity="info" sx={{ mt: 3 }}>
