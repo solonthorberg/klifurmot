@@ -84,3 +84,16 @@ class JudgeLink(models.Model):
         null=True,
         related_name='judge_links_created'
     )
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'competition'],
+                condition=models.Q(user__isnull=False),
+                name='unique_user_competition_link'
+            ),
+            models.UniqueConstraint(
+                fields=['invited_email', 'competition'],
+                condition=models.Q(invited_email__isnull=False, claimed_at__isnull=True),
+                name='unique_email_competition_invitation'
+            )
+        ]
