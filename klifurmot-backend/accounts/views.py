@@ -52,7 +52,6 @@ class CountryViewSet(viewsets.ModelViewSet):
     serializer_class = CountrySerializer
     permission_classes = [AllowAny]
 
-
 class UserAccountViewSet(viewsets.ModelViewSet):
     queryset = UserAccount.objects.all()
     serializer_class = UserAccountSerializer
@@ -177,8 +176,6 @@ def GoogleLogin(request):
     except ValueError:
         return Response({"detail": "Invalid Google token"}, status=401)
 
-# In accounts/views.py, replace the Register function with this updated version:
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def Register(request):
@@ -233,78 +230,160 @@ def Logout(request):
     request.user.auth_token.delete()
     return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
 
-class SendJudgeLinkView(APIView):
+class SendJudgeInvitationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, competition_id):
         user_account = getattr(request.user, 'profile', None)
-        if not user_account:
-            return Response({"detail": "No user profile found."}, status=403)
-
-        if not user_account.is_admin:
-            return Response({"detail": "Only admins can send judge links."}, status=403)
-
-        user_id = request.data.get("user_id")
-        if not user_id:
-            return Response({"detail": "User ID required."}, status=400)
-
-        expires_at = request.data.get("expires_at")
-        if expires_at:
+        if not user_account or not user_account.is_admin:
+            return Response({"detail": "Only admins can send judge invitations."}, status=403)
+        
+        email = request.data.get("email",)
+        name = request.data.get("name", "")
+        
+        
+        if email:
             try:
-                expires_at = timezone.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-            except ValueError:
-                return Response({"detail": "Invalid expiration date format."}, status=400)
-        else:
-            expires_at = timezone.now() + timedelta(days=1)
-
+                validate_email(email)
+            except ValidationError:
+                return Response({"detail": "Invalid email address."}, status=400)
+        
         try:
-            judge_user_account = UserAccount.objects.get(id=user_id)
             competition = Competition.objects.get(id=competition_id)
-        except (UserAccount.DoesNotExist, Competition.DoesNotExist):
-            return Response({"detail": "Invalid user or competition."}, status=404)
-
-        # Create or update the judge link
-        link, created = JudgeLink.objects.get_or_create(
-            user=judge_user_account.user,
-            competition=competition,
-            defaults={
-                "created_by": request.user,
-                "expires_at": expires_at
-            }
-        )
-
-        if not created and link.expires_at != expires_at:
-            link.expires_at = expires_at
-            link.save()
-
-        # Automatically assign judge role to the user for this competition
-        competition_role, role_created = CompetitionRole.objects.get_or_create(
-            user=judge_user_account,
-            competition=competition,
-            defaults={
-                "role": "judge",
-                "created_by": request.user.profile,
-                "last_modified_by": request.user.profile
-            }
-        )
-
-        # If role already exists but isn't judge, update it to judge
-        if not role_created and competition_role.role != "judge":
-            competition_role.role = "judge"
-            competition_role.last_modified_by = request.user.profile
-            competition_role.save()
-
-        frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
+        except Competition.DoesNotExist:
+            return Response({"detail": "Competition not found."}, status=404)
+        
+        existing_user = User.objects.filter(email=email).first()
+        
+        if existing_user:
+            link, created = JudgeLink.objects.get_or_create(
+                user=existing_user,
+                competition=competition,
+                defaults={
+                    "created_by": request.user,
+                    "expires_at": timezone.now() + timedelta(days=7)
+                }
+            )
+            UserAccount.objects.get_or_create(user=existing_user)
+            CompetitionRole.objects.get_or_create(
+                user=existing_user.profile,
+                competition=competition,
+                defaults={"role": "judge"}
+            )
+            judge_url = f"{settings.FRONTEND_BASE_URL}/judge/login/{link.token}/"
+            link_type = "existing_user"
+        else:
+            existing_link = JudgeLink.objects.filter(
+                invited_email=email,
+                competition_id=competition_id,
+                claimed_at__isnull=True
+            ).first()
+            
+            if existing_link:
+                existing_link.expires_at = timezone.now() + timedelta(days=7)
+                existing_link.save()
+                link = existing_link
+                created = False
+            else:
+                link = JudgeLink.objects.create(
+                    invited_email=email,
+                    invited_name=name,
+                    competition=competition,
+                    expires_at=timezone.now() + timedelta(days=7),
+                    created_by=request.user
+                )
+                created = True
+            
+            judge_url = f"{settings.FRONTEND_BASE_URL}/judge/invite/{link.token}/"
+            link_type = "invitation"
         
         return Response({
-            "judge_link": f"{frontend_url}/judge/login/{link.token}/",
+            "judge_link": judge_url,
+            "email": email,
+            "name": name,
             "expires_at": link.expires_at,
-            "is_used": link.is_used,
             "created": created,
-            "role_assigned": True,
-            "role_created": role_created,
-            "detail": f"Judge link created and judge role assigned to {judge_user_account.full_name}"
+            "type": link_type,
+            "detail": f"{'Invitation' if link_type == 'invitation' else 'Link'} {'created' if created else 'updated'} for {email}"
         })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def ValidateInvitation(request, token):
+    try:
+        link = JudgeLink.objects.get(token=token)
+        
+        if link.expires_at < timezone.now():
+            return Response({"detail": "Invitation has expired."}, status=400)
+        
+        if link.claimed_at:
+            return Response({
+                "detail": "Invitation has already been claimed.",
+                "claimed": True
+            }, status=400)
+        
+        return Response({
+            "valid": True,
+            "competition_id": link.competition.id,
+            "competition_title": link.competition.title,
+            "invited_email": link.invited_email,
+            "invited_name": link.invited_name,
+            "expires_at": link.expires_at,
+            "token": str(link.token)
+        })
+    except JudgeLink.DoesNotExist:
+        return Response({"detail": "Invalid invitation token."}, status=404)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def ClaimJudgeInvitation(request, token):
+    try:
+        link = JudgeLink.objects.get(token=token)
+        
+        if link.expires_at < timezone.now():
+            return Response({"detail": "Invitation expired"}, status=400)
+        
+        if link.claimed_at:
+            return Response({"detail": "Invitation already claimed"}, status=400)
+        
+        if not request.user.is_authenticated:
+            return Response({
+                "authenticated": False,
+                "requires_auth": True,
+                "invitation_valid": True,
+                "competition_title": link.competition.title,
+                "invited_email": link.invited_email,
+                "invited_name": link.invited_name
+            }, status=401)
+        
+        if link.invited_email and request.user.email != link.invited_email:
+            return Response({
+                "detail": f"This invitation is for {link.invited_email}. Please login or register with that email."
+            }, status=403)
+        
+        link.claimed_by = request.user
+        link.claimed_at = timezone.now()
+        link.user = request.user
+        link.is_used = True
+        link.save()
+        
+        user_account, _ = UserAccount.objects.get_or_create(user=request.user)
+        
+        CompetitionRole.objects.get_or_create(
+            user=user_account,
+            competition=link.competition,
+            defaults={"role": "judge"}
+        )
+        
+        return Response({
+            "success": True,
+            "detail": "Invitation claimed successfully",
+            "competition_id": link.competition.id,
+            "redirect_to": f"/judge/dashboard/{link.competition.id}/"
+        })
+        
+    except JudgeLink.DoesNotExist:
+        return Response({"detail": "Invalid invitation"}, status=404)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -316,8 +395,8 @@ def ValidateJudgeToken(request, token):
         return Response({
             "competition_id": link.competition.id,
             "competition_title": link.competition.title,
-            "user_id": link.user.id,
-            "user_email": link.user.email,
+            "user_id": link.user.id if link.user else None,
+            "user_email": link.user.email if link.user else None,
             "token": str(link.token),
             "is_used": link.is_used,
         })
@@ -327,12 +406,10 @@ def ValidateJudgeToken(request, token):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def GetCompetitionJudgeLinks(request, competition_id):
-    """Get all judge links for a specific competition"""
     user_account = getattr(request.user, 'profile', None)
     if not user_account:
         return Response({"detail": "No user profile found."}, status=403)
 
-    # Check if user is admin
     if not user_account.is_admin:
         return Response({"detail": "Only admins can view judge links."}, status=403)
 
@@ -341,35 +418,75 @@ def GetCompetitionJudgeLinks(request, competition_id):
     except Competition.DoesNotExist:
         return Response({"detail": "Competition not found."}, status=404)
 
-    # Get all judge links for this competition
     judge_links = JudgeLink.objects.filter(competition=competition).select_related('user')
     
     frontend_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:5173")
     
     links_data = []
     for link in judge_links:
-        links_data.append({
-            "id": link.id,
-            "user_id": link.user.id,
-            "user_email": link.user.email,
-            "judge_link": f"{frontend_url}/judge/login/{link.token}/",
-            "token": str(link.token),
-            "expires_at": link.expires_at,
-            "is_used": link.is_used,
-            "created_at": link.created_at,
-        })
+        if link.user:
+            links_data.append({
+                "id": link.id,
+                "user_id": link.user.id,
+                "user_email": link.user.email,
+                "judge_link": f"{frontend_url}/judge/login/{link.token}/",
+                "token": str(link.token),
+                "expires_at": link.expires_at,
+                "is_used": link.is_used,
+                "created_at": link.created_at,
+            })
+    
+    return Response(links_data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def GetCompetitionInvitations(request, competition_id):
+    user_account = getattr(request.user, 'profile', None)
+    if not user_account or not user_account.is_admin:
+        return Response({"detail": "Only admins can view invitations."}, status=403)
+    
+    try:
+        competition = Competition.objects.get(id=competition_id)
+    except Competition.DoesNotExist:
+        return Response({"detail": "Competition not found."}, status=404)
+    
+    all_links = JudgeLink.objects.filter(competition=competition)
+    
+    links_data = []
+    for link in all_links:
+        if link.invited_email:
+            links_data.append({
+                "id": link.id,
+                "type": "invitation",
+                "invited_email": link.invited_email,
+                "invited_name": link.invited_name,
+                "judge_link": f"{settings.FRONTEND_BASE_URL}/judge/invite/{link.token}/",
+                "expires_at": link.expires_at,
+                "claimed_at": link.claimed_at,
+                "claimed_by": link.claimed_by.email if link.claimed_by else None,
+                "created_at": link.created_at,
+            })
+        else:
+            links_data.append({
+                "id": link.id,
+                "type": "link",
+                "user_id": link.user.id if link.user else None,
+                "user_email": link.user.email if link.user else None,
+                "judge_link": f"{settings.FRONTEND_BASE_URL}/judge/login/{link.token}/",
+                "expires_at": link.expires_at,
+                "is_used": link.is_used,
+                "created_at": link.created_at,
+            })
     
     return Response(links_data)
 
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def ManageJudgeLink(request, link_id):
-    """Update or delete a judge link"""
     user_account = getattr(request.user, 'profile', None)
     if not user_account:
         return Response({"detail": "No user profile found."}, status=403)
 
-    # Check if user is admin
     if not user_account.is_admin:
         return Response({"detail": "Only admins can manage judge links."}, status=403)
 
@@ -379,7 +496,6 @@ def ManageJudgeLink(request, link_id):
         return Response({"detail": "Judge link not found."}, status=404)
 
     if request.method == 'PATCH':
-        # Update expiration date if provided
         expires_at = request.data.get("expires_at")
         if expires_at:
             try:
@@ -392,8 +508,8 @@ def ManageJudgeLink(request, link_id):
         
         return Response({
             "id": judge_link.id,
-            "user_id": judge_link.user.id,
-            "user_email": judge_link.user.email,
+            "user_id": judge_link.user.id if judge_link.user else None,
+            "user_email": judge_link.user.email if judge_link.user else None,
             "judge_link": f"{frontend_url}/judge/login/{judge_link.token}/",
             "expires_at": judge_link.expires_at,
             "is_used": judge_link.is_used,

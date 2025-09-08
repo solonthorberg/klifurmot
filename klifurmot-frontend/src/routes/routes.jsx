@@ -26,7 +26,7 @@ function JudgeDashboardPageWrapper() {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public routes */}
+      {/** Public routes **/}
       <Route path="/" element={<Home />} />
       <Route path="/competitions" element={<Competitions />} />
       <Route path="/competitions/:id" element={<CompetitionDetails />} />
@@ -36,8 +36,7 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-
-      {/* Protected routes - require authentication */}
+      {/** Protected routes - require authentication **/}
       <Route
         path="/profile"
         element={
@@ -54,9 +53,10 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-      {/* Judge routes - require authentication */}
+      {/** Judge routes - require authentication **/}
       <Route path="/judge/login/:token" element={<JudgeLoginPage />} />
+      <Route path="/judge/invite/:token" element={<JudgeLoginPage />} />{" "}
+      {/* ADD THIS LINE */}
       <Route
         path="/judge/competition/:competitionId/judge-dashboard"
         element={
@@ -65,8 +65,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-      {/* Admin-only routes - require admin privileges */}
+      {/** Admin-only routes - require admin privileges **/}
       <Route
         path="/admin/competition/:competitionId/judge-dashboard"
         element={
@@ -75,8 +74,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-      {/* Control panel routes - handle their own authorization */}
+      {/** Control panel routes - handle their own authorization **/}
       <Route path="/controlpanel" element={<ControlPanel />} />
       <Route
         path="/controlpanel/:competitionId"
@@ -87,8 +85,7 @@ function AppRoutes() {
         element={<CreateCompetition />}
       />
       <Route path="/controlpanel/create" element={<CreateCompetition />} />
-
-      {/* 404 route */}
+      {/** 404 route **/}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

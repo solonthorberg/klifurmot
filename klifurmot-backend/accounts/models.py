@@ -53,13 +53,34 @@ class CompetitionRole(models.Model):
         return f"{self.user} - {self.role} at {self.competition}"
 
 class JudgeLink(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE,related_name='judge_links_as_user')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='judge_links_as_user',
+        null=True,
+        blank=True
+    )
     competition = models.ForeignKey('competitions.Competition', on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='judge_links_created')
     
-    def __str__(self):
-        return f"Judge Link for {self.user} in {self.competition}"
+    invited_email = models.EmailField(null=True, blank=True)
+    invited_name = models.CharField(max_length=255, null=True, blank=True)
+    
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    claimed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='claimed_judge_links'
+    )
+    
+    created_at = models.DateTimeField(default=timezone.now)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='judge_links_created'
+    )
