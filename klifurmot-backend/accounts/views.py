@@ -272,7 +272,6 @@ class SendJudgeInvitationView(APIView):
         except Competition.DoesNotExist:
             return Response({"detail": "Competition not found."}, status=404)
         
-        # Parse expiration date
         try:
             expiration_dt = timezone.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
         except ValueError:
@@ -281,7 +280,6 @@ class SendJudgeInvitationView(APIView):
         existing_user = User.objects.filter(email=email).first()
         
         if existing_user:
-            # Create judge link for existing user
             link, created = JudgeLink.objects.get_or_create(
                 user=existing_user,
                 competition=competition,
@@ -295,10 +293,8 @@ class SendJudgeInvitationView(APIView):
                 link.expires_at = expiration_dt
                 link.save()
             
-            # Ensure user account exists
             UserAccount.objects.get_or_create(user=existing_user)
             
-            # Create judge role
             CompetitionRole.objects.get_or_create(
                 user=existing_user.profile,
                 competition=competition,
@@ -308,7 +304,6 @@ class SendJudgeInvitationView(APIView):
             judge_url = f"{settings.FRONTEND_BASE_URL}/judge/login/{link.token}/"
             link_type = "existing_user"
         else:
-            # Create invitation for new user
             existing_link = JudgeLink.objects.filter(
                 invited_email=email,
                 competition_id=competition_id,
@@ -396,13 +391,17 @@ def ClaimJudgeInvitation(request, token):
         
         if link.invited_email and request.user.email != link.invited_email:
             return Response({
-                "detail": f"Þetta boð er fyrir {link.invited_email}. Vinsamlegast notið rétt netfang."
+                "detail": f"This invitation is for {link.invited_email}. Please login or register with that email."
             }, status=403)
         
         link.claimed_by = request.user
         link.claimed_at = timezone.now()
         link.user = request.user
         link.is_used = True
+        
+        link.invited_email = None
+        link.invited_name = None
+        
         link.save()
         
         user_account, _ = UserAccount.objects.get_or_create(user=request.user)
@@ -422,7 +421,7 @@ def ClaimJudgeInvitation(request, token):
         
     except JudgeLink.DoesNotExist:
         return Response({"detail": "Invalid invitation"}, status=404)
-
+    
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def ValidateJudgeToken(request, token):
@@ -439,7 +438,7 @@ def ValidateJudgeToken(request, token):
             "is_used": link.is_used,
         })
     except JudgeLink.DoesNotExist:
-        return Response({"detail": "Invalid token."}, status=404)
+        return Response({"detail": "Invalid token."}, status=404)    
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -490,7 +489,7 @@ def GetCompetitionInvitations(request, competition_id):
     
     invitation_links = JudgeLink.objects.filter(
         competition=competition,
-        invited_email__isnull=False  # Only invitations
+        invited_email__isnull=False
     )
     
     links_data = []
