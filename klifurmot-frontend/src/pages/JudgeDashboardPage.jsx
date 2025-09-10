@@ -5,14 +5,7 @@ import SelectCategoryAndBoulder from "../components/SelectCategoryAndBoulder";
 import JudgeScoring from "../components/JudgeScoring";
 import api, { setAuthToken } from "../services/api";
 import { useNotification } from "../context/NotificationContext";
-import {
-  Box,
-  Typography,
-  Chip,
-  Alert,
-  CircularProgress,
-  Container,
-} from "@mui/material";
+import { Box, Typography, Chip, Alert, CircularProgress } from "@mui/material";
 
 function JudgeDashboardPage() {
   const { competitionId } = useParams();
@@ -200,25 +193,6 @@ function JudgeDashboardPage() {
       </Box>
 
       <Box sx={{ mb: 4 }}>{renderComponent()}</Box>
-
-      {userRole === "admin" && (
-        <Alert
-          severity="info"
-          sx={{
-            borderRadius: 2,
-            "& .MuiAlert-message": {
-              width: "100%",
-            },
-          }}
-        >
-          <Typography variant="body2">
-            <Box component="span" fontWeight="bold">
-              Keppnisstjóri aðgangur:
-            </Box>{" "}
-            Þú hefur aðgang að dómaraviðmóti sem keppnisstjóri.
-          </Typography>
-        </Alert>
-      )}
     </Box>
   );
 }

@@ -1,7 +1,9 @@
-// src/pages/JudgeLoginPage.jsx
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api, { setAuthToken } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import { useNotification } from "../context/NotificationContext";
+import { GoogleLogin } from "@react-oauth/google";
 import {
   Box,
   TextField,
@@ -11,70 +13,90 @@ import {
   Alert,
   Paper,
   CircularProgress,
-  Container,
   Divider,
   Tabs,
   Tab,
+  Select,
+  MenuItem,
+  InputLabel,
 } from "@mui/material";
+import { MobileDatePicker } from "@mui/x-date-pickers";
 import { Check as CheckIcon } from "@mui/icons-material";
 
 function JudgeLoginPage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [linkInfo, setLinkInfo] = useState(null);
   const [isInvitation, setIsInvitation] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Login form
+  const { login } = useAuth();
+  const { showNotification } = useNotification();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Registration form
-  const [registerData, setRegisterData] = useState({
+  const [formData, setFormData] = useState({
     username: "",
+    full_name: "",
     email: "",
     password: "",
     password2: "",
-    full_name: "",
+    gender: "",
+    date_of_birth: null,
+    nationality: "",
+    height_cm: "",
+    wingspan_cm: "",
   });
 
+  const [countries, setCountries] = useState([]);
+
+  // Initialize page - validate token and check auth
   useEffect(() => {
-    checkToken();
+    initializePage();
   }, [token]);
+
+  // Auto-redirect when both linkInfo and auth are ready
+  useEffect(() => {
+    if (linkInfo && isAuthenticated) {
+      redirectToJudgeDashboard();
+    }
+  }, [linkInfo, isAuthenticated]);
+
+  const initializePage = async () => {
+    try {
+      await checkToken();
+      checkAuth();
+      await fetchCountries();
+    } catch (err) {
+      setError("Ógild eða útrunnin slóð");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const checkToken = async () => {
     try {
-      // First try as invitation
-      try {
-        const inviteRes = await api.get(
-          `/accounts/judge-invitations/validate/${token}/`
-        );
-        setLinkInfo(inviteRes.data);
-        setIsInvitation(true);
-        setRegisterData((prev) => ({
-          ...prev,
-          email: inviteRes.data.invited_email || "",
-          full_name: inviteRes.data.invited_name || "",
-          username: inviteRes.data.invited_email
-            ? inviteRes.data.invited_email.split("@")[0]
-            : "",
-        }));
-        setLoading(false);
-        checkAuth();
-      } catch (inviteErr) {
-        // If not invitation, try as regular link
-        const linkRes = await api.get(`/accounts/judge-links/${token}/`);
-        setLinkInfo(linkRes.data);
-        setIsInvitation(false);
-        setLoading(false);
-        checkAuth();
-      }
-    } catch (err) {
-      setError("Invalid or expired link");
-      setLoading(false);
+      // Try as invitation first
+      const inviteRes = await api.get(
+        `/accounts/judge-invitations/validate/${token}/`
+      );
+      setLinkInfo(inviteRes.data);
+      setIsInvitation(true);
+      setFormData((prev) => ({
+        ...prev,
+        email: inviteRes.data.invited_email || "",
+      }));
+    } catch (inviteErr) {
+      // Try as regular judge link
+      const linkRes = await api.get(`/accounts/judge-links/${token}/`);
+      setLinkInfo(linkRes.data);
+      setIsInvitation(false);
     }
   };
 
@@ -83,140 +105,313 @@ function JudgeLoginPage() {
     if (authToken) {
       setAuthToken(authToken);
       setIsAuthenticated(true);
-      if (linkInfo) {
-        handleAuthenticated();
-      }
     }
   };
 
-  const handleAuthenticated = async () => {
-    if (isInvitation) {
-      // Claim invitation
-      try {
+  const redirectToJudgeDashboard = async () => {
+    try {
+      if (isInvitation) {
+        // Claim the invitation
         const res = await api.post(
           `/accounts/judge-invitations/claim/${token}/`
         );
         if (res.data.success) {
           navigate(
-            res.data.redirect_to ||
-              `/judge/dashboard/${linkInfo.competition_id}`
+            `/judge/competition/${linkInfo.competition_id}/judge-dashboard`
           );
         }
-      } catch (err) {
-        if (err.response?.status === 403) {
-          setError(err.response.data.detail);
-          localStorage.removeItem("token");
-          setAuthToken(null);
-          setIsAuthenticated(false);
+      } else {
+        // Verify user has access to this link
+        const me = await api.get("accounts/me/");
+        if (
+          me.data.user.id === linkInfo.user_id ||
+          me.data.user.email === linkInfo.user_email
+        ) {
+          navigate(
+            `/judge/competition/${linkInfo.competition_id}/judge-dashboard`
+          );
+        } else {
+          throw new Error(
+            "This link is for a different user. Please login with the correct account."
+          );
         }
       }
-    } else {
-      // Regular link - just redirect
-      const me = await api.get("accounts/me/");
-      if (
-        me.data.user.id === linkInfo.user_id ||
-        me.data.user.email === linkInfo.user_email
-      ) {
-        navigate(`/judge/dashboard/${linkInfo.competition_id}`);
-      } else {
-        setError(
-          "This link is for a different user. Please login with the correct account."
-        );
-        localStorage.removeItem("token");
-        setAuthToken(null);
-        setIsAuthenticated(false);
-      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Failed to access judge dashboard"
+      );
+      setIsAuthenticated(false);
+      localStorage.removeItem("token");
+      setAuthToken(null);
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const fetchCountries = async () => {
+    try {
+      const response = await api.get("accounts/countries/");
+      setCountries(response.data);
+      const iceland = response.data.find((c) => c.name_en === "Iceland");
+      if (iceland) {
+        setFormData((prev) => ({
+          ...prev,
+          nationality: iceland.country_code,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to load countries:", err);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (isLoading || !email || !password) return;
+
+    setIsLoading(true);
+    setError("");
 
     try {
-      localStorage.removeItem("token");
-      setAuthToken(null);
-
       const res = await api.post("accounts/login/", { email, password });
-      const authToken = res.data.token;
-      localStorage.setItem("token", authToken);
-      setAuthToken(authToken);
-
+      const { token } = res.data;
+      login(token);
       setIsAuthenticated(true);
-      await handleAuthenticated();
+      // Redirect will happen automatically via useEffect
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
+      const errorMessage =
+        "Innskráning mistókst. Athugaðu netfang og lykilorð.";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (newValue) => {
+    setFormData((prev) => ({
+      ...prev,
+      date_of_birth: newValue,
+    }));
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError(null);
+    setError("");
+    setSuccess("");
 
-    if (registerData.password !== registerData.password2) {
-      setError("Passwords do not match");
+    if (!formData.full_name.trim()) {
+      const errorMessage = "Fullt nafn er nauðsynlegt.";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
+      return;
+    }
+
+    if (formData.password !== formData.password2) {
+      const errorMessage = "Lykilorð passa ekki saman.";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
       return;
     }
 
     try {
-      const res = await api.post("/accounts/register/", registerData);
-      const authToken = res.data.token;
-      localStorage.setItem("token", authToken);
-      setAuthToken(authToken);
+      const submitData = {
+        ...formData,
+        date_of_birth: formData.date_of_birth
+          ? formData.date_of_birth.format("YYYY-MM-DD")
+          : "",
+      };
 
+      const res = await api.post("accounts/register/", submitData);
+      const authToken = res.data.token;
+      login(authToken);
       setIsAuthenticated(true);
-      await handleAuthenticated();
+      setSuccess("Nýskráning tókst!");
+      showNotification("Nýskráning tókst!", "success");
+      // Redirect will happen automatically via useEffect
     } catch (err) {
-      setError(err.response?.data?.detail || "Registration failed");
+      const msg =
+        err.response?.data?.detail ||
+        (typeof err.response?.data === "object"
+          ? "Skráning mistókst. Athugaðu upplýsingarnar þínar."
+          : err.response?.data) ||
+        "Skráning mistókst.";
+      setError(msg);
+      showNotification(msg, "error");
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    const idToken = credentialResponse.credential;
+    setError("");
+    try {
+      const res = await api.post("accounts/google-login/", { token: idToken });
+      const { token } = res.data;
+      login(token);
+      setIsAuthenticated(true);
+      // Redirect will happen automatically via useEffect
+    } catch (err) {
+      const errorMessage = "Google innskráning mistókst";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
+    }
+  };
+
+  const handleGoogleSignup = async (credentialResponse) => {
+    const idToken = credentialResponse.credential;
+    setError("");
+    try {
+      const res = await api.post("accounts/google-login/", { token: idToken });
+      const { token } = res.data;
+      login(token);
+      setIsAuthenticated(true);
+      showNotification("Nýskráning með Google tókst!", "success");
+      // Redirect will happen automatically via useEffect
+    } catch (err) {
+      const errorMessage = "Google nýskráning mistókst";
+      setError(errorMessage);
+      showNotification(errorMessage, "error");
     }
   };
 
   if (loading) {
     return (
-      <Container
-        maxWidth="sm"
-        sx={{ mt: 8, display: "flex", justifyContent: "center" }}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "80vh",
+          padding: 2,
+        }}
       >
-        <CircularProgress />
-      </Container>
+        <Box sx={{ textAlign: "center" }}>
+          <CircularProgress size={48} />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 2 }}>
+            Hleður dómaraviðmót...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
   if (error && !linkInfo) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 8 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "80vh",
+          padding: 2,
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            maxWidth: 600,
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Typography variant="body1" color="text.secondary">
+            Vinsamlegast athugaðu slóðina og reyndu aftur.
+          </Typography>
+        </Paper>
+      </Box>
     );
   }
 
+  // Show processing state when authenticated
+  if (isAuthenticated && linkInfo) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "80vh",
+          padding: 2,
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            maxWidth: 400,
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <CheckIcon sx={{ fontSize: 60, color: "success.main", mb: 2 }} />
+          <Typography variant="h6">Unnið úr beiðni...</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Beint þér á dómaraviðmót...
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
+
+  const maxWidth = isInvitation ? 600 : 400;
+  const minHeight = isInvitation ? "80vh" : "60vh";
+
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom align="center">
-          {isInvitation ? "Judge Invitation" : "Judge Login"}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: minHeight,
+        padding: 2,
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          padding: 4,
+          maxWidth: maxWidth,
+          width: "100%",
+        }}
+      >
+        <Typography variant="h4" component="h1" align="center" gutterBottom>
+          {isInvitation ? "Dómaraboð" : "Dómarainnskráning"}
         </Typography>
 
         {linkInfo && (
           <Alert severity="info" sx={{ mb: 3 }}>
             {isInvitation ? (
               <>
-                You've been invited to judge{" "}
+                Þú hefur verið boðaður sem dómari í{" "}
                 <strong>{linkInfo.competition_title}</strong>
                 {linkInfo.invited_email && (
                   <>
                     {" "}
-                    for email: <strong>{linkInfo.invited_email}</strong>
+                    fyrir netfang: <strong>{linkInfo.invited_email}</strong>
                   </>
                 )}
               </>
             ) : (
               <>
-                Login to judge <strong>{linkInfo.competition_title}</strong>
+                Skráðu þig inn til að dæma{" "}
+                <strong>{linkInfo.competition_title}</strong>
                 <br />
-                Required email: <strong>{linkInfo.user_email}</strong>
+                Nauðsynlegt netfang: <strong>{linkInfo.user_email}</strong>
               </>
             )}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
           </Alert>
         )}
 
@@ -229,185 +424,365 @@ function JudgeLoginPage() {
         {!isAuthenticated ? (
           <Box>
             {isInvitation ? (
-              // For invitations, show tabs for login/register
               <>
                 <Tabs
                   value={activeTab}
                   onChange={(e, v) => setActiveTab(v)}
                   sx={{ mb: 3 }}
+                  centered
                 >
-                  <Tab label="Login" />
-                  <Tab label="Create Account" />
+                  <Tab label="Innskrá" />
+                  <Tab label="Búa til aðgang" />
                 </Tabs>
 
                 {activeTab === 0 ? (
-                  // Login form
-                  <Box component="form" onSubmit={handleLogin}>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      Already have an account? Login to accept the invitation.
-                    </Typography>
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      sx={{ mb: 2 }}
-                      helperText={
-                        linkInfo.invited_email &&
-                        `Must match: ${linkInfo.invited_email}`
-                      }
-                    />
-                    <TextField
-                      fullWidth
-                      label="Password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      sx={{ mb: 3 }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      fullWidth
-                      size="large"
+                  <Box>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "center", mb: 3 }}
                     >
-                      Login & Accept Invitation
-                    </Button>
+                      <GoogleLogin
+                        onSuccess={handleGoogleLogin}
+                        onError={() => {
+                          const errorMessage = "Google login mistókst";
+                          setError(errorMessage);
+                          showNotification(errorMessage, "error");
+                        }}
+                        size="large"
+                        width="100%"
+                      />
+                    </Box>
+
+                    <Divider sx={{ my: 3 }}>
+                      <Typography variant="body2" color="textSecondary">
+                        eða
+                      </Typography>
+                    </Divider>
+
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                    >
+                      <FormControl fullWidth>
+                        <TextField
+                          type="email"
+                          label="Netfang"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          variant="outlined"
+                          fullWidth
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          type="password"
+                          label="Lykilorð"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          variant="outlined"
+                          fullWidth
+                          disabled={isLoading}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleLogin();
+                            }
+                          }}
+                        />
+                      </FormControl>
+
+                      <Button
+                        onClick={handleLogin}
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        disabled={isLoading || !email || !password}
+                        sx={{ mt: 1 }}
+                      >
+                        {isLoading ? "Innskrái..." : "Innskrá og taka við boði"}
+                      </Button>
+                    </Box>
                   </Box>
                 ) : (
-                  // Register form
-                  <Box component="form" onSubmit={handleRegister}>
-                    <Typography variant="body2" sx={{ mb: 2 }}>
-                      Create a new account to accept the invitation.
-                    </Typography>
-                    <TextField
-                      fullWidth
-                      label="Full Name"
-                      value={registerData.full_name}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          full_name: e.target.value,
-                        })
-                      }
-                      required
-                      sx={{ mb: 2 }}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      type="email"
-                      value={registerData.email}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          email: e.target.value,
-                        })
-                      }
-                      required
-                      disabled={!!linkInfo.invited_email}
-                      sx={{ mb: 2 }}
-                      helperText={
-                        linkInfo.invited_email && "Email locked to invitation"
-                      }
-                    />
-                    <TextField
-                      fullWidth
-                      label="Username"
-                      value={registerData.username}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          username: e.target.value,
-                        })
-                      }
-                      required
-                      sx={{ mb: 2 }}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Password"
-                      type="password"
-                      value={registerData.password}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          password: e.target.value,
-                        })
-                      }
-                      required
-                      sx={{ mb: 2 }}
-                      helperText="At least 8 characters"
-                    />
-                    <TextField
-                      fullWidth
-                      label="Confirm Password"
-                      type="password"
-                      value={registerData.password2}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          password2: e.target.value,
-                        })
-                      }
-                      required
-                      sx={{ mb: 3 }}
-                    />
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      fullWidth
-                      size="large"
+                  <Box>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "center", mb: 3 }}
                     >
-                      Create Account & Accept Invitation
-                    </Button>
+                      <GoogleLogin
+                        onSuccess={handleGoogleSignup}
+                        onError={() => {
+                          const errorMessage = "Google nýskráning mistókst";
+                          setError(errorMessage);
+                          showNotification(errorMessage, "error");
+                        }}
+                        size="large"
+                        width="100%"
+                        text="signup_with"
+                      />
+                    </Box>
+
+                    <Divider sx={{ my: 3 }}>
+                      <Typography variant="body2" color="textSecondary">
+                        eða
+                      </Typography>
+                    </Divider>
+
+                    <Box
+                      component="form"
+                      onSubmit={handleRegister}
+                      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                    >
+                      <FormControl fullWidth>
+                        <TextField
+                          label="Notendanafn"
+                          name="username"
+                          value={formData.username}
+                          onChange={handleChange}
+                          required
+                          variant="outlined"
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          label="Fullt nafn"
+                          name="full_name"
+                          value={formData.full_name}
+                          onChange={handleChange}
+                          required
+                          variant="outlined"
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          label="Netfang"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          required
+                          variant="outlined"
+                          disabled={!!linkInfo.invited_email}
+                          helperText={
+                            linkInfo.invited_email && "Netfang fest við boð"
+                          }
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          label="Lykilorð"
+                          name="password"
+                          type="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          required
+                          variant="outlined"
+                          helperText="Að minnsta kosti 8 stafir"
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          label="Staðfesta lykilorð"
+                          name="password2"
+                          type="password"
+                          value={formData.password2}
+                          onChange={handleChange}
+                          required
+                          variant="outlined"
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <InputLabel>Kyn</InputLabel>
+                        <Select
+                          name="gender"
+                          value={formData.gender}
+                          onChange={handleChange}
+                          label="Kyn"
+                        >
+                          <MenuItem value="KK">KK</MenuItem>
+                          <MenuItem value="KVK">KVK</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <MobileDatePicker
+                          label="Fæðingardagur"
+                          value={formData.date_of_birth}
+                          onChange={handleDateChange}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              variant: "outlined",
+                            },
+                          }}
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <InputLabel>Þjóðerni</InputLabel>
+                        <Select
+                          name="nationality"
+                          value={formData.nationality}
+                          onChange={handleChange}
+                          label="Þjóðerni"
+                        >
+                          {countries.map((country) => (
+                            <MenuItem
+                              key={country.country_code}
+                              value={country.country_code}
+                            >
+                              {country.name_en}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          textAlign: "center",
+                          fontWeight: "medium",
+                          color: "text.secondary",
+                        }}
+                      >
+                        Valfrjálsar upplýsingar:
+                      </Typography>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          type="number"
+                          label="Hæð (cm)"
+                          name="height_cm"
+                          value={formData.height_cm}
+                          onChange={handleChange}
+                          variant="outlined"
+                          inputProps={{ min: 0, max: 300 }}
+                        />
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <TextField
+                          type="number"
+                          label="Vænghaf (cm)"
+                          name="wingspan_cm"
+                          value={formData.wingspan_cm}
+                          onChange={handleChange}
+                          variant="outlined"
+                          inputProps={{ min: 0, max: 300 }}
+                        />
+                      </FormControl>
+
+                      <Button
+                        type="submit"
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        sx={{ mt: 3 }}
+                      >
+                        Skrá Aðgang og Taka Við Boði
+                      </Button>
+                    </Box>
                   </Box>
                 )}
               </>
             ) : (
-              // For regular links, just show login
-              <Box component="form" onSubmit={handleLogin}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  sx={{ mb: 2 }}
-                  helperText={`Must be: ${linkInfo.user_email}`}
-                />
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  sx={{ mb: 3 }}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  fullWidth
-                  size="large"
-                >
-                  Login as Judge
-                </Button>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Skráðu þig inn með réttum netfangi til að fá aðgang að
+                  dómaraviðmóti.
+                </Typography>
+
+                <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+                  <GoogleLogin
+                    onSuccess={handleGoogleLogin}
+                    onError={() => {
+                      const errorMessage = "Google login mistókst";
+                      setError(errorMessage);
+                      showNotification(errorMessage, "error");
+                    }}
+                    size="large"
+                    width="100%"
+                  />
+                </Box>
+
+                <Divider sx={{ my: 3 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    eða
+                  </Typography>
+                </Divider>
+
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <FormControl fullWidth>
+                    <TextField
+                      type="email"
+                      label="Netfang"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      variant="outlined"
+                      fullWidth
+                      disabled={isLoading}
+                      helperText={`Verður að vera: ${linkInfo.user_email}`}
+                    />
+                  </FormControl>
+
+                  <FormControl fullWidth>
+                    <TextField
+                      type="password"
+                      label="Lykilorð"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      variant="outlined"
+                      fullWidth
+                      disabled={isLoading}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleLogin();
+                        }
+                      }}
+                    />
+                  </FormControl>
+
+                  <Button
+                    onClick={handleLogin}
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    disabled={isLoading || !email || !password}
+                    sx={{ mt: 1 }}
+                  >
+                    {isLoading ? "Innskrái..." : "Innskrá sem dómari"}
+                  </Button>
+                </Box>
               </Box>
             )}
           </Box>
-        ) : (
-          <Box sx={{ textAlign: "center" }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2 }}>Processing...</Typography>
-          </Box>
+        ) : null}
+
+        {!isAuthenticated && (
+          <Typography
+            variant="body2"
+            align="center"
+            color="textSecondary"
+            sx={{ mt: 3 }}
+          >
+            Vandamál með aðgang?{" "}
+            <Typography
+              component="span"
+              variant="body2"
+              sx={{
+                color: "#1976d2",
+                fontWeight: "bold",
+              }}
+            >
+              Hafðu samband við keppnisstjóra
+            </Typography>
+          </Typography>
         )}
       </Paper>
-    </Container>
+    </Box>
   );
 }
 

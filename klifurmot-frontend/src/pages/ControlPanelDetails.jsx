@@ -937,51 +937,8 @@ function ControlPanelDetails() {
           búinn að skrá niðurstöður fyrir núverandi umferð. Kerfið flytur
           sjálfkrafa bestu keppendur út frá stigagjöf í næstu umferð.
           <br />
-          <strong>Röðun:</strong> Dragðu og slepptu keppendum til að breyta
-          ráslista röðun.
         </Typography>
       </Alert>
-
-      {/* Role-specific access info */}
-      {userRole === "admin" && (
-        <Alert
-          severity="success"
-          sx={{
-            borderRadius: 2,
-            mt: 2,
-            "& .MuiAlert-message": {
-              width: "100%",
-            },
-          }}
-        >
-          <Typography variant="body2">
-            <Box component="span" fontWeight="bold">
-              Keppnisstjóri aðgangur:
-            </Box>{" "}
-            Þú hefur fullan aðgang að stjórnun þessarar keppni.
-          </Typography>
-        </Alert>
-      )}
-
-      {userRole === "judge" && (
-        <Alert
-          severity="info"
-          sx={{
-            borderRadius: 2,
-            mt: 2,
-            "& .MuiAlert-message": {
-              width: "100%",
-            },
-          }}
-        >
-          <Typography variant="body2">
-            <Box component="span" fontWeight="bold">
-              Dómari aðgangur:
-            </Box>{" "}
-            Þú hefur skoðunaraðgang að þessari keppni.
-          </Typography>
-        </Alert>
-      )}
     </Container>
   );
 }
