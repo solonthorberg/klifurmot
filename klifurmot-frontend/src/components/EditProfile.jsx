@@ -20,7 +20,6 @@ import { compressCompetitionImage } from "../utils/ImageCompression";
 
 function EditProfile({ me, onCancel, onSave }) {
   const [formData, setFormData] = useState({
-    email: me.user.email || "",
     full_name: me.profile?.full_name || "",
     gender: me.profile?.gender || "",
     nationality: me.profile?.nationality || "",
@@ -84,7 +83,6 @@ function EditProfile({ me, onCancel, onSave }) {
     e.preventDefault();
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("email", formData.email);
       formDataToSend.append("full_name", formData.full_name);
       formDataToSend.append("gender", formData.gender);
       formDataToSend.append("nationality", formData.nationality);
@@ -202,18 +200,6 @@ function EditProfile({ me, onCancel, onSave }) {
             required
             variant="outlined"
             label="Fullt nafn"
-          />
-        </FormControl>
-
-        <FormControl fullWidth>
-          <TextField
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            variant="outlined"
-            label="Netfang"
           />
         </FormControl>
 

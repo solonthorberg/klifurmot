@@ -10,7 +10,7 @@ class UserAccountSerializer(serializers.ModelSerializer):
     nationality = CountrySerializer()
     class Meta:
         model = UserAccount
-        fields = '__all__'
+        fields = []
 
 class JudgeLinkSerializer(serializers.ModelSerializer):
     class Meta:
