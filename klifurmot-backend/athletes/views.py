@@ -12,7 +12,53 @@ from scoring.models import RoundResult
 from competitions.models import CompetitionRound
 from .utils import calculate_age, get_age_based_category, CATEGORY_LABELS, GENDER_LABELS
 
-
+class PublicClimbers(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        return Climber.objects.select_related(
+            'user_account__nationality'  
+        ).filter(
+            deleted=False,
+            is_simple_athlete=False,
+            user_account__isnull=False,
+            # Athletes who registered for competitions
+            competitionregistration__isnull=False
+        ).distinct()
+    
+    def list(self, request):
+        queryset = self.get_queryset()
+        data = []
+    
+        for climber in queryset:
+            user_account = climber.user_account
+            
+            if not user_account:
+                continue
+                
+            age = None
+            category = None
+            if user_account.date_of_birth:
+                age = calculate_age(user_account.date_of_birth)
+                if age is not None:
+                    category = get_age_based_category(age)
+            
+            data.append({
+                "id": climber.id,
+                "user_account_id": user_account.id,
+                "name": user_account.full_name or "Name not provided",
+                "age": age,
+                "height_cm": user_account.height_cm,
+                "wingspan_cm": user_account.wingspan_cm,
+                "profile_picture": user_account.profile_picture.url if user_account.profile_picture else None,
+                "gender": user_account.gender,
+                "nationality": user_account.nationality.country_code if user_account.nationality else None,
+                "category": category,
+            })
+   
+        
+        return Response(data)
+    
 class GetClimberViewSet(viewsets.ModelViewSet):
     queryset = Climber.objects.all()
     serializer_class = ClimberSerializer
