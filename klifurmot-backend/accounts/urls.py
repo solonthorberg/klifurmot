@@ -12,7 +12,7 @@ router = DefaultRouter()
 router.register(r'countries', CountryViewSet)
 router.register(r'user-accounts', UserAccountViewSet)
 router.register(r'roles', CompetitionRoleViewSet)
-router.register(r'users', UserViewSet)
+router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
     path('me/', Me, name='me'),
@@ -27,7 +27,7 @@ urlpatterns = [
     path('judge-invitations/claim/<uuid:token>/', ClaimJudgeInvitation, name='claim-invitation'),
     path('judge-invitations/competition/<int:competition_id>/', GetCompetitionInvitations, name='get-competition-invitations'),
     
-    path('judge-links/<int:competition_id>/', CreateJudgeLink, name='create-judge-link'),
+    path('judge-links/competition/<int:competition_id>/', CreateJudgeLink, name='create-judge-link'),
     path('judge-links/<uuid:token>/', ValidateJudgeToken, name='validate-judge-link'),
     path('judge-links/competition/<int:competition_id>/', GetCompetitionJudgeLinks, name='get-competition-judge-links'),
     path('judge-links/link/<int:link_id>/', ManageJudgeLink, name='manage-judge-link'),

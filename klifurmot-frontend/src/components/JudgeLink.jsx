@@ -162,7 +162,7 @@ function JudgeLinkSection({ competitionId }) {
           user_id: selectedJudge,
           expires_at: new Date(expirationDate).toISOString(),
         };
-        endpoint = `/accounts/judge-links/${competitionId}/`;
+        endpoint = `/accounts/judge-links/competition/${competitionId}/`;
       }
 
       const res = await api.post(endpoint, payload);

@@ -10,7 +10,12 @@ class IsAuthenticatedOrReadOnly(BasePermission):
             return True
         return request.user and request.user.is_authenticated
 
-
+class IsAdmin(IsAuthenticated):
+    """
+    Allow access only to users marked as admin in their profile.
+    """
+    def has_permission(self, request, view):
+        return getattr(request.user.profile, "is_admin", False)
 class IsAdminOrReadOnly(IsAuthenticated):
     """
     Allow read-only access to any authenticated user,
@@ -53,3 +58,12 @@ class IsCompetitionAdminOrReadOnly(BasePermission):
             ).exists()
         
         return False
+    
+class IsDjangoAdminOrReadOnly(BasePermission):
+    """
+    Allow read-only access to anyone, write access only to Django admin users.
+    """
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user and request.user.is_staff
