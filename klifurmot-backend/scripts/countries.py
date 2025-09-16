@@ -1,4 +1,4 @@
-from accounts.models import Country
+from accounts.countries import Country
 
 countries = [
     {"code": "IS", "name_en": "Iceland", "name_local": "Ísland"},
