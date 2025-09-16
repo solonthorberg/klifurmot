@@ -29,6 +29,6 @@ urlpatterns = [
     
     path('judge-links/competition/<int:competition_id>/', CreateJudgeLink, name='create-judge-link'),
     path('judge-links/<uuid:token>/', ValidateJudgeToken, name='validate-judge-link'),
-    path('judge-links/competition/<int:competition_id>/', GetCompetitionJudgeLinks, name='get-competition-judge-links'),
+    path('judge-links/<int:competition_id>/', GetCompetitionJudgeLinks, name='get-competition-judge-links'),
     path('judge-links/link/<int:link_id>/', ManageJudgeLink, name='manage-judge-link'),
 ]

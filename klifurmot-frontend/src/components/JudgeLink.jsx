@@ -110,7 +110,7 @@ function JudgeLinkSection({ competitionId }) {
     try {
       const [linksRes, invitationsRes] = await Promise.all([
         api
-          .get(`/accounts/judge-links/competition/${competitionId}/`)
+          .get(`/accounts/judge-links/${competitionId}/`)
           .catch(() => ({ data: [] })),
         api
           .get(`/accounts/judge-invitations/competition/${competitionId}/`)
