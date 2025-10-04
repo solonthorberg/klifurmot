@@ -20,7 +20,7 @@ from django.conf import settings
 from django.db import transaction
 from datetime import date
 from django.contrib.auth.password_validation import validate_password
-from .permissions import IsDjangoAdminOrReadOnly, IsAdmin
+from .permissions import IsDjangoAdminOrReadOnly, IsAdmin, IsCompetitionAdmin
 
 from competitions.models import Competition
 
@@ -81,7 +81,7 @@ class UserAccountViewSet(viewsets.ModelViewSet):
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCompetitionAdmin]
     
     def get_queryset(self):
         user = self.request.user

@@ -12,57 +12,96 @@ from scoring.models import RoundResult
 from competitions.models import CompetitionRound
 from .utils import calculate_age, get_age_based_category, CATEGORY_LABELS, GENDER_LABELS
 
+from accounts.permissions import IsCompetitionAdmin
+
 class PublicClimbers(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     
     def get_queryset(self):
         return Climber.objects.select_related(
-            'user_account__nationality'  
+            'user_account__nationality'
         ).filter(
             deleted=False,
             is_simple_athlete=False,
             user_account__isnull=False,
-            # Athletes who registered for competitions
             competitionregistration__isnull=False
         ).distinct()
     
     def list(self, request):
+        """Lightweight list for browsing page"""
         queryset = self.get_queryset()
         data = []
-    
+        
         for climber in queryset:
             user_account = climber.user_account
-            
             if not user_account:
                 continue
-                
-            age = None
-            category = None
-            if user_account.date_of_birth:
-                age = calculate_age(user_account.date_of_birth)
-                if age is not None:
-                    category = get_age_based_category(age)
+            
+            age = calculate_age(user_account.date_of_birth) if user_account.date_of_birth else None
             
             data.append({
                 "id": climber.id,
                 "user_account_id": user_account.id,
                 "name": user_account.full_name or "Name not provided",
                 "age": age,
-                "height_cm": user_account.height_cm,
-                "wingspan_cm": user_account.wingspan_cm,
-                "profile_picture": user_account.profile_picture.url if user_account.profile_picture else None,
-                "gender": user_account.gender,
-                "nationality": user_account.nationality.country_code if user_account.nationality else None,
-                "category": category,
+                "category": get_age_based_category(age) if age else None,
+                "nationality": user_account.nationality.country_code if user_account.nationality else None
             })
-   
+        
+        return Response(data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Detailed data for individual athlete with competition history"""
+        instance = self.get_object()
+        user_account = instance.user_account
+        
+        if not user_account:
+            return Response({"detail": "Athlete not found."}, status=404)
+        
+        age = calculate_age(user_account.date_of_birth) if user_account.date_of_birth else None
+        group_name = get_age_based_category(age) if age else None
+        gender = user_account.gender
+        category = f"{CATEGORY_LABELS.get(group_name, group_name)} {GENDER_LABELS.get(gender, gender)}" if group_name and gender else None
+        
+        registrations = CompetitionRegistration.objects.filter(
+            climber=instance
+        ).select_related("competition", "competition_category__category_group")
+        
+        competitions_result = []
+        for reg in registrations:
+            results = GetResultsForClimbers(reg.competition, instance)
+            competitions_result.append({
+                "id": reg.competition.id,
+                "title": reg.competition.title,
+                "category": f"{CATEGORY_LABELS.get(reg.competition_category.category_group.name, reg.competition_category.category_group.name)} {GENDER_LABELS.get(reg.competition_category.gender, reg.competition_category.gender)}",
+                "start_date": reg.competition.start_date,
+                "results": results
+            })
+        
+        wins = sum(CalculateWins(reg.competition, instance) for reg in registrations)
+        
+        data = {
+            "id": instance.id,
+            "user_account_id": user_account.id,
+            "full_name": user_account.full_name or "Name not provided",
+            "age": age,
+            "height_cm": user_account.height_cm,
+            "wingspan_cm": user_account.wingspan_cm,
+            "profile_picture": user_account.profile_picture.url if user_account.profile_picture else None,
+            "gender": user_account.gender,
+            "nationality": user_account.nationality.name_local if user_account.nationality else None,
+            "category": category,
+            "competitions_count": registrations.count(),
+            "wins_count": wins,
+            "competition_results": competitions_result,
+        }
         
         return Response(data)
     
 class GetClimberViewSet(viewsets.ModelViewSet):
     queryset = Climber.objects.all()
     serializer_class = ClimberSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsCompetitionAdmin]
 
     def _add_age_data(self, climber_data):
         """Add age and age_category data to climber response"""

@@ -90,7 +90,7 @@ function Athletes() {
               >
                 <ListItemButton
                   component={Link}
-                  to={`/athletes/${climber.user_account_id}`}
+                  to={`/athletes/${climber.id}`}
                   sx={{ py: 2 }}
                 >
                   <ListItemText

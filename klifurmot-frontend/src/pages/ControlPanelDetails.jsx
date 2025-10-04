@@ -901,14 +901,19 @@ function ControlPanelDetails() {
                           {athlete.user_account?.full_name ||
                             athlete.simple_name}
                         </Typography>
+
                         <Typography variant="body2" color="text.secondary">
-                          {athlete.age_category || "–"} •
-                          {athlete.user_account?.date_of_birth ||
-                            `${athlete.simple_age} ára`}{" "}
-                          •
-                          {athlete.user_account?.gender ||
-                            athlete.simple_gender}
-                        </Typography>
+                          {athlete.user_account?.age_category || athlete.age_category}
+                          {" • "}
+                          {athlete.user_account?.age
+                            ? `${athlete.user_account.age} ára`
+                            : athlete.simple_age
+                            ? `${athlete.simple_age} ára`
+                            : "Aldur óþekktur"}
+                          {" • "}
+                          {athlete.user_account?.gender || athlete.simple_gender}
+                          </Typography>
+
                       </Box>
                       <Chip label="Velja" color="primary" size="small" />
                     </ListItemButton>
