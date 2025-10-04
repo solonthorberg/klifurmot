@@ -36,4 +36,4 @@ def get_age_based_category(age):
     elif age <= 21:
         return "U21"
     else:
-        return "Opinn"
+        return "Opinn Flokkur"

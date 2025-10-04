@@ -69,11 +69,6 @@ function ViewProfile({ me, onEdit }) {
         </FormControl>
 
         <FormControl fullWidth>
-          <label>Netfang</label>
-          <DisplayField>{me.user.email}</DisplayField>
-        </FormControl>
-
-        <FormControl fullWidth>
           <label>Fæðingardagur</label>
           <DisplayField>{formatDate(me.profile?.date_of_birth)}</DisplayField>
         </FormControl>

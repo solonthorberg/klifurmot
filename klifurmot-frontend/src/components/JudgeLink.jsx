@@ -110,7 +110,7 @@ function JudgeLinkSection({ competitionId }) {
     try {
       const [linksRes, invitationsRes] = await Promise.all([
         api
-          .get(`/accounts/judge-links/competition/${competitionId}/`)
+          .get(`/accounts/judge-links/${competitionId}/`)
           .catch(() => ({ data: [] })),
         api
           .get(`/accounts/judge-invitations/competition/${competitionId}/`)
@@ -162,7 +162,7 @@ function JudgeLinkSection({ competitionId }) {
           user_id: selectedJudge,
           expires_at: new Date(expirationDate).toISOString(),
         };
-        endpoint = `/accounts/judge-links/${competitionId}/`;
+        endpoint = `/accounts/judge-links/competition/${competitionId}/`;
       }
 
       const res = await api.post(endpoint, payload);

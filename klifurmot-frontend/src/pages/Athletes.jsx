@@ -20,10 +20,8 @@ function Athletes() {
 
   const fetchAthletes = async () => {
     try {
-      const response = await api.get("athletes/climbers");
-      // Only keep athletes with a user_account
-      const filtered = response.data.filter((climber) => climber.user_account);
-      setAthletes(filtered);
+      const response = await api.get("athletes/public-climbers/");
+      setAthletes(response.data);
     } catch (error) {
       console.error("Error fetching athletes:", error);
     } finally {
@@ -35,9 +33,8 @@ function Athletes() {
     fetchAthletes();
   }, []);
 
-  // Filter by search query
   const filteredAthletes = athletes.filter((climber) => {
-    const fullName = climber.user_account.full_name || "";
+    const fullName = climber.name || "";
     return fullName.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -85,9 +82,6 @@ function Athletes() {
       ) : (
         <List sx={{ bgcolor: "background.paper" }}>
           {filteredAthletes.map((climber) => {
-            const { user_account } = climber;
-            const nationality = user_account.nationality?.country_code || "";
-
             return (
               <ListItem
                 key={climber.id}
@@ -96,21 +90,21 @@ function Athletes() {
               >
                 <ListItemButton
                   component={Link}
-                  to={`/athletes/${user_account.id}`}
+                  to={`/athletes/${climber.id}`}
                   sx={{ py: 2 }}
                 >
                   <ListItemText
                     primary={
                       <Typography variant="h6">
-                        {user_account.full_name || "Nafn vantar"}
+                        {climber.name || "Name not provided"}
                       </Typography>
                     }
                     secondary={
                       <Typography variant="body2" color="textSecondary">
-                        {nationality} •{" "}
-                        {user_account.age && user_account.age > 0
-                          ? `${user_account.age} ára`
-                          : "Aldur óþekktur"}
+                        {climber.nationality || "Unknown"} •{" "}
+                        {climber.age && climber.age > 0
+                          ? `${climber.age} ára`
+                          : climber.category || "Aldur óþekktur"}
                       </Typography>
                     }
                   />

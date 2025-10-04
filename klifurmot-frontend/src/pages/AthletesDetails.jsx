@@ -25,7 +25,7 @@ function AthletesDetails() {
   useEffect(() => {
     const fetchAthlete = async () => {
       try {
-        const res = await api.get(`/athletes/${id}/`);
+        const res = await api.get(`/athletes/public-climbers/${id}/`);
         setAthlete(res.data);
         console.log(res);
       } catch (err) {
