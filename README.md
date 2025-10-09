@@ -26,11 +26,11 @@ Uppsetning:
    Í rótinni þarf að keyra python manage.py makemigrations og síðan python manage.py migrate
 
 5. Keyra verkefnið
-   daphne -p 8000 klifurmot.asgi:application
+   daphne -p 8000 klifurmot.asgi:application 
 
-6. Install Vite
-   cd klifurmot-frontend
-   npm install
+6. Install Vite 
+   cd klifurmot-frontend 
+  npm install
    npm run dev
 
 7. Búa til superuser

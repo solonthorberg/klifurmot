@@ -21,13 +21,15 @@ from django.db import transaction
 from datetime import date
 from django.contrib.auth.password_validation import validate_password
 from .permissions import IsDjangoAdminOrReadOnly, IsAdmin, IsCompetitionAdmin
+from core.utils import success_response, error_response, validation_error_response
+from . import services
 
 from competitions.models import Competition
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
 
 from .serializers import (
-    CountrySerializer, UserAccountSerializer, CompetitionRoleSerializer, UserSerializer
+    RegisterSerializer, LoginSerializer, CountrySerializer, UserAccountSerializer, UserSerializer, CompetitionRoleSerializer, CompetitionRole
 )
 
 logger = logging.getLogger(__name__)
@@ -322,48 +324,47 @@ def Me(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def Login(request):
+def login(request):
+    """Login a user account"""
+    
+    serializer = LoginSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        return validation_error_response(serializer.errors)
+
     try:
-        data = request.data
-        email = data.get("email", "").strip().lower()
-        password = data.get("password", "")
-        
-        if not email or not password:
-            return Response({"detail": "Missing credentials"}, status=400)
-           
-        if len(email) > 254 or len(password) > 128:
-            return Response({"detail": "Invalid credentials"}, status=401)
-       
-        try:
-            validate_email(email)
-        except ValidationError:
-            return Response({"detail": "Invalid credentials"}, status=401)
-       
-        start_time = time.time()
-        
-        user = None
-        try:
-            user_obj = User.objects.get(email__iexact=email)
+        result = services.login(**serializer.validated_data)
+
+        return success_response(
+            data={
+                'token': result['token'],
+                'user': {
+                    'id': result['user'].id,
+                    'username': result['user'].username,
+                    'email': result['user'].email,
+                    'full_name': result['user_account'].full_name,
+                }
+            },
+            message='Login successful',
+            status_code=status.HTTP_200_OK
             
-            user = authenticate(request, username=user_obj.username, password=password)
-            
-        except User.DoesNotExist:
-            authenticate(request, username="nonexistent_user", password=password)
+        )
+    except ValueError as e:
+        return error_response(
+            code='Invalid_credentials',
+            message='str(e)',
+            status_code=status.HTTP_401_UNAUTHORIZED
+        )
         
-        elapsed = time.time() - start_time
-        min_time = 0.5
-        if elapsed < min_time:
-            time.sleep(min_time - elapsed)
-        
-        if user is not None and user.is_active:
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response(SerializeUserResponse(user, token))
-        
-        return Response({"detail": "Invalid credentials"}, status=401)
-       
     except Exception as e:
-        logger.error(f"Login error: {str(e)}")
-        return Response({"detail": "An error occurred during login"}, status=500)
+        logger.error(f'Unexpected error during login: {str(e)}')
+        return error_response(
+            code="Login_failed",
+            message="Login failed due to server error",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 
 def generate_unique_username(email, max_length=150):
     """Generate a unique username, handling collisions"""
@@ -456,116 +457,52 @@ def GoogleLogin(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def Register(request):
+def register(request):
+    """Register a new user account"""
+    serializer = RegisterSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return validation_error_response(serializer.errors)
+
     try:
-        data = request.data
-        username = data.get("username", "").strip()
-        email = data.get("email", "").strip().lower()
-        password = data.get("password", "")
-        password2 = data.get("password2", "")
-        full_name = data.get("full_name", "").strip()
+        result = services.register(**serializer.validated_data)
         
-        if not all([username, email, password, password2, full_name]):
-            return Response({"detail": "Missing required fields"}, status=400)
-        
-        if len(username) > 150:
-            return Response({"detail": "Username too long"}, status=400)
-        if len(full_name) > 100:
-            return Response({"detail": "Full name too long"}, status=400)
-        if len(email) > 254:
-            return Response({"detail": "Email too long"}, status=400)
-        
-        if password != password2:
-            return Response({"detail": "Passwords do not match"}, status=400)
-            
-        try:
-            validate_password(password)
-        except ValidationError as e:
-            return Response({"detail": e.messages[0]}, status=400)
-        
-        try:
-            validate_email(email)
-        except ValidationError:
-            return Response({"detail": "Invalid email address"}, status=400)
-        
-        if User.objects.filter(username__iexact=username).exists():
-            return Response({"detail": "Username already exists"}, status=400)
-        if User.objects.filter(email__iexact=email).exists():
-            return Response({"detail": "Email already exists"}, status=400)
-        
-        gender = data.get('gender')
-        if gender and gender not in ['KK', 'KVK']:
-            return Response({"detail": "Invalid gender value"}, status=400)
-        
-        height_cm = data.get('height_cm')
-        wingspan_cm = data.get('wingspan_cm')
-        
-        if height_cm:
-            try:
-                height_val = int(height_cm)
-                if height_val < 50 or height_val > 300:
-                    return Response({"detail": "Height must be between 50-300 cm"}, status=400)
-            except (ValueError, TypeError):
-                return Response({"detail": "Invalid height value"}, status=400)
-        
-        if wingspan_cm:
-            try:
-                wingspan_val = int(wingspan_cm)
-                if wingspan_val < 50 or wingspan_val > 400:
-                    return Response({"detail": "Wingspan must be between 50-400 cm"}, status=400)
-            except (ValueError, TypeError):
-                return Response({"detail": "Invalid wingspan value"}, status=400)
-        
-        date_of_birth = None
-        if data.get('date_of_birth'):
-            try:
-                date_of_birth = parse_date(data.get('date_of_birth'))
-                if not date_of_birth:
-                    raise ValueError("Invalid date format")
-                if date_of_birth > date.today():
-                    return Response({"detail": "Date of birth cannot be in future"}, status=400)
-            except (ValueError, TypeError):
-                return Response({"detail": "Invalid date format. Use YYYY-MM-DD"}, status=400)
-            
-        nationality_obj = None
-        if data.get('nationality'):
-            try:
-                nationality_obj = Country.objects.get(country_code=data.get('nationality'))
-            except Country.DoesNotExist:
-                return Response({"detail": "Invalid nationality"}, status=400)
-        
-        with transaction.atomic():
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                is_active=True
-            )
-            
-            profile, _ = UserAccount.objects.get_or_create(
-                user=user,
-                defaults={
-                    'full_name': full_name,
-                    'gender': gender,
-                    'date_of_birth': date_of_birth,
-                    'nationality': nationality_obj,
-                    'height_cm': int(height_cm) if height_cm else None,
-                    'wingspan_cm': int(wingspan_cm) if wingspan_cm else None,
+        return success_response(
+            data={
+                'token': result['token'],
+                'user': {
+                    'id': result['user'].id,
+                    'username': result['user'].username,
+                    'email': result['user'].email,
+                    'full_name': result['user_account'].full_name,
                 }
-            )
-            
-            token, _ = Token.objects.get_or_create(user=user)
-            
-        logger.info(f"New user registered: {username} ({email})")
-        
-        return Response(SerializeUserResponse(user, token), status=status.HTTP_201_CREATED)
-        
-    except IntegrityError as e:
-        logger.error(f"Database error during registration: {str(e)}")
-        return Response({"detail": "Registration failed"}, status=500)
+            },
+            message="User registered successfully",
+            status_code=status.HTTP_201_CREATED
+        )        
+    except IntegrityError:
+        logger.error('IntegrityError during registration')
+        return error_response(
+            code="Duplicate_user",
+            message="Username or email already exists",
+            status_code=HTTP_409_CONFLICT
+        )
+    
+    except Country.DoesNotExist:
+        logger.error('Country not found during registration')
+        return error_response(
+            code="Invalid_nationality",
+            message="Invalid nationality code",
+            status_code=HTTP_400_BAD_REQUEST
+        )
+    
     except Exception as e:
-        logger.error(f"Unexpected error during registration: {str(e)}")
-        return Response({"detail": "Registration failed"}, status=500)
+        logger.error(f'Unexpected error during registration: {str(e)}')
+        return error_response(
+            code="Registration_failed",
+            message="Registration failed due to server error",
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
