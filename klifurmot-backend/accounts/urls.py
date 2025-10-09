@@ -1,8 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
+    register, login,
     CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet,
-    Me, Login, GoogleLogin, Register, Logout, UserViewSet,
+    Me, GoogleLogin, Logout, UserViewSet,
     SendJudgeInvitationView, ValidateInvitation, ClaimJudgeInvitation,
     ValidateJudgeToken, GetCompetitionJudgeLinks, ManageJudgeLink,
     GetCompetitionInvitations, CreateJudgeLink,
@@ -17,9 +18,9 @@ router.register(r'users', UserViewSet, basename='user')
 urlpatterns = [
     path('me/', Me, name='me'),
     path('', include(router.urls)),
-    path('login/', Login, name='login'),
+    path('login/', login, name='login'),
     path("google-login/", GoogleLogin, name="google-login"),
-    path('register/', Register, name='register'),
+    path('register/', register, name='register'),
     path('logout/', Logout, name='logout'),
     
     path('judge-invitations/<int:competition_id>/', SendJudgeInvitationView.as_view(), name='send-judge-invitation'),
