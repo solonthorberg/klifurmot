@@ -1,35 +1,27 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    register, login,
-    CountryViewSet, UserAccountViewSet, CompetitionRoleViewSet,
-    Me, GoogleLogin, Logout, UserViewSet,
-    SendJudgeInvitationView, ValidateInvitation, ClaimJudgeInvitation,
-    ValidateJudgeToken, GetCompetitionJudgeLinks, ManageJudgeLink,
-    GetCompetitionInvitations, CreateJudgeLink,
-)
+from . import views
 
 router = DefaultRouter()
-router.register(r'countries', CountryViewSet)
-router.register(r'user-accounts', UserAccountViewSet)
-router.register(r'roles', CompetitionRoleViewSet)
-router.register(r'users', UserViewSet, basename='user')
+router.register(r'countries', views.CountryViewSet)
+router.register(r'user-accounts', views.UserAccountViewSet)
+router.register(r'roles', views.CompetitionRoleViewSet)
 
 urlpatterns = [
-    path('me/', Me, name='me'),
+    path('me/', views.me, name='me'),
     path('', include(router.urls)),
-    path('login/', login, name='login'),
-    path("google-login/", GoogleLogin, name="google-login"),
-    path('register/', register, name='register'),
-    path('logout/', Logout, name='logout'),
+    path('auth/login/', views.login, name='login'),
+    path('auth/google-login/', views.google_login , name="google-login"),
+    path('auth/register/', views.register, name='register'),
+    path('auth/logout/', views.logout, name='logout'),
     
-    path('judge-invitations/<int:competition_id>/', SendJudgeInvitationView.as_view(), name='send-judge-invitation'),
-    path('judge-invitations/validate/<uuid:token>/', ValidateInvitation, name='validate-invitation'),
-    path('judge-invitations/claim/<uuid:token>/', ClaimJudgeInvitation, name='claim-invitation'),
-    path('judge-invitations/competition/<int:competition_id>/', GetCompetitionInvitations, name='get-competition-invitations'),
+    path('judge-invitations/<int:competition_id>/', views.SendJudgeInvitationView.as_view(), name='send-judge-invitation'),
+    path('judge-invitations/validate/<uuid:token>/', views.ValidateInvitation, name='validate-invitation'),
+    path('judge-invitations/claim/<uuid:token>/', views.ClaimJudgeInvitation, name='claim-invitation'),
+    path('judge-invitations/competition/<int:competition_id>/', views.GetCompetitionInvitations, name='get-competition-invitations'),
     
-    path('judge-links/competition/<int:competition_id>/', CreateJudgeLink, name='create-judge-link'),
-    path('judge-links/<uuid:token>/', ValidateJudgeToken, name='validate-judge-link'),
-    path('judge-links/<int:competition_id>/', GetCompetitionJudgeLinks, name='get-competition-judge-links'),
-    path('judge-links/link/<int:link_id>/', ManageJudgeLink, name='manage-judge-link'),
+    path('judge-links/competition/<int:competition_id>/', views.CreateJudgeLink, name='create-judge-link'),
+    path('judge-links/<uuid:token>/', views.ValidateJudgeToken, name='validate-judge-link'),
+    path('judge-links/<int:competition_id>/', views.GetCompetitionJudgeLinks, name='get-competition-judge-links'),
+    path('judge-links/link/<int:link_id>/', views.ManageJudgeLink, name='manage-judge-link'),
 ]

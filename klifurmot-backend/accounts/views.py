@@ -3,11 +3,13 @@ import re
 import time
 from django.db import IntegrityError
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate, get_user_model
 from django.core.validators import validate_email
@@ -22,15 +24,14 @@ from datetime import date
 from django.contrib.auth.password_validation import validate_password
 from .permissions import IsDjangoAdminOrReadOnly, IsAdmin, IsCompetitionAdmin
 from core.utils import success_response, error_response, validation_error_response
+
 from . import services
+from . import serializers
 
 from competitions.models import Competition
 
 from .models import Country, UserAccount, CompetitionRole, JudgeLink
 
-from .serializers import (
-    RegisterSerializer, LoginSerializer, CountrySerializer, UserAccountSerializer, UserSerializer, CompetitionRoleSerializer, CompetitionRole
-)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -67,12 +68,12 @@ def SerializeUserResponse(user, token=None):
 
 class CountryViewSet(viewsets.ModelViewSet):
     queryset = Country.objects.all()
-    serializer_class = CountrySerializer
+    serializer_class = serializers.CountrySerializer
     permission_classes = [IsDjangoAdminOrReadOnly]
 
 class UserAccountViewSet(viewsets.ModelViewSet):
     queryset = UserAccount.objects.all()
-    serializer_class = UserAccountSerializer
+    serializer_class = serializers.UserAccountSerializer
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -81,19 +82,10 @@ class UserAccountViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAdminUser]
         return [permission() for permission in permission_classes]
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = UserSerializer
-    permission_classes = [IsCompetitionAdmin]
-    
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_staff:
-            return User.objects.all()
-        return User.objects.filter(id=user.id)
 
 class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CompetitionRole.objects.all()
-    serializer_class = CompetitionRoleSerializer
+    serializer_class = serializers.CompetitionRoleSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -113,221 +105,104 @@ class CustomAuthToken(ObtainAuthToken):
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
-def Me(request):
-    user = request.user
+def me(request):
+    """Get or update current user profile"""
     
     if request.method == 'GET':
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response(SerializeUserResponse(user, token))
+        try:
+            result = services.get_profile(user=request.user)
+            
+            return success_response(
+                data={
+                    'token': result['token'],
+                    'user': {
+                        'id': result['user'].id,
+                        'username': result['user'].username,
+                        'email': result['user'].email,
+                    },
+                    'profile': serializers.UserProfileResponseSerializer(result['user_account']).data
+                },
+                message='Profile retrieved successfully'
+            )
+        
+        except ValueError as e:
+            return error_response(
+                code='Profile_not_found',
+                message=str(e),
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        
+        except Exception as e:
+            logger.error(f'Unexpected error retrieving profile: {str(e)}')
+            return error_response(
+                code='Server_error',
+                message='Failed to retrieve profile',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
-    try:
-        with transaction.atomic():
-            data = request.data
-            profile, created = UserAccount.objects.get_or_create(user=user)
-            
-            email = data.get('email')
-            if email and email != user.email:
-                if len(email) > 255:
-                    return Response(
-                        {'error': 'Email address is too long'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+    elif request.method == 'PATCH':
+        serializer = serializers.UpdateProfileSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return validation_error_response(serializer.errors)
+        
+        profile_picture = None
+        if 'profile_picture' in request.data:
+            if 'profile_picture' in request.FILES:
+                uploaded_file = request.FILES['profile_picture']
                 try:
-                    validate_email(email)
-                    if User.objects.filter(email=email).exclude(id=user.id).exists():
-                        return Response(
-                            {'error': 'Email already exists'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    user.email = email
-                except ValidationError:
-                    return Response(
-                        {'error': 'Invalid email format'}, 
-                        status=status.HTTP_400_BAD_REQUEST
+                    validate_profile_picture(uploaded_file)
+                    profile_picture = uploaded_file
+                except serializers.ValidationError as e:
+                    return error_response(
+                        code='Invalid_file',
+                        message=str(e),
+                        status_code=status.HTTP_400_BAD_REQUEST
                     )
+            elif request.data.get('profile_picture') == '':
+                profile_picture = ''
+        
+        try:
+            result = services.update_profile(
+                user=request.user,
+                profile_picture=profile_picture,
+                **serializer.validated_data
+            )
             
-            full_name = data.get('full_name')
-            if full_name is not None:
-                full_name_stripped = full_name.strip()
-                if not full_name_stripped:
-                    return Response(
-                        {'error': 'Full name cannot be empty'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                if len(full_name_stripped) > 100:
-                    return Response(
-                        {'error': 'Full name cannot exceed 100 characters'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                if any(ord(char) < 32 for char in full_name_stripped if char not in ['\n', '\t']):
-                    return Response(
-                        {'error': 'Full name contains invalid characters'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                profile.full_name = full_name_stripped
-            
-            gender = data.get('gender')
-            if gender is not None:
-                if gender not in ['KK', 'KVK']:
-                    return Response(
-                        {'error': 'Invalid gender value'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                profile.gender = gender
-            
-            dob = data.get('date_of_birth')
-            if dob:
-                try:
-                    parsed_date = parse_date(dob)
-                    if not parsed_date:
-                        raise ValueError("Invalid date format")
-                    if parsed_date > date.today():
-                        return Response(
-                            {'error': 'Date of birth cannot be in the future'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    min_date = date.today().replace(year=date.today().year - 100)
-                    if parsed_date < min_date:
-                        return Response(
-                            {'error': 'Date of birth is too far in the past'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    profile.date_of_birth = parsed_date
-                except (ValueError, TypeError):
-                    return Response(
-                        {'error': 'Invalid date format. Use YYYY-MM-DD'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-            
-            nationality = data.get('nationality')
-            if nationality:
-                if len(nationality) > 10:
-                    return Response(
-                        {'error': 'Invalid nationality code'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                try:
-                    country = Country.objects.get(country_code=nationality)
-                    profile.nationality = country
-                except Country.DoesNotExist:
-                    return Response(
-                        {'error': 'Invalid nationality'}, 
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-            
-            height_cm = data.get('height_cm')
-            if height_cm is not None:
-                if height_cm == '' or height_cm is None:
-                    profile.height_cm = None
-                else:
-                    try:
-                        height_val = int(float(str(height_cm)))
-                        if height_val < 50 or height_val > 300:
-                            return Response(
-                                {'error': 'Height must be between 50-300 cm'}, 
-                                status=status.HTTP_400_BAD_REQUEST
-                            )
-                        profile.height_cm = height_val
-                    except (ValueError, TypeError, OverflowError):
-                        return Response(
-                            {'error': 'Height must be a valid number'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-            
-            wingspan_cm = data.get('wingspan_cm')
-            if wingspan_cm is not None:
-                if wingspan_cm == '' or wingspan_cm is None:
-                    profile.wingspan_cm = None
-                else:
-                    try:
-                        wingspan_val = int(float(str(wingspan_cm)))
-                        if wingspan_val < 50 or wingspan_val > 400:
-                            return Response(
-                                {'error': 'Wingspan must be between 50-400 cm'}, 
-                                status=status.HTTP_400_BAD_REQUEST
-                            )
-                        profile.wingspan_cm = wingspan_val
-                    except (ValueError, TypeError, OverflowError):
-                        return Response(
-                            {'error': 'Wingspan must be a valid number'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-            
-            if 'profile_picture' in request.data:
-                if 'profile_picture' in request.FILES:
-                    uploaded_file = request.FILES['profile_picture']
-                    
-                    if uploaded_file.size > 5 * 1024 * 1024:
-                        return Response(
-                            {'error': 'Image size cannot exceed 5MB'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    
-                    if not uploaded_file.content_type.startswith('image/'):
-                        return Response(
-                            {'error': 'Only image files are allowed'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    
-                    allowed_extensions = ['.jpg', '.jpeg', '.png', '.webp']
-                    file_extension = uploaded_file.name.lower().split('.')[-1] if '.' in uploaded_file.name else ''
-                    if f'.{file_extension}' not in allowed_extensions:
-                        return Response(
-                            {'error': 'Allowed file types: JPG, PNG, GIF, WebP'}, 
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
-                    
-                    if profile.profile_picture:
-                        try:
-                            profile.profile_picture.delete(save=False)
-                        except Exception as e:
-                            logger.warning(f"Failed to delete old profile picture: {str(e)}")
-                    
-                    profile.profile_picture = uploaded_file
-                    
-                elif request.data.get('profile_picture') == '':
-                    if profile.profile_picture:
-                        try:
-                            profile.profile_picture.delete(save=False)
-                            profile.profile_picture = None
-                        except Exception as e:
-                            logger.warning(f"Failed to delete profile picture: {str(e)}")
-            
-            profile.save()
-            user.save()
-            
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({
-                'success': True,
-                'message': 'Profile updated successfully',
-                'data': SerializeUserResponse(user, token)
-            })
-            
-    except ValidationError as e:
-        logger.warning(f"Validation error in profile update: {str(e)}")
-        return Response(
-            {'error': 'Please check your input and try again'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except IntegrityError as e:
-        logger.error(f"Database integrity error in profile update: {str(e)}")
-        return Response(
-            {'error': 'Unable to save profile. Please check your data and try again'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error in profile update: {str(e)}", exc_info=True)
-        return Response(
-            {'error': 'An error occurred while updating profile'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+            return success_response(
+                data={
+                    'token': result['token'],
+                    'user': {
+                        'id': result['user'].id,
+                        'username': result['user'].username,
+                        'email': result['user'].email,
+                    },
+                    'profile': serializers.UserProfileResponseSerializer(result['user_account']).data
+                },
+                message='Profile updated successfully'
+            )
+        
+        except Country.DoesNotExist:
+            return error_response(
+                code='Invalid_nationality',
+                message='Invalid nationality code',
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        
+        except Exception as e:
+            logger.error(f'Unexpected error updating profile: {str(e)}')
+            return error_response(
+                code='Server_error',
+                message='Failed to update profile',
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
     """Login a user account"""
     
-    serializer = LoginSerializer(data=request.data)
+    serializer = serializers.LoginSerializer(data=request.data)
 
     if not serializer.is_valid():
         return validation_error_response(serializer.errors)
@@ -352,7 +227,7 @@ def login(request):
     except ValueError as e:
         return error_response(
             code='Invalid_credentials',
-            message='str(e)',
+            message=str(e),
             status_code=status.HTTP_401_UNAUTHORIZED
         )
         
@@ -365,101 +240,55 @@ def login(request):
         )
 
 
-
-def generate_unique_username(email, max_length=150):
-    """Generate a unique username, handling collisions"""
-    base_username = email.split("@")[0]
-    
-    base_username = re.sub(r'[^a-zA-Z0-9_.-]', '', base_username)[:30]
-    
-    if not base_username:
-        base_username = "user"
-    
-    if not User.objects.filter(username=base_username).exists():
-        return base_username
-    
-    counter = 1
-    while counter < 1000:
-        candidate = f"{base_username}{counter}"
-        if len(candidate) <= max_length and not User.objects.filter(username=candidate).exists():
-            return candidate
-        counter += 1
-    
-    import time
-    timestamp = str(int(time.time()))[-6:]
-    return f"{base_username[:20]}_{timestamp}"
-
-@api_view(["POST"])
+@api_view(['POST'])
 @permission_classes([AllowAny])
-def GoogleLogin(request):
-    token_from_client = request.data.get("token")
-    if not token_from_client:
-        return Response({"detail": "Missing token"}, status=400)
-   
+def google_login(request):
+    """Login or register user via Google OAuth"""
+    
+    serializer = serializers.GoogleLoginSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return validation_error_response(serializer.errors)
+    
     try:
-        idinfo = id_token.verify_oauth2_token(
-            token_from_client,
-            requests.Request(),
-            settings.GOOGLE_CLIENT_ID,
-            clock_skew_in_seconds=30
+        result = services.google_login(
+            google_token=serializer.validated_data['token']
         )
-       
-        email = idinfo["email"].lower()
-        full_name = idinfo.get("name", "")
-        google_id = idinfo.get("sub")
-       
-        name_parts = full_name.strip().split() if full_name else []
-        first_name = name_parts[0] if name_parts else ""
-        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
-       
-        with transaction.atomic():
-            try:
-                user = User.objects.get(email__iexact=email)
-                created = False
-            except User.DoesNotExist:
-                base_username = email.split("@")[0][:30]
-                username = base_username
-               
-                counter = 1
-                while User.objects.filter(username=username).exists():
-                    username = f"{base_username}{counter}"
-                    counter += 1
-               
-                user = User.objects.create(
-                    email=email,
-                    username=username,
-                    first_name=first_name,
-                    last_name=last_name,
-                )
-                created = True
-           
-            from .models import UserAccount
-            profile, profile_created = UserAccount.objects.get_or_create(
-                user=user,
-                defaults={
-                    "full_name": full_name,
-                    "google_id": google_id,
+        
+        return success_response(
+            data={
+                'token': result['token'],
+                'user': {
+                    'id': result['user'].id,
+                    'username': result['user'].username,
+                    'email': result['user'].email,
+                    'full_name': result['user_account'].full_name,
                 }
-            )
-           
-            if not profile_created:
-                if not profile.full_name and full_name:
-                    profile.full_name = full_name
-                if not profile.google_id and google_id:
-                    profile.google_id = google_id
-                profile.save()
-       
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response(SerializeUserResponse(user, token))
-       
+            },
+            message='Google login successful',
+            status_code=status.HTTP_200_OK
+        )
+    
+    except ValueError as e:
+        return error_response(
+            code='Invalid_token',
+            message=str(e),
+            status_code=status.HTTP_401_UNAUTHORIZED
+        )
+    
     except Exception as e:
-        return Response({"detail": "Login failed"}, status=500)
+        logger.error(f'Unexpected error during Google login: {str(e)}')
+        return error_response(
+            code='Login_failed',
+            message='Google login failed',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
     """Register a new user account"""
-    serializer = RegisterSerializer(data=request.data)
+    serializer = serializers.RegisterSerializer(data=request.data)
     
     if not serializer.is_valid():
         return validation_error_response(serializer.errors)
@@ -485,7 +314,7 @@ def register(request):
         return error_response(
             code="Duplicate_user",
             message="Username or email already exists",
-            status_code=HTTP_409_CONFLICT
+            status_code=status.HTTP_409_CONFLICT
         )
     
     except Country.DoesNotExist:
@@ -493,7 +322,7 @@ def register(request):
         return error_response(
             code="Invalid_nationality",
             message="Invalid nationality code",
-            status_code=HTTP_400_BAD_REQUEST
+            status_code=status.HTTP_400_BAD_REQUEST
         )
     
     except Exception as e:
@@ -501,14 +330,36 @@ def register(request):
         return error_response(
             code="Registration_failed",
             message="Registration failed due to server error",
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@csrf_exempt
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def Logout(request):
-    Token.objects.filter(user=request.user).delete()
-    return Response({"detail": "Successfully logged out."}, status=200)
+def logout(request):
+    """Logout user by deleting their token"""
+    print("====== LOGOUT CALLED ======")
+    print(f"User: {request.user}")
+    print(f"Is authenticated: {request.user.is_authenticated}")
+    print(f"Auth header: {request.META.get('HTTP_AUTHORIZATION')}")
+
+    try:
+        services.logout(user=request.user)
+        
+        return success_response(
+            data=None,
+            message='Successfully logged out',
+            status_code=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        logger.error(f'Unexpected error during logout: {str(e)}')
+        return error_response(
+            code='Logout_failed',
+            message='Logout failed',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class SendJudgeInvitationView(APIView):
     permission_classes = [IsAuthenticated]

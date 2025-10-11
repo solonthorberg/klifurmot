@@ -16,7 +16,7 @@ class LoginSerializerTest(TestCase):
         }
 
     # Email
-   def test_email_required(self):
+    def test_email_required(self):
         data = {**self.valid_data}
         del data['email']
         serializer = LoginSerializer(data=data)
@@ -24,7 +24,7 @@ class LoginSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('email', serializer.errors)
 
-   def test_email_converts_to_lowercase(self):
+    def test_email_converts_to_lowercase(self):
         data = {**self.valid_data, 'email': 'Mundi@Gmail.COM'}
         serializer = LoginSerializer(data=data)
         

@@ -7,6 +7,73 @@ import re
 
 from .models import UserAccount, Country, JudgeLink, CompetitionRole 
 
+class UserProfileResponseSerializer(serializers.ModelSerializer):
+    """Serializer for response for /me"""
+    nationality = serializers.CharField(source='nationality.country_code', allow_null=True)
+    profile_picture = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserAccount
+        fields = ['full_name', 'gender', 'date_of_birth', 'nationality', 
+                  'height_cm', 'wingspan_cm', 'profile_picture', 'is_admin']
+    
+    def get_profile_picture(self, obj):
+        return obj.profile_picture.url if obj.profile_picture else None
+
+class UserResponseSerializer(serializers.Serializer):
+    """Serializer for response of updating a profile"""
+    token = serializers.CharField()
+    user = serializers.SerializerMethodField()
+    profile = UserProfileResponseSerializer(source='user_account')
+    
+    def get_user(self, obj):
+        return {
+            'id': obj['user'].id,
+            'username': obj['user'].username,
+            'email': obj['user'].email,
+        }
+
+class UpdateProfileSerializer(serializers.Serializer):
+    """Serializer for updating a profile"""
+    full_name = serializers.CharField(min_length=3, max_length=100, required=False)
+    gender = serializers.ChoiceField(choices=['KK', 'KVK'], required=False)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    nationality = serializers.CharField(min_length=2, max_length=2, required=False)
+    height_cm = serializers.IntegerField(min_value=50, max_value=300, required=False, allow_null=True)
+    wingspan_cm = serializers.IntegerField(min_value=50, max_value=400, required=False, allow_null=True)
+
+    def validate_full_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError('Full name cannot be empty')
+        return value
+
+    def validate_nationality(self, value):
+        value = value.strip().upper()
+        if not Country.objects.filter(country_code=value).exists():
+            raise serializers.ValidationError('Invalid nationality code')
+        return value
+
+    def validate_date_of_birth(self, value):
+        if value and value > date.today():
+            raise serializers.ValidationError('Date of birth cannot be in the future')
+        return value
+
+def validate_profile_picture(uploaded_file):
+    """Validate profile picture file - called from view before service"""
+    if uploaded_file.size > 5 * 1024 * 1024:
+        raise serializers.ValidationError('Image size cannot exceed 5MB')
+    
+    if not uploaded_file.content_type.startswith('image/'):
+        raise serializers.ValidationError('Only image files are allowed')
+    
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+    file_extension = uploaded_file.name.lower().split('.')[-1] if '.' in uploaded_file.name else ''
+    if f'.{file_extension}' not in allowed_extensions:
+        raise serializers.ValidationError('Allowed file types: JPG, PNG, GIF, WebP')
+    
+    return True
+
 class LoginSerializer(serializers.Serializer):
     """Serializer for login"""
     email = serializers.EmailField(required=True)
@@ -127,6 +194,15 @@ class RegisterSerializer(serializers.Serializer):
         data.pop('password2')
         return data
 
+class GoogleLoginSerializer(serializers.Serializer):
+    """Serializer for Google OAuth login"""
+    token = serializers.CharField(required=True)
+    
+    def validate_token(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('Token cannot be empty')
+        return value.strip()
+
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Country
@@ -137,11 +213,6 @@ class UserAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = '__all__'
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'email']
 
 class CompetitionRoleSerializer(serializers.ModelSerializer):
     competition_title = serializers.CharField(source='competition.title', read_only=True)
