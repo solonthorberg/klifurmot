@@ -24,11 +24,10 @@ Including another URLconf
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', include('accounts.urls')),
+    path('api/', include('accounts.urls')),
     path('api/athletes/', include('athletes.urls')),
     path('api/scoring/', include('scoring.urls')),
     path('api/competitions/', include('competitions.urls')),
-    path('api/token/', obtain_auth_token),
 ]
 
 if settings.DEBUG:
