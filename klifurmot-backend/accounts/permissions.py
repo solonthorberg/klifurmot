@@ -104,3 +104,21 @@ class IsDjangoAdminOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         return request.user and request.user.is_staff
+
+class IsActiveAccount(BasePermission):
+    """
+    Permission class to check if user account is not deleted
+    """
+    
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        
+        user_account = getattr(request.user, 'profile', None)
+        if not user_account:
+            return False
+        
+        if user_account.deleted:
+            return False
+        
+        return True

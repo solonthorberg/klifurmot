@@ -66,17 +66,16 @@ def validation_error_response(serializer_errors: Dict) -> Response:
     Returns:
         Standardized validation error response
     """
-    details = []
+    details = {}
     duplicate_detected = False
 
     for field, errors in serializer_errors.items():
         if isinstance(errors, list):
-            for error in errors:
-                details.append(f"{field}: {error}")
-                if "already exists" in str(error).lower() or "already in use" in str(error).lower():
-                    duplicate_detected = True
+            details[field] = errors
+            if any("already exists" in str(e).lower() or "already in use" in str(e).lower() for e in errors):
+                duplicate_detected = True
         else:
-            details.append(f"{field}: {errors}")
+            details[field] = [errors]
             if "already exists" in str(errors).lower() or "already in use" in str(errors).lower():
                 duplicate_detected = True
 

@@ -411,9 +411,6 @@ class GoogleLoginViewTest(TestCase):
             'token': 'fake_google_token'
         }, format='json')
 
-        if response.status_code == 500:
-            print("ERROR:", response.data)
-        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         
@@ -596,4 +593,307 @@ class GoogleLoginViewTest(TestCase):
         self.assertIn('username', data['user'])
         self.assertIn('email', data['user'])
         self.assertIn('full_name', data['user'])
+
+
+class MeViewTest(TestCase):
+    """Test /me endpoint for getting and updating user profile"""
+    
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse('me')
         
+        self.country = Country.objects.create(
+            country_code='IS',
+            name_en='Iceland',
+            name_local='Ísland'
+        )
+        
+        self.country_us = Country.objects.create(
+            country_code='US',
+            name_en='United States',
+            name_local='United States'
+        )
+        
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        
+        self.user_account = UserAccount.objects.create(
+            user=self.user,
+            full_name='Test User',
+            gender='KK',
+            nationality=self.country,
+            height_cm=180,
+            wingspan_cm=185,
+            date_of_birth='1990-01-01'
+        )
+        
+        self.token = Token.objects.create(user=self.user)
+    
+    def test_get_profile_success(self):
+        """Test successfully retrieving user profile"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['message'], 'Profile retrieved successfully')
+        
+        self.assertIn('data', response.data)
+        self.assertIn('token', response.data['data'])
+        self.assertIn('user', response.data['data'])
+        self.assertIn('profile', response.data['data'])
+        
+        user_data = response.data['data']['user']
+        self.assertEqual(user_data['id'], self.user.id)
+        self.assertEqual(user_data['username'], 'testuser')
+        self.assertEqual(user_data['email'], 'test@example.com')
+        
+        profile_data = response.data['data']['profile']
+        self.assertEqual(profile_data['full_name'], 'Test User')
+        self.assertEqual(profile_data['gender'], 'KK')
+        self.assertEqual(profile_data['nationality'], 'IS')
+        self.assertEqual(profile_data['height_cm'], 180)
+        self.assertEqual(profile_data['wingspan_cm'], 185)
+        self.assertEqual(profile_data['date_of_birth'], '1990-01-01')
+    
+    def test_get_profile_without_authentication(self):
+        """Test that unauthenticated users cannot access profile"""
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_get_profile_with_invalid_token(self):
+        """Test that invalid token is rejected"""
+        self.client.credentials(HTTP_AUTHORIZATION='Token invalid_token_here')
+        
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_get_profile_without_user_account(self):
+        """Test getting profile for user without UserAccount"""
+        user_no_account = User.objects.create_user(
+            username='noaccountuser',
+            email='noaccount@example.com',
+            password='testpass123'
+        )
+        token_no_account = Token.objects.create(user=user_no_account)
+        
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token_no_account.key}')
+        
+        response = self.client.get(self.url)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(response.data['success'])
+        self.assertEqual(response.data['error']['code'], 'Profile_not_found')
+    
+    def test_update_profile_full_name(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'full_name': 'Updated Name'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['message'], 'Profile updated successfully')
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.full_name, 'Updated Name')
+        
+        self.assertEqual(response.data['data']['profile']['full_name'], 'Updated Name')
+    
+    def test_update_profile_gender(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'gender': 'KVK'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.gender, 'KVK')
+    
+    def test_update_profile_date_of_birth(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'date_of_birth': '1995-05-15'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(str(self.user_account.date_of_birth), '1995-05-15')
+    
+    def test_update_profile_nationality(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'nationality': 'US'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.nationality.country_code, 'US')
+    
+    def test_update_profile_invalid_nationality(self):
+        """Test updating with invalid nationality code"""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'nationality': 'INVALID'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['success'])
+        self.assertEqual(response.data['error']['code'], 'Validation_error')
+        self.assertIn('nationality', response.data['error']['details'])
+
+    def test_update_profile_height_and_wingspan(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'height_cm': 175,
+            'wingspan_cm': 180
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.height_cm, 175)
+        self.assertEqual(self.user_account.wingspan_cm, 180)
+    
+    def test_update_profile_multiple_fields(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'full_name': 'New Full Name',
+            'gender': 'KVK',
+            'height_cm': 170,
+            'wingspan_cm': 175,
+            'nationality': 'US'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.full_name, 'New Full Name')
+        self.assertEqual(self.user_account.gender, 'KVK')
+        self.assertEqual(self.user_account.height_cm, 170)
+        self.assertEqual(self.user_account.wingspan_cm, 175)
+        self.assertEqual(self.user_account.nationality.country_code, 'US')
+    
+    def test_update_profile_without_authentication(self):
+        response = self.client.patch(self.url, {
+            'full_name': 'Hacker Name'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.full_name, 'Test User')
+    
+    def test_update_profile_empty_update(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {}, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+    
+    def test_update_profile_invalid_date_format(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'date_of_birth': 'invalid-date'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['success'])
+    
+    def test_update_profile_invalid_height(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'height_cm': -10
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['success'])
+    
+    def test_update_profile_invalid_wingspan(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'wingspan_cm': -5
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['success'])
+    
+    def test_response_format_get(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.get(self.url)
+        
+        self.assertIn('success', response.data)
+        self.assertIn('message', response.data)
+        self.assertIn('data', response.data)
+        self.assertIn('timestamp', response.data)
+    
+    def test_response_format_patch(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.patch(self.url, {
+            'full_name': 'Test Name'
+        }, format='json')
+        
+        self.assertIn('success', response.data)
+        self.assertIn('message', response.data)
+        self.assertIn('data', response.data)
+        self.assertIn('timestamp', response.data)
+    
+    def test_method_not_allowed(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        response = self.client.put(self.url, {})
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+    def test_token_included_in_response(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        response = self.client.get(self.url)
+        self.assertEqual(response.data['data']['token'], self.token.key)
+        
+        response = self.client.patch(self.url, {'full_name': 'New Name'}, format='json')
+        self.assertEqual(response.data['data']['token'], self.token.key)
+    
+    def test_partial_update_doesnt_affect_other_fields(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        
+        original_height = self.user_account.height_cm
+        original_gender = self.user_account.gender
+        
+        response = self.client.patch(self.url, {
+            'full_name': 'Different Name'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        self.user_account.refresh_from_db()
+        self.assertEqual(self.user_account.full_name, 'Different Name')
+        self.assertEqual(self.user_account.height_cm, original_height)
+        self.assertEqual(self.user_account.gender, original_gender)

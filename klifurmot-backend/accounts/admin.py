@@ -6,5 +6,4 @@ from .models import *
 admin.site.register(Country)
 admin.site.register(UserAccount)
 admin.site.register(CompetitionRole)
-admin.site.register(JudgeLink)
 

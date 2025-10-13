@@ -1,5 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from accounts.views import CompetitionRoleViewSet
+from . import views
 from .views import (
     GetCompetitionViewSet, CategoryGroupViewSet, CompetitionCategoryViewSet,
     RoundViewSet, BoulderViewSet, JudgeBoulderAssignmentViewSet,
@@ -18,7 +20,12 @@ router.register(r'round-groups', RoundGroupViewSet)
 router.register(r'boulders', BoulderViewSet)
 router.register(r'judge-assignments', JudgeBoulderAssignmentViewSet)
 
+role_router = DefaultRouter()
+role_router.register(r'roles', CompetitionRoleViewSet, basename='competition-roles')
+
 urlpatterns = [
+    path('', include(router.urls)),
+    path('', include(role_router.urls)),
     path('competitions/<int:pk>/athletes/', GetCompetitionAthletes, name='competition-athletes'),
     path('competitions/<int:pk>/boulders/', GetCompetitionBoulders, name='competition-boulders'),
     path('competitions/<int:pk>/startlist/', GetCompetitionStartlist, name='competition-startlist'),
@@ -31,5 +38,4 @@ urlpatterns = [
     path('self-scoring/boulders/', SelfScoringBoulders, name='self-scoring-boulders'),
     path('self-scoring-boulders/', SelfScoringBoulders, name='self-scoring-boulders-alt'),
     path('self-scoring/', SelfScoring, name='self-scoring'),
-    path('', include(router.urls)),
 ]

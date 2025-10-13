@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from datetime import date
 import re
 
-from .models import UserAccount, Country, JudgeLink, CompetitionRole 
+from . import models
 
 class UserProfileResponseSerializer(serializers.ModelSerializer):
     """Serializer for response for /me"""
@@ -13,7 +13,7 @@ class UserProfileResponseSerializer(serializers.ModelSerializer):
     profile_picture = serializers.SerializerMethodField()
     
     class Meta:
-        model = UserAccount
+        model = models.UserAccount
         fields = ['full_name', 'gender', 'date_of_birth', 'nationality', 
                   'height_cm', 'wingspan_cm', 'profile_picture', 'is_admin']
     
@@ -205,13 +205,13 @@ class GoogleLoginSerializer(serializers.Serializer):
 
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:
-        model = Country
+        model = models.Country
         fields = ['country_code', 'name_en', 'name_local']
 
 class UserAccountSerializer(serializers.ModelSerializer):
-    nationality = CountrySerializer()  # Nested serializer
+    nationality = CountrySerializer()
     class Meta:
-        model = UserAccount
+        model = models.UserAccount
         fields = '__all__'
 
 class CompetitionRoleSerializer(serializers.ModelSerializer):
@@ -219,5 +219,5 @@ class CompetitionRoleSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.user.username', read_only=True)
 
     class Meta:
-        model = CompetitionRole
+        model = models.CompetitionRole
         fields = ['id', 'user', 'user_name', 'competition', 'competition_title', 'role']

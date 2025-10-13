@@ -5,10 +5,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# SQLite (optional if not using PostgreSQL)
-*.sqlite3
-db.sqlite3
-
 # Django stuff
 *.log
 local_settings.py
@@ -16,14 +12,26 @@ local_settings.py
 # Virtual environments
 venv/
 .venv/
+env/
+ENV/
 
 # Environment config
 .env
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
 
-# VS Code
+# VS Code & IDEs
 .vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Django migrations (but keep __init__.py)
+# Django migrations
 **/migrations/*.py
 !**/migrations/__init__.py
 
@@ -31,27 +39,36 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Node.js / React
+# Node.js / React / Vite
 node_modules/
 dist/
+dist-ssr/
 build/
-*.log
-.env.local
-.env.development.local
-.env.production.local
-.env.test.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Frontend-specific (adjust path if needed)
-klifurhus-frontend/node_modules/
-klifurhus-frontend/dist/
-klifurhus-frontend/build/
+# Frontend-specific
+klifurmot-frontend/node_modules/
+klifurmot-frontend/dist/
+klifurmot-frontend/dist-ssr/
+klifurmot-frontend/build/
+klifurmot-frontend/*.local
 
 # Static files
 staticfiles/
 static/
 
-# Media files  
+# Media files 
 media/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.pytest_cache/
+.hypothesis/
