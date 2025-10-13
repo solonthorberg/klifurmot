@@ -112,8 +112,7 @@ class RegisterSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('full_name', serializer.errors)
     
-    def test_full_name_too_short(self):
-        data = {**self.valid_data, 'full_name': 'AB'}
+    def test_full_name_too_short(self): data = {**self.valid_data, 'full_name': 'AB'}
         serializer = RegisterSerializer(data=data)
         
         self.assertFalse(serializer.is_valid())

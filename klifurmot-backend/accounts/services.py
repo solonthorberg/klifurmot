@@ -10,7 +10,7 @@ from django.conf import settings
 import logging, time, re
 
 
-from .models import UserAccount, Country
+from .models import UserAccount, Country, CompetitionRole
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,9 @@ def login(
         if user is not None and user.is_active:
             user_account = UserAccount.objects.get(user=user)
             
+            if user_account.deleted:
+                user = None
+            
     except User.DoesNotExist:
         authenticate(username="nonexistent_user", password=password)
 
@@ -121,42 +124,80 @@ def login(
         raise ValueError('Invalid email or password')
 
 def register(
-    full_name: str,
     username: str,
     email: str,
     password: str,
-    gender: Optional[str] = None,
-    date_of_birth: Optional[date] = None,
-    nationality: Optional[str] = None,
-    height_cm: Optional[int] = None,
-    wingspan_cm: Optional[int] = None
+    password2: str,
+    full_name: str,
+    gender: str,
+    date_of_birth: date,
+    nationality: str,
+    height_cm: int = None,
+    wingspan_cm: int = None
 ) -> Dict[str, Any]:
-    """Register a new user both for django user and UserAccount"""
+    """Register a new user account"""
     
-    nationality_obj = Country.objects.get(country_code=nationality)
+    if password != password2:
+        raise ValueError('Passwords do not match')
     
     try:
-        with transaction.atomic():
-            # Create Django user
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                is_active=True
-            )
+        validate_password(password)
+    except DjangoValidationError as e:
+        raise ValueError(', '.join(e.messages))
+    
+    with transaction.atomic():
+        try:
+            existing_user = User.objects.get(email__iexact=email)
+            user_account = UserAccount.objects.get(user=existing_user)
             
-            # Create user profile
-            user_account = UserAccount.objects.create(
-                user=user,
-                full_name=full_name,
-                gender=gender if gender else None,
-                date_of_birth=date_of_birth,
-                nationality=nationality_obj,
-                height_cm=height_cm if height_cm else None,
-                wingspan_cm=wingspan_cm if wingspan_cm else None,
-            )
-            
-            token, _ = Token.objects.get_or_create(user=user)
+            if user_account.deleted:
+                user_account.deleted = False
+                user_account.full_name = full_name
+                user_account.gender = gender
+                user_account.date_of_birth = date_of_birth
+                user_account.nationality = Country.objects.get(country_code=nationality)
+                user_account.height_cm = height_cm
+                user_account.wingspan_cm = wingspan_cm
+                user_account.save()
+                
+                existing_user.set_password(password)
+                existing_user.username = username
+                existing_user.save()
+                
+                token, _ = Token.objects.get_or_create(user=existing_user)
+                
+                logger.info(f'User reactivated: {username} ({email})')
+                
+                return {
+                    'user': existing_user,
+                    'user_account': user_account,
+                    'token': token.key,
+                }
+            else:
+                raise IntegrityError('User already exists')
+                
+        except User.DoesNotExist:
+            pass
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+        
+        nationality_obj = Country.objects.get(country_code=nationality)
+        
+        user_account = UserAccount.objects.create(
+            user=user,
+            full_name=full_name,
+            gender=gender,
+            date_of_birth=date_of_birth,
+            nationality=nationality_obj,
+            height_cm=height_cm,
+            wingspan_cm=wingspan_cm
+        )
+        
+        token = Token.objects.create(user=user)
         
         logger.info(f'User registered successfully: {username} ({email})')
         
@@ -165,21 +206,11 @@ def register(
             'user_account': user_account,
             'token': token.key,
         }
-        
-    except IntegrityError as e:
-        logger.error(f'IntegrityError during registration for {username}: {str(e)}')
-        raise
-    except Country.DoesNotExist as e:
-        logger.error(f'Country not found for {nationality}: {str(e)}')
-    except Exception as e:
-        logger.error(f'Unexpected error during registration: {str(e)}')
-        raise
 
 def google_login(google_token: str) -> Dict[str, Any]:
     """Handle Google OAuth login/registration"""
     
     try:
-        # Verify Google token
         idinfo = id_token.verify_oauth2_token(
             google_token,
             requests.Request(),
@@ -196,22 +227,18 @@ def google_login(google_token: str) -> Dict[str, Any]:
         last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
         
         with transaction.atomic():
-            # Try to get existing user
             try:
                 user = User.objects.get(email__iexact=email)
                 created = False
             except User.DoesNotExist:
-                # Generate unique username
                 username = generate_unique_username(email)
                 
-                # Create new user
                 user = User.objects.create(
                     email=email,
                     username=username,
                 )
                 created = True
             
-            # Get or create UserAccount
             user_account, profile_created = UserAccount.objects.get_or_create(
                 user=user,
                 defaults={
@@ -220,18 +247,22 @@ def google_login(google_token: str) -> Dict[str, Any]:
                 }
             )
             
-            # Update profile if needed
-            if not profile_created:
+            if user_account.deleted:
+                user_account.deleted = False
+                user_account.full_name = full_name
+                user_account.google_id = google_id
+                user_account.save()
+            
+            if not profile_created and not user_account.deleted:
                 if not user_account.full_name and full_name:
                     user_account.full_name = full_name
                 if not user_account.google_id and google_id:
                     user_account.google_id = google_id
                 user_account.save()
             
-            # Get or create token
             token, _ = Token.objects.get_or_create(user=user)
             
-            logger.info(f'Google login successful: {username} ({email}) - Created: {created}')
+            logger.info(f'Google login successful: {user.username} ({email}) - Created: {created}')
             
             return {
                 'user': user,
@@ -277,3 +308,55 @@ def logout(user: User) -> None:
     except Exception as e:
         logger.error(f'Error during logout for user {user.username}: {str(e)}')
         raise
+
+def get_competition_roles(
+    user: User,
+    competition_id: int = None,
+    role: str = None
+) -> Dict[str, Any]:
+    """Get competition roles filtered by permissions"""
+    qs = CompetitionRole.objects.select_related(
+        'competition',
+        'user__user'
+    )
+    
+    if competition_id:
+        qs = qs.filter(competition_id=competition_id)
+    
+    if role:
+        qs = qs.filter(role=role)
+    
+    if user.is_staff or (hasattr(user, 'profile') and user.profile.is_admin):
+        return {'roles': list(qs)}
+    
+    if hasattr(user, 'profile'):
+        return {'roles': list(qs.filter(user=user.profile))}
+    
+    return {'roles': []}
+
+
+def get_competition_role_by_id(
+    user: User,
+    role_id: int
+) -> Dict[str, Any]:
+    """Get a specific competition role by ID"""
+    try:
+        role = CompetitionRole.objects.select_related(
+            'competition',
+            'user__user'
+        ).get(id=role_id)
+    except CompetitionRole.DoesNotExist:
+        raise CompetitionRole.DoesNotExist('Role not found')
+
+    if user.is_staff or (hasattr(user, 'profile') and user.profile.is_admin):
+        return {'role': role}
+    
+    if hasattr(user, 'profile') and role.user == user.profile:
+        return {'role': role}
+    
+    raise PermissionError('You do not have permission to view this role')
+
+def get_countries() -> Dict[str, Any]:
+    """Get all countries"""
+    countries = Country.objects.all().order_by('name_en')
+    return {'countries': list(countries)}

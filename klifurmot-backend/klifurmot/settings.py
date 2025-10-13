@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'competitions',
     'athletes',
     'scoring',
+    'judges',
 ]
 
 MIDDLEWARE = [
