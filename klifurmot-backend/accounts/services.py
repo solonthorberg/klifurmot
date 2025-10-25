@@ -1,8 +1,9 @@
 from typing import Dict, Any, Optional
 from datetime import date
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User
 from django.db import transaction, IntegrityError
-from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from google.oauth2 import id_token
 from google.auth.transport import requests
@@ -21,12 +22,10 @@ def get_profile(user: User) -> Dict[str, Any]:
     except UserAccount.DoesNotExist:
         raise ValueError('User profile not found')
 
-    token, _ = Token.objects.get_or_create(user=user)
 
     return {
         'user': user,
         'user_account': user_account,
-        'token': token.key
     }
 
 def update_profile(
@@ -75,12 +74,10 @@ def update_profile(
         
         user_account.save()
         
-        token, _ = Token.objects.get_or_create(user=user)
         
         return {
             'user': user,
             'user_account': user_account,
-            'token': token.key
         }
 
 def login(
@@ -114,11 +111,9 @@ def login(
         time.sleep(min_time - elapsed)
         
     if user is not None and user.is_active:
-        token, _ = Token.objects.get_or_create(user=user)
         return {
             'user': user,
             'user_account': user_account,
-            'token': token.key,
         }
     else:
         raise ValueError('Invalid email or password')
@@ -127,7 +122,6 @@ def register(
     username: str,
     email: str,
     password: str,
-    password2: str,
     full_name: str,
     gender: str,
     date_of_birth: date,
@@ -136,9 +130,6 @@ def register(
     wingspan_cm: int = None
 ) -> Dict[str, Any]:
     """Register a new user account"""
-    
-    if password != password2:
-        raise ValueError('Passwords do not match')
     
     try:
         validate_password(password)
@@ -197,14 +188,12 @@ def register(
             wingspan_cm=wingspan_cm
         )
         
-        token = Token.objects.create(user=user)
         
         logger.info(f'User registered successfully: {username} ({email})')
         
         return {
             'user': user,
             'user_account': user_account,
-            'token': token.key,
         }
 
 def google_login(google_token: str) -> Dict[str, Any]:
@@ -260,14 +249,12 @@ def google_login(google_token: str) -> Dict[str, Any]:
                     user_account.google_id = google_id
                 user_account.save()
             
-            token, _ = Token.objects.get_or_create(user=user)
             
             logger.info(f'Google login successful: {user.username} ({email}) - Created: {created}')
             
             return {
                 'user': user,
                 'user_account': user_account,
-                'token': token.key,
             }
     
     except ValueError as e:
@@ -300,14 +287,6 @@ def generate_unique_username(email: str, max_length: int = 150) -> str:
     timestamp = str(int(time.time()))[-6:]
     return f"{base_username[:20]}_{timestamp}"       
 
-def logout(user: User) -> None:
-    """Logout user by deleting their auth token"""
-    try:
-        Token.objects.filter(user=user).delete()
-        logger.info(f'User logged out: {user.username} ({user.email})')
-    except Exception as e:
-        logger.error(f'Error during logout for user {user.username}: {str(e)}')
-        raise
 
 def get_competition_roles(
     user: User,

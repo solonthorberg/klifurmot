@@ -50,7 +50,7 @@ class UpdateProfileSerializer(serializers.Serializer):
 
     def validate_nationality(self, value):
         value = value.strip().upper()
-        if not Country.objects.filter(country_code=value).exists():
+        if not models.Country.objects.filter(country_code=value).exists():
             raise serializers.ValidationError('Invalid nationality code')
         return value
 
@@ -172,7 +172,7 @@ class RegisterSerializer(serializers.Serializer):
         if len(value) != 2:
             raise serializers.ValidationError('Nationality must be exactly 2 characters')
         
-        if not Country.objects.filter(country_code=value).exists():
+        if not models.Country.objects.filter(country_code=value).exists():
             raise serializers.ValidationError('Invalid nationality code')
         
         return value
