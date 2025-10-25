@@ -1,6 +1,5 @@
 from django.utils import timezone
 from django.db import models
-
 from django.conf import settings
 from athletes.models import Climber
 from competitions.models import Boulder, CompetitionRound
@@ -55,6 +54,9 @@ class ClimberRoundScore(models.Model):
     zones = models.IntegerField()
     attempts_tops = models.IntegerField()
     attempts_zones = models.IntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
+    last_modified_at = models.DateTimeField(default=timezone.now)
+    deleted = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('round', 'climber')
@@ -62,3 +64,30 @@ class ClimberRoundScore(models.Model):
 
     def __str__(self):
         return f"{self.climber} - {self.total_score} pts in {self.round}"
+
+class SelfScore(models.Model):
+    """Self-reported scores by climbers - always editable, no verification"""
+    climber = models.ForeignKey('athletes.Climber', on_delete=models.CASCADE)
+    boulder = models.ForeignKey('competitions.Boulder', on_delete=models.CASCADE)
+    round = models.ForeignKey('competitions.CompetitionRound', on_delete=models.CASCADE)
+    
+    top_reached = models.BooleanField(default=False)
+    zone_reached = models.BooleanField(default=False)
+    attempts_top = models.IntegerField(default=0)
+    attempts_zone = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(default=timezone.now)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='self_scores_created'
+    )
+    last_updated_at = models.DateTimeField(auto_now=True)
+    deleted = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ('climber', 'boulder')
+        ordering = ['boulder__boulder_number']
+    
+    def __str__(self):
+        return f"{self.climber} - Boulder {self.boulder.boulder_number}"

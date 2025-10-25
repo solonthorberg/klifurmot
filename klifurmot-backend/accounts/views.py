@@ -4,7 +4,7 @@ import time
 from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -146,7 +146,6 @@ def me(request):
             
             return utils.success_response(
                 data={
-                    'token': result['token'],
                     'user': {
                         'id': result['user'].id,
                         'username': result['user'].username,
@@ -203,7 +202,6 @@ def me(request):
             
             return utils.success_response(
                 data={
-                    'token': result['token'],
                     'user': {
                         'id': result['user'].id,
                         'username': result['user'].username,
@@ -214,7 +212,7 @@ def me(request):
                 message='Profile updated successfully'
             )
         
-        except Country.DoesNotExist:
+        except models.Country.DoesNotExist:
             return utils.error_response(
                 code='Invalid_nationality',
                 message='Invalid nationality code',
@@ -240,22 +238,27 @@ def login(request):
         return utils.validation_error_response(serializer.errors)
 
     try:
-        result = services.login(**serializer.validated_data)
-
+        result = services.login(
+            email=serializer.validated_data['email'],
+            password=serializer.validated_data['password']
+        )
+        
+        refresh = RefreshToken.for_user(result['user'])
+        
         return utils.success_response(
             data={
-                'token': result['token'],
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
                     'email': result['user'].email,
-                    'full_name': result['user_account'].full_name,
                 }
             },
             message='Login successful',
             status_code=status.HTTP_200_OK
-            
         )
+
     except ValueError as e:
         return utils.error_response(
             code='Invalid_credentials',
@@ -286,10 +289,13 @@ def google_login(request):
         result = services.google_login(
             google_token=serializer.validated_data['token']
         )
+
+        refresh = RefreshToken.for_user(result['user'])
         
         return utils.success_response(
             data={
-                'token': result['token'],
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
@@ -327,10 +333,13 @@ def register(request):
 
     try:
         result = services.register(**serializer.validated_data)
+
+        refresh = RefreshToken.for_user(result['user'])
         
         return utils.success_response(
             data={
-                'token': result['token'],
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
@@ -349,7 +358,7 @@ def register(request):
             status_code=status.HTTP_409_CONFLICT
         )
     
-    except Country.DoesNotExist:
+    except models.Country.DoesNotExist:
         logger.error('Country not found during registration')
         return utils.error_response(
             code="Invalid_nationality",
@@ -367,17 +376,14 @@ def register(request):
 
 @csrf_exempt
 @api_view(['POST'])
-@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def logout(request):
     """Logout user by deleting their token"""
-    print("====== LOGOUT CALLED ======")
-    print(f"User: {request.user}")
-    print(f"Is authenticated: {request.user.is_authenticated}")
-    print(f"Auth header: {request.META.get('HTTP_AUTHORIZATION')}")
 
     try:
-        services.logout(user=request.user)
+        refresh_token = request.data.get('refresh')
+        token = RefreshToken(refresh_token)
+        token.blacklist()
         
         return utils.success_response(
             data=None,

@@ -11,6 +11,7 @@ channels==4.0.0
 channels_redis==4.2.1
 charset-normalizer==3.4.2
 constantly==23.10.4
+coverage==7.10.7
 cryptography==45.0.4
 daphne==4.2.0
 dj-database-url==3.0.0
@@ -19,6 +20,7 @@ django-cors-headers==4.7.0
 django-extensions==4.1
 django-storages==1.14.6
 djangorestframework==3.16.0
+djangorestframework_simplejwt==5.5.1
 google-auth==2.40.1
 hyperlink==21.0.0
 idna==3.10
@@ -31,6 +33,7 @@ psycopg2-binary==2.9.10
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22
+PyJWT==2.10.1
 pyOpenSSL==25.1.0
 python-dateutil==2.9.0.post0
 python-decouple==3.8
@@ -50,4 +53,3 @@ tzdata==2025.2
 urllib3==2.5.0
 whitenoise==6.9.0
 zope.interface==7.2
-coverage==7.10.7
