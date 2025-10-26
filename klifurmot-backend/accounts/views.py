@@ -4,7 +4,6 @@ import time
 from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -243,16 +242,15 @@ def login(request):
             password=serializer.validated_data['password']
         )
         
-        refresh = RefreshToken.for_user(result['user'])
-        
         return utils.success_response(
             data={
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
+                'access': result['access'],
+                'refresh': result['refresh'],
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
                     'email': result['user'].email,
+                    'full_name': result['user_account'].full_name,
                 }
             },
             message='Login successful',
@@ -290,12 +288,10 @@ def google_login(request):
             google_token=serializer.validated_data['token']
         )
 
-        refresh = RefreshToken.for_user(result['user'])
-        
         return utils.success_response(
             data={
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
+                'access': result['access'],
+                'refresh': result['refresh'],
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
@@ -334,12 +330,11 @@ def register(request):
     try:
         result = services.register(**serializer.validated_data)
 
-        refresh = RefreshToken.for_user(result['user'])
         
         return utils.success_response(
             data={
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
+                'access': result['access'],
+                'refresh': result['refresh'],
                 'user': {
                     'id': result['user'].id,
                     'username': result['user'].username,
@@ -378,17 +373,31 @@ def register(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    """Logout user by deleting their token"""
+    """Logout user by blacklisting their refresh token"""
 
+    refresh_token = request.data.get('refresh')
+    
+    if not refresh_token:
+        return utils.error_response(
+            code='Missing_token',
+            message='Refresh token is required',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
     try:
-        refresh_token = request.data.get('refresh')
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+        result = services.logout(refresh_token=refresh_token)
         
         return utils.success_response(
             data=None,
-            message='Successfully logged out',
+            message=result['message'],
             status_code=status.HTTP_200_OK
+        )
+    
+    except ValueError as e:
+        return utils.error_response(
+            code='Invalid_token',
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST
         )
     
     except Exception as e:
@@ -399,3 +408,106 @@ def logout(request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """Request password reset email"""
+    
+    email = request.data.get('email', '').strip()
+    
+    if not email:
+        return utils.error_response(
+            code='Missing_email',
+            message='Email is required',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if '@' not in email:
+        return utils.error_response(
+            code='Invalid_email',
+            message='Invalid email format',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        client_ip = request.META.get('REMOTE_ADDR')
+        
+        result = services.request_password_reset(
+            email=email,
+            request_ip=client_ip
+        )
+        
+        return utils.success_response(
+            data=None,
+            message=result['message'],
+            status_code=status.HTTP_200_OK
+        )
+    
+    except Exception as e:
+        logger.error(f'Error in password reset request view: {str(e)}')
+        return utils.success_response(
+            data=None,
+            message='If an account exists with this email, you will receive reset instructions',
+            status_code=status.HTTP_200_OK
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """Reset password with token"""
+    
+    token = request.data.get('token', '').strip()
+    password = request.data.get('password', '')
+    password_confirm = request.data.get('password_confirm', '')
+    
+    if not token:
+        return utils.error_response(
+            code='Missing_token',
+            message='Reset token is required',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if not password:
+        return utils.error_response(
+            code='Missing_password',
+            message='New password is required',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if password != password_confirm:
+        return utils.error_response(
+            code='Password_mismatch',
+            message='Passwords do not match',
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        client_ip = request.META.get('REMOTE_ADDR')
+        
+        result = services.reset_password(
+            token=token,
+            new_password=password,
+            request_ip=client_ip
+        )
+        
+        return utils.success_response(
+            data=None,
+            message=result['message'],
+            status_code=status.HTTP_200_OK
+        )
+    
+    except ValueError as e:
+        return utils.error_response(
+            code='Reset_failed',
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    
+    except Exception as e:
+        logger.error(f'Unexpected error in password reset: {str(e)}')
+        return utils.error_response(
+            code='Reset_failed',
+            message='Password reset failed',
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

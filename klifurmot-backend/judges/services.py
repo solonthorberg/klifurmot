@@ -10,15 +10,17 @@ from competitions.models import Competition
 
 logger = logging.getLogger(__name__)
 
-
 def send_judge_invitation(
     competition_id: int,
     user: User,
     email: str,
     expires_at: timezone.datetime,
-    name: str = None
+    name: str = '',
 ) -> Dict[str, Any]:
-    """Send a judge invitation via email"""
+    """Send a judge invitation via link"""
+    
+    email = email.lower().strip()
+    name = (name or '').strip()
     
     user_account = getattr(user, 'profile', None)
     if not user_account:
@@ -36,11 +38,12 @@ def send_judge_invitation(
             role='admin'
         ).exists()
         if not is_competition_admin:
-            raise PermissionError('You do not have permission to send invitations for this competition')
+            raise PermissionError('You do not have permission to manage judges for this competition')
     
     with transaction.atomic():
         try:
             existing_user = User.objects.get(email__iexact=email)
+            user_account_target, _ = UserAccount.objects.get_or_create(user=existing_user)
             
             judge_link, created = JudgeLink.objects.get_or_create(
                 user=existing_user,
@@ -56,7 +59,6 @@ def send_judge_invitation(
                 judge_link.expires_at = expires_at
                 judge_link.save()
             
-            user_account_target, _ = UserAccount.objects.get_or_create(user=existing_user)
             role, role_assigned = CompetitionRole.objects.get_or_create(
                 user=user_account_target,
                 competition=competition,
@@ -71,22 +73,40 @@ def send_judge_invitation(
             }
             
         except User.DoesNotExist:
-            judge_link = JudgeLink.objects.create(
-                type='invitation',
-                competition=competition,
-                invited_email=email,
-                invited_name=name,
-                expires_at=expires_at,
-                created_by=user
-            )
-            
-            return {
-                'judge_link': judge_link,
-                'type': 'new_user',
-                'created': True,
-                'role_assigned': False
-            }
-
+            try:
+                existing_invitation = JudgeLink.objects.get(
+                    invited_email=email,
+                    competition=competition,
+                    claimed_at__isnull=True
+                )
+                
+                existing_invitation.invited_name = name
+                existing_invitation.expires_at = expires_at
+                existing_invitation.save()
+                
+                return {
+                    'judge_link': existing_invitation,
+                    'type': 'updated_invitation',
+                    'created': False,
+                    'role_assigned': False
+                }
+                
+            except JudgeLink.DoesNotExist:
+                judge_link = JudgeLink.objects.create(
+                    type='invitation',
+                    competition=competition,
+                    invited_email=email,
+                    invited_name=name or email.split('@')[0],
+                    expires_at=expires_at,
+                    created_by=user
+                )
+                
+                return {
+                    'judge_link': judge_link,
+                    'type': 'new_user',
+                    'created': True,
+                    'role_assigned': False
+                }
 def validate_invitation(token: str) -> Dict[str, Any]:
     """Validate a judge invitation token"""
     

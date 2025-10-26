@@ -17,7 +17,9 @@ daphne==4.2.0
 dj-database-url==3.0.0
 Django==5.2.1
 django-cors-headers==4.7.0
+django-expiring-token==1.0.3
 django-extensions==4.1
+django-ses==4.4.0
 django-storages==1.14.6
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.1

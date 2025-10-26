@@ -1,7 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db import IntegrityError
-from rest_framework.authtoken.models import Token
 from unittest.mock import patch, MagicMock
 
 from accounts import services
@@ -38,7 +37,13 @@ class LoginServiceTest(TestCase):
         
         self.assertEqual(result['user'].id, self.user.id)
         self.assertEqual(result['user_account'].id, self.user_account.id)
-        self.assertIsInstance(result['token'], str)
+        # JWT tokens are now generated in service layer
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
+        self.assertIsInstance(result['access'], str)
+        self.assertIsInstance(result['refresh'], str)
+        self.assertTrue(len(result['access']) > 100)  # JWT tokens are long
+        self.assertTrue(len(result['refresh']) > 100)
     
     def test_login_case_insensitive_email(self):
         result = services.login(
@@ -47,13 +52,8 @@ class LoginServiceTest(TestCase):
         )
         
         self.assertEqual(result['user'].email, 'mundi@gmail.com')
-    
-    def test_login_token_reuse(self):
-        result1 = services.login(email='mundi@gmail.com', password='secretpassword123')
-        result2 = services.login(email='mundi@gmail.com', password='secretpassword123')
-        
-        self.assertEqual(result1['token'], result2['token'])
-        self.assertEqual(Token.objects.filter(user=self.user).count(), 1)
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
     
     def test_login_invalid_password(self):
         with self.assertRaises(ValueError):
@@ -61,7 +61,11 @@ class LoginServiceTest(TestCase):
     
     def test_login_nonexistent_email(self):
         with self.assertRaises(ValueError):
-            services.login(email='notexist@gmail.com', password='somepassword')
+            services.login(email='nonexistent@gmail.com', password='anypassword')
+    
+    def test_login_case_sensitive_password(self):
+        with self.assertRaises(ValueError):
+            services.login(email='mundi@gmail.com', password='SECRETPASSWORD123')
     
     def test_login_inactive_user(self):
         self.user.is_active = False
@@ -70,19 +74,15 @@ class LoginServiceTest(TestCase):
         with self.assertRaises(ValueError):
             services.login(email='mundi@gmail.com', password='secretpassword123')
     
-    def test_login_user_without_user_account(self):
-        orphan_user = User.objects.create_user(
-            username='orphan',
-            email='orphan@gmail.com',
-            password='password123',
-            is_active=True
-        )
+    def test_login_deleted_user_account(self):
+        self.user_account.deleted = True
+        self.user_account.save()
         
         with self.assertRaises(ValueError):
-            services.login(email='orphan@gmail.com', password='password123')
+            services.login(email='mundi@gmail.com', password='secretpassword123')
+
 
 class RegisterServiceTest(TestCase):
-    """Test user registration service"""
     
     def setUp(self):
         self.country = Country.objects.create(
@@ -92,12 +92,12 @@ class RegisterServiceTest(TestCase):
         )
         
         self.valid_data = {
-            'full_name': 'Gudmundur Freyr Arnarsson',
-            'username': 'Mundi',
-            'email': 'mundi@gmail.com',
-            'password': 'secretPassword123',
+            'username': 'testuser',
+            'email': 'test@example.com',
+            'password': 'ComplexPass123!',
+            'full_name': 'Test User',
             'gender': 'KK',
-            'date_of_birth': '1990-01-15',
+            'date_of_birth': '1990-01-01',
             'nationality': 'IS',
         }
     
@@ -106,15 +106,30 @@ class RegisterServiceTest(TestCase):
         
         self.assertIsNotNone(result['user'])
         self.assertIsNotNone(result['user_account'])
-        self.assertIsNotNone(result['token'])
-        self.assertEqual(result['user'].username, 'Mundi')
-        self.assertEqual(result['user'].email, 'mundi@gmail.com')
+        # JWT tokens are now generated in service layer
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
+        self.assertIsInstance(result['access'], str)
+        self.assertIsInstance(result['refresh'], str)
+        
+        self.assertTrue(User.objects.filter(email='test@example.com').exists())
+        user = User.objects.get(email='test@example.com')
+        self.assertTrue(UserAccount.objects.filter(user=user).exists())
     
-    def test_register_duplicate_username(self):
+    def test_register_duplicate_email(self):
         services.register(**self.valid_data)
         
         with self.assertRaises(IntegrityError):
             services.register(**self.valid_data)
+    
+    def test_register_duplicate_username(self):
+        services.register(**self.valid_data)
+        
+        data = self.valid_data.copy()
+        data['email'] = 'different@example.com'
+        
+        with self.assertRaises(IntegrityError):
+            services.register(**data)
     
     def test_register_with_optional_fields(self):
         data = {
@@ -127,6 +142,9 @@ class RegisterServiceTest(TestCase):
         
         self.assertEqual(result['user_account'].height_cm, 180)
         self.assertEqual(result['user_account'].wingspan_cm, 185)
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
+
 
 class GoogleLoginServiceTest(TestCase):
     
@@ -151,7 +169,11 @@ class GoogleLoginServiceTest(TestCase):
         
         self.assertIsNotNone(result['user'])
         self.assertIsNotNone(result['user_account'])
-        self.assertIsNotNone(result['token'])
+        # JWT tokens are now generated in service layer
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
+        self.assertIsInstance(result['access'], str)
+        self.assertIsInstance(result['refresh'], str)
         
         user = result['user']
         self.assertEqual(user.email, 'test@gmail.com')
@@ -166,6 +188,8 @@ class GoogleLoginServiceTest(TestCase):
         user_account = result['user_account']
         self.assertEqual(user_account.full_name, 'Test User')
         self.assertEqual(user_account.google_id, 'google_id_12345')
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
     
     @patch('accounts.services.id_token.verify_oauth2_token')
     def test_google_login_returns_existing_user(self, mock_verify):
@@ -184,6 +208,8 @@ class GoogleLoginServiceTest(TestCase):
         
         self.assertEqual(result['user'].id, existing_user.id)
         self.assertEqual(User.objects.filter(email='test@gmail.com').count(), 1)
+        self.assertIn('access', result)
+        self.assertIn('refresh', result)
     
     @patch('accounts.services.id_token.verify_oauth2_token')
     def test_google_login_updates_missing_profile_data(self, mock_verify):
@@ -224,30 +250,6 @@ class GoogleLoginServiceTest(TestCase):
         user_account.refresh_from_db()
         self.assertEqual(user_account.full_name, 'My Custom Name')
         self.assertEqual(user_account.google_id, 'old_google_id')
-    
-    @patch('accounts.services.id_token.verify_oauth2_token')
-    def test_google_login_generates_token(self, mock_verify):
-        mock_verify.return_value = self.mock_google_data
-        
-        result = services.google_login(google_token='fake_token')
-        
-        self.assertIn('token', result)
-        self.assertTrue(Token.objects.filter(key=result['token']).exists())
-    
-    @patch('accounts.services.id_token.verify_oauth2_token')
-    def test_google_login_reuses_token(self, mock_verify):
-        mock_verify.return_value = self.mock_google_data
-        
-        result1 = services.google_login(google_token='fake_token')
-        token1 = result1['token']
-        
-        result2 = services.google_login(google_token='fake_token')
-        token2 = result2['token']
-        
-        self.assertEqual(token1, token2)
-        
-        user = result1['user']
-        self.assertEqual(Token.objects.filter(user=user).count(), 1)
     
     @patch('accounts.services.id_token.verify_oauth2_token')
     def test_google_login_normalizes_email_to_lowercase(self, mock_verify):
@@ -326,3 +328,191 @@ class GoogleLoginServiceTest(TestCase):
                 services.google_login(google_token='fake_token')
         
         self.assertEqual(User.objects.count(), initial_user_count)
+
+
+class LogoutServiceTest(TestCase):
+    
+    def setUp(self):
+        self.country = Country.objects.create(
+            country_code='IS',
+            name_en='Iceland',
+            name_local='Ísland'
+        )
+        
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123',
+            is_active=True
+        )
+        
+        self.user_account = UserAccount.objects.create(
+            user=self.user,
+            full_name='Test User',
+            gender='KK',
+            nationality=self.country
+        )
+    
+    def test_logout_success(self):
+        login_result = services.login(
+            email='test@example.com',
+            password='testpass123'
+        )
+        refresh_token = login_result['refresh']
+        
+        result = services.logout(refresh_token=refresh_token)
+        
+        self.assertTrue(result['success'])
+        self.assertEqual(result['message'], 'Successfully logged out')
+    
+    def test_logout_invalid_token(self):
+        with self.assertRaises(ValueError) as context:
+            services.logout(refresh_token='invalid_token_string')
+        
+        self.assertIn('Invalid or expired', str(context.exception))
+    
+    def test_logout_already_blacklisted_token(self):
+        login_result = services.login(
+            email='test@example.com',
+            password='testpass123'
+        )
+        refresh_token = login_result['refresh']
+        services.logout(refresh_token=refresh_token)
+        
+        with self.assertRaises(ValueError):
+            services.logout(refresh_token=refresh_token)
+    
+    def test_logout_empty_token(self):
+        with self.assertRaises(ValueError):
+            services.logout(refresh_token='')
+    
+class PasswordResetServiceTest(TestCase):
+    
+    def setUp(self):
+        self.country = Country.objects.create(
+            country_code='IS',
+            name_en='Iceland',
+            name_local='Ísland'
+        )
+        
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='OldPassword123!',
+            is_active=True
+        )
+        
+        self.user_account = UserAccount.objects.create(
+            user=self.user,
+            full_name='Test User',
+            gender='KK',
+            nationality=self.country
+        )
+    
+    @patch('accounts.services.send_mail')
+    def test_request_password_reset_success(self, mock_send_mail):
+        """Test successful password reset request"""
+        result = services.request_password_reset(
+            email='test@example.com',
+            request_ip='127.0.0.1'
+        )
+        
+        self.assertTrue(result['success'])
+        self.user_account.refresh_from_db()
+        self.assertIsNotNone(self.user_account.reset_token_hash)
+        self.assertIsNotNone(self.user_account.reset_token_created)
+        mock_send_mail.assert_called_once()
+    
+    @patch('accounts.services.send_mail')
+    def test_request_password_reset_nonexistent_email(self, mock_send_mail):
+        """Test password reset for non-existent email returns success (no enumeration)"""
+        result = services.request_password_reset(
+            email='nonexistent@example.com',
+            request_ip='127.0.0.1'
+        )
+        
+        self.assertTrue(result['success'])
+        mock_send_mail.assert_not_called()
+    
+    @patch('accounts.services.send_mail')
+    def test_request_password_reset_rate_limiting(self, mock_send_mail):
+        """Test rate limiting (3 requests per hour)"""
+        for i in range(3):
+            services.request_password_reset(email='test@example.com')
+        
+        result = services.request_password_reset(email='test@example.com')
+        self.assertTrue(result['success'])
+        self.assertEqual(mock_send_mail.call_count, 3)
+    
+    @patch('accounts.services.send_mail')
+    def test_reset_password_success(self, mock_send_mail):
+        """Test successful password reset"""
+        result = services.request_password_reset(email='test@example.com')
+        
+        email_body = mock_send_mail.call_args[1]['message']
+        token = email_body.split('token=')[1].split('\n')[0].strip()
+        
+        result = services.reset_password(
+            token=token,
+            new_password='NewPassword123!',
+            request_ip='127.0.0.1'
+        )
+        
+        self.assertTrue(result['success'])
+        
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('NewPassword123!'))
+        
+        self.user_account.refresh_from_db()
+        self.assertIsNone(self.user_account.reset_token_hash)
+    
+    def test_reset_password_invalid_token(self):
+        """Test reset with invalid token"""
+        with self.assertRaises(ValueError) as context:
+            services.reset_password(
+                token='invalid_token',
+                new_password='NewPassword123!'
+            )
+        
+        self.assertIn('Invalid', str(context.exception))
+    
+    @patch('accounts.services.send_mail')
+    def test_reset_password_expired_token(self, mock_send_mail):
+        """Test reset with expired token (>1 hour)"""
+        services.request_password_reset(email='test@example.com')
+        
+        self.user_account.refresh_from_db()
+        self.user_account.reset_token_created = timezone.now() - timedelta(hours=2)
+        self.user_account.save()
+        
+        email_body = mock_send_mail.call_args[1]['message']
+        token = email_body.split('token=')[1].split('\n')[0].strip()
+        
+        with self.assertRaises(ValueError) as context:
+            services.reset_password(token=token, new_password='NewPassword123!')
+        
+        self.assertIn('expired', str(context.exception).lower())
+    
+    @patch('accounts.services.send_mail')
+    def test_reset_password_weak_password(self, mock_send_mail):
+        services.request_password_reset(email='test@example.com')
+        
+        email_body = mock_send_mail.call_args[1]['message']
+        token = email_body.split('token=')[1].split('\n')[0].strip()
+        
+        with self.assertRaises(ValueError) as context:
+            services.reset_password(token=token, new_password='123')
+        
+        self.assertIn('validation', str(context.exception).lower())
+    
+    @patch('accounts.services.send_mail')
+    def test_reset_password_one_time_use(self, mock_send_mail):
+        services.request_password_reset(email='test@example.com')
+        
+        email_body = mock_send_mail.call_args[1]['message']
+        token = email_body.split('token=')[1].split('\n')[0].strip()
+        
+        services.reset_password(token=token, new_password='NewPassword123!')
+        
+        with self.assertRaises(ValueError):
+            services.reset_password(token=token, new_password='AnotherPassword123!')            

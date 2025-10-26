@@ -1,5 +1,9 @@
 from typing import Dict, Any, Optional
-from datetime import date
+from datetime import date, timedelta
+import secrets
+import hashlib
+from django.core.mail import send_mail
+from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import User
@@ -8,6 +12,8 @@ from django.contrib.auth import authenticate
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 import logging, time, re
 
 
@@ -111,9 +117,13 @@ def login(
         time.sleep(min_time - elapsed)
         
     if user is not None and user.is_active:
+        refresh = RefreshToken.for_user(user)
+        
         return {
             'user': user,
             'user_account': user_account,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
         }
     else:
         raise ValueError('Invalid email or password')
@@ -155,14 +165,15 @@ def register(
                 existing_user.username = username
                 existing_user.save()
                 
-                token, _ = Token.objects.get_or_create(user=existing_user)
+                refresh = RefreshToken.for_user(existing_user)
                 
                 logger.info(f'User reactivated: {username} ({email})')
                 
                 return {
                     'user': existing_user,
                     'user_account': user_account,
-                    'token': token.key,
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
                 }
             else:
                 raise IntegrityError('User already exists')
@@ -188,13 +199,17 @@ def register(
             wingspan_cm=wingspan_cm
         )
         
+        refresh = RefreshToken.for_user(user)
         
         logger.info(f'User registered successfully: {username} ({email})')
         
         return {
             'user': user,
             'user_account': user_account,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
         }
+
 
 def google_login(google_token: str) -> Dict[str, Any]:
     """Handle Google OAuth login/registration"""
@@ -219,6 +234,7 @@ def google_login(google_token: str) -> Dict[str, Any]:
             try:
                 user = User.objects.get(email__iexact=email)
                 created = False
+
             except User.DoesNotExist:
                 username = generate_unique_username(email)
                 
@@ -249,13 +265,16 @@ def google_login(google_token: str) -> Dict[str, Any]:
                     user_account.google_id = google_id
                 user_account.save()
             
+            refresh = RefreshToken.for_user(user)
             
             logger.info(f'Google login successful: {user.username} ({email}) - Created: {created}')
-            
+
             return {
                 'user': user,
                 'user_account': user_account,
-            }
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            } 
     
     except ValueError as e:
         logger.error(f'Invalid Google token: {str(e)}')
@@ -287,6 +306,26 @@ def generate_unique_username(email: str, max_length: int = 150) -> str:
     timestamp = str(int(time.time()))[-6:]
     return f"{base_username[:20]}_{timestamp}"       
 
+def logout(refresh_token: str) -> Dict[str, Any]:
+    """Logout user by blacklisting their refresh token"""
+    try:
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+
+        logger.info(f'User logged out successfully (token blacklisted)')
+
+        return {
+            'success': True,
+            'message': 'Successfully logged out'
+        }
+
+    except TokenError as e:
+        logger.warning(f'Logout failed with TokenError: {str(e)}')
+        raise ValueError(f'Invalid or expired refresh token: {str(e)}')
+    
+    except Exception as e:
+        logger.error(f'Unexpected error during logout: {str(e)}')
+        raise ValueError(f'Logout failed: {str(e)}')
 
 def get_competition_roles(
     user: User,
@@ -339,3 +378,142 @@ def get_countries() -> Dict[str, Any]:
     """Get all countries"""
     countries = Country.objects.all().order_by('name_en')
     return {'countries': list(countries)}
+
+def request_password_reset(email: str, request_ip: str = None) -> Dict[str, Any]:
+    """Request password reset - Always returns success to prevent email enumeration"""
+    
+    try:
+        user = User.objects.get(email__iexact=email.lower())
+        user_account = UserAccount.objects.get(user=user)
+        
+        now = timezone.now()
+        if user_account.last_reset_attempt:
+            time_since_last = now - user_account.last_reset_attempt
+            
+            if time_since_last < timedelta(hours=1):
+                if user_account.reset_attempts >= 3:
+                    logger.warning(
+                        f'Password reset rate limit exceeded for {email} from IP {request_ip}'
+                    )
+                    return {'success': True, 'message': 'If account exists, reset email sent'}
+                
+                user_account.reset_attempts += 1
+            else:
+                user_account.reset_attempts = 1
+        else:
+            user_account.reset_attempts = 1
+        
+        user_account.last_reset_attempt = now
+        
+        token = secrets.token_urlsafe(32)
+        
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        
+        user_account.reset_token_hash = token_hash
+        user_account.reset_token_created = now
+        user_account.save()
+        
+        reset_url = f"https://klifurmot.is/reset-password?token={token}"
+        
+        send_mail(
+            subject='Password Reset Request',
+            message=f'''
+            You requested a password reset for your account.
+            
+            Click here to reset your password (valid for 1 hour):
+            {reset_url}
+            
+            If you didn't request this, ignore this email.
+            Your password won't change until you click the link above.
+            
+            For security, this link expires in 1 hour.
+            ''',
+            from_email='None',
+            recipient_list=[email],
+            fail_silently=False
+        )
+        
+        logger.info(f'Password reset requested for {email} from IP {request_ip}')
+        
+    except User.DoesNotExist:
+        logger.info(f'Password reset requested for non-existent email {email} from IP {request_ip}')
+        pass
+    
+    except Exception as e:
+        logger.error(f'Error in password reset request: {str(e)}')
+        pass
+    
+    return {
+        'success': True,
+        'message': 'If an account exists with this email, you will receive reset instructions'
+    }
+
+
+def reset_password(token: str, new_password: str, request_ip: str = None) -> Dict[str, Any]:
+    """Reset password with token"""
+    
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    
+    try:
+        user_account = UserAccount.objects.get(reset_token_hash=token_hash)
+        
+        if not user_account.reset_token_created:
+            raise ValueError('Invalid reset token')
+        
+        time_since_created = timezone.now() - user_account.reset_token_created
+        if time_since_created > timedelta(hours=1):
+            user_account.reset_token_hash = None
+            user_account.reset_token_created = None
+            user_account.save()
+            raise ValueError('Reset token has expired')
+        
+        user = user_account.user
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            raise ValueError(f"Password validation failed: {', '.join(e.messages)}")
+        
+        user.set_password(new_password)
+        user.save()
+        
+        user_account.reset_token_hash = None
+        user_account.reset_token_created = None
+        user_account.reset_attempts = 0
+        user_account.save()
+        
+        try:
+            logout_all_sessions(user)
+        except Exception as e:
+            logger.error(f'Failed to logout all sessions during password reset: {str(e)}')
+        
+        send_mail(
+            subject='Password Changed Successfully',
+            message=f'''
+            Your password was successfully changed.
+            
+            If you didn't make this change, please contact support immediately.
+            
+            Time: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+            IP Address: {request_ip or 'Unknown'}
+            ''',
+            from_email='None',
+            recipient_list=[user.email],
+            fail_silently=True
+        )
+        
+        logger.info(
+            f'Password reset completed for user {user.username} ({user.email}) from IP {request_ip}'
+        )
+        
+        return {
+            'success': True,
+            'message': 'Password reset successful. Please login with your new password.'
+        }
+        
+    except UserAccount.DoesNotExist:
+        logger.warning(f'Invalid password reset token attempted from IP {request_ip}')
+        raise ValueError('Invalid or expired reset token')
+    
+    except Exception as e:
+        logger.error(f'Error during password reset: {str(e)}')
+        raise ValueError('Password reset failed')

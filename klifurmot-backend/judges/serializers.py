@@ -11,10 +11,8 @@ class SendInvitationSerializer(serializers.Serializer):
         return value.strip().lower()
     
     def validate_name(self, value):
-        if value:
-            return value.strip()
-        return value
-    
+        return value.strip() if value else ''
+
     def validate_expires_at(self, value):
         if value <= timezone.now():
             raise serializers.ValidationError('Expiration date must be in the future')

@@ -33,6 +33,13 @@ def send_invitation(request, competition_id):
             user=request.user,
             **serializer.validated_data
         )
+
+        if result['type'] == 'updated_invitation':
+            message = 'Existing invitation updated with new expiration date'
+        elif result['created']:
+            message = 'Invitation sent successfully' if result['type'] == 'new_user' else 'Judge link created successfully'
+        else:
+            message = 'Judge link updated successfully'
         
         return utils.success_response(
             data=serializers.SendInvitationResponseSerializer(result, context={'request': request}).data,

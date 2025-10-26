@@ -29,6 +29,10 @@ class UserAccount(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
     last_modified_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    reset_token_hash = models.CharField(max_length=128, null=True, blank=True)
+    reset_token_created = models.DateTimeField(null=True, blank=True)
+    reset_attempts = models.IntegerField(default=0)
+    last_reset_attempt = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
