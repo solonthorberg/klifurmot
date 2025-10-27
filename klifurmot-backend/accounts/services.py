@@ -2,7 +2,9 @@ from typing import Dict, Any, Optional
 from datetime import date, timedelta
 import secrets
 import hashlib
-from django.core.mail import send_mail
+import json
+import textwrap
+from django.core.mail import send_mail, EmailMessage
 from django.utils import timezone
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.contrib.auth.password_validation import validate_password
@@ -415,24 +417,37 @@ def request_password_reset(email: str, request_ip: str = None) -> Dict[str, Any]
         
         reset_url = f"https://klifurmot.is/reset-password?token={token}"
         
-        send_mail(
+        email_message = EmailMessage(
             subject='Password Reset Request',
-            message=f'''
-            You requested a password reset for your account.
-            
-            Click here to reset your password (valid for 1 hour):
-            {reset_url}
-            
-            If you didn't request this, ignore this email.
-            Your password won't change until you click the link above.
-            
-            For security, this link expires in 1 hour.
-            ''',
-            from_email='None',
-            recipient_list=[email],
-            fail_silently=False
+            body=textwrap.dedent(f'''
+                You requested a password reset for your account.
+                
+                Click here to reset your password (valid for 1 hour):
+                {reset_url}
+                
+                If you didn't request this, ignore this email.
+                Your password won't change until you click the link above.
+                
+                For security, this link expires in 1 hour.
+            ''').strip(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
         )
-        
+
+        email_message.extra_headers = {
+            'X-SMTPAPI': json.dumps({
+                'filters': {
+                    'clicktrack': {
+                        'settings': {
+                            'enable': 0
+                        }
+                    }
+                }
+            })
+        }
+
+        email_message.send(fail_silently=False)
+
         logger.info(f'Password reset requested for {email} from IP {request_ip}')
         
     except User.DoesNotExist:
@@ -486,21 +501,34 @@ def reset_password(token: str, new_password: str, request_ip: str = None) -> Dic
         except Exception as e:
             logger.error(f'Failed to logout all sessions during password reset: {str(e)}')
         
-        send_mail(
+        email_message = EmailMessage(
             subject='Password Changed Successfully',
-            message=f'''
-            Your password was successfully changed.
-            
-            If you didn't make this change, please contact support immediately.
-            
-            Time: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
-            IP Address: {request_ip or 'Unknown'}
-            ''',
-            from_email='None',
-            recipient_list=[user.email],
-            fail_silently=True
+            body=textwrap.dedent(f'''
+                Your password was successfully changed.
+                
+                If you didn't make this change, please contact support immediately.
+                
+                Time: {timezone.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+                IP Address: {request_ip or 'Unknown'}
+            ''').strip(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
         )
-        
+
+        email_message.extra_headers = {
+            'X-SMTPAPI': json.dumps({
+                'filters': {
+                    'clicktrack': {
+                        'settings': {
+                            'enable': 0
+                        }
+                    }
+                }
+            })
+        }
+
+        email_message.send(fail_silently=True)
+
         logger.info(
             f'Password reset completed for user {user.username} ({user.email}) from IP {request_ip}'
         )
