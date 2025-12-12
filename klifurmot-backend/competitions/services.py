@@ -43,3 +43,23 @@ def create_competition(
     except Exception as e:
         logger.error(f"Failed to create competition: {str(e)}")
         raise
+
+def update_competition(
+    id: id,
+    title: str,
+    description: str,
+    start_date: datetime,
+    end_date: datetime,
+    location: str,
+    created_by: User,
+    image: Optional[UploadedFile] = None,
+    visible: bool = True,
+) -> Dict[str, Any]:
+    """Updates a competition"""
+    if start_date >= end_date:
+        raise ValueError("start_date must be before end_date")
+
+    try:
+        now = timezone.now()
+        if competition.
+

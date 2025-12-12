@@ -1,5 +1,4 @@
 from django.urls import path, include
-from rest_framework.authtoken.views import obtain_auth_token
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -23,11 +22,12 @@ Including another URLconf
 """
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls')),
-    path('api/athletes/', include('athletes.urls')),
-    path('api/judges/', include('judges.urls')), path('api/scoring/', include('scoring.urls')),
-    path('api/competitions/', include('competitions.urls')),
+    path("admin/", admin.site.urls),
+    path("api/", include("accounts.urls")),
+    path("api/athletes/", include("athletes.urls")),
+    path("api/judges/", include("judges.urls")),
+    path("api/scoring/", include("scoring.urls")),
+    path("api/competitions/", include("competitions.urls")),
 ]
 
 if settings.DEBUG:
