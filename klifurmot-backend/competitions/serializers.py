@@ -1,70 +1,100 @@
 from rest_framework import serializers
-from .models import Competition, CategoryGroup, CompetitionCategory, CompetitionRound, Boulder, JudgeBoulderAssignment, RoundGroup
+
+from . import models
+
+
+class CreateCompetitionSerializer(serializers.ModelSerializer):
+    """Serializer for creating competitions"""
+
+    title = serializers.CharField(max_length=200, min_length=3)
+    description = serializers.CharField(
+        max_length=5000, required=False, allow_blank=True
+    )
+    location = serializers.CharField(max_length=250, required=False, allow_blank=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = models.Competition
+        fields = [
+            "title",
+            "description",
+            "start_date",
+            "end_date",
+            "location",
+            "image",
+            "visible",
+        ]
+
+    def validate(self, data):
+        if data.get("end_date") and data.get("start_date"):
+            if data["end_date"] <= data["start_date"]:
+                raise serializers.ValidationError("End date must be after start date")
+        return data
+
+
+class UpdateCompetitionSerializer(serializers.ModelSerializer):
+    """Serializer for updating a competition"""
+
+    title = serializers.CharField(max_length=200, min_length=3, required=False)
+    description = serializers.CharField(
+        max_length=5000, required=False, allow_blank=True
+    )
+    location = serializers.CharField(max_length=250, required=False, allow_blank=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = models.Competition
+        fields = [
+            "title",
+            "description",
+            "start_date",
+            "end_date",
+            "location",
+            "image",
+            "visible",
+        ]
+
+    def validate(self, data):
+        if data.get("end_date") and data.get("start_date"):
+            if data["end_date"] <= data["start_date"]:
+                raise serializers.ValidationError("End date must be after start date")
+        return data
+
 
 class CompetitionSerializer(serializers.ModelSerializer):
-    created_by_username = serializers.CharField(source='created_by.username', read_only=True)    
-    class Meta:
-        model = Competition
-        fields = '__all__'
-        read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
-    
-    def get_created_by_full_name(self, obj):
-        if obj.created_by and hasattr(obj.created_by, 'profile'):
-            return obj.created_by.profile.full_name
-        elif obj.created_by:
-            return obj.created_by.get_full_name() or obj.created_by.username
-        return None
+    """For listing and retrieving competitions"""
 
-class CategoryGroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CategoryGroup
-        fields = '__all__'
-
-class CompetitionCategorySerializer(serializers.ModelSerializer):
-    category_group_detail = CategoryGroupSerializer(source='category_group', read_only=True)
-    category_group = serializers.PrimaryKeyRelatedField(queryset=CategoryGroup.objects.all())
-    
-    class Meta:
-        model = CompetitionCategory
-        fields = ['id', 'competition', 'category_group', 'category_group_detail', 'gender', 
-                  'created_at', 'created_by', 'last_modified_at', 'last_modified_by', 'deleted']
-        read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
+        model = models.Competition
+        fields = [
+            "id",
+            "title",
+            "description",
+            "start_date",
+            "end_date",
+            "location",
+            "image",
+            "visible",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
-class RoundGroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RoundGroup
-        fields = '__all__'
+def validate_competition_image(uploaded_file):
+    """Validate competition picture file - called from view before service"""
+    if uploaded_file.size > 5 * 1024 * 1024:
+        raise serializers.ValidationError("Image size cannot exceed 5MB")
 
-class RoundSerializer(serializers.ModelSerializer):
-    round_group_detail = RoundGroupSerializer(source='round_group', read_only=True)
-    competition_category_detail = CompetitionCategorySerializer(source='competition_category', read_only=True)
-    
-    class Meta:
-        model = CompetitionRound
-        fields = ['id', 'competition_category', 'competition_category_detail', 'round_group', 
-                  'round_group_detail', 'round_order', 'climbers_advance', 'boulder_count', 
-                  'completed', 'start_date', 'end_date', 'is_self_scoring', 'is_default', 'created_by', 
-                  'created_at', 'last_modified_at', 'last_modified_by', 'deleted']
-        read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
-        extra_kwargs = {
-            'round_group': {'write_only': True},
-            'competition_category': {'write_only': True}
-        }
+    if not uploaded_file.content_type.startswith("image/"):
+        raise serializers.ValidationError("Only image files are allowed")
 
-class BoulderSerializer(serializers.ModelSerializer):
-    round_detail = RoundSerializer(source='round', read_only=True)
-    
-    class Meta:
-        model = Boulder
-        fields = ['id', 'round', 'round_detail', 'section_style', 'boulder_number', 
-                  'created_by', 'created_at', 'last_modified_at', 'last_modified_by', 'deleted']
-        read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
-        extra_kwargs = {
-            'round': {'write_only': True}
-        }
+    allowed_extensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+    file_extension = (
+        uploaded_file.name.lower().split(".")[-1] if "." in uploaded_file.name else ""
+    )
+    if f".{file_extension}" not in allowed_extensions:
+        raise serializers.ValidationError("Allowed file types: JPG, PNG, GIF, WebP")
 
-class JudgeBoulderAssignmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = JudgeBoulderAssignment
-        fields = '__all__'
+    return True

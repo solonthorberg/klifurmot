@@ -1,0 +1,25 @@
+{
+  "reportUnreachableCode": false,
+  "enableReachabilityAnalysis": false,
+  "typeCheckingMode": "basic",
+  "reportAttributeAccessIssue": false,
+  "reportOptionalMemberAccess": false,
+  "reportGeneralTypeIssues": false,
+  "reportAssignmentType": false,
+  "reportOptionalSubscript": false,
+  "reportPrivateUsage": false,
+  "ignore": ["**/models.py"],
+  "include": [
+    "accounts",
+    "athletes",
+    "competitions",
+    "judges",
+    "scoring",
+    "klifurmot"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/migrations"
+  ]
+}

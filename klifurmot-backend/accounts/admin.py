@@ -1,9 +1,8 @@
 from django.contrib import admin
-from .models import *
+from . import models
 
 # Register your models here.
 
-admin.site.register(Country)
-admin.site.register(UserAccount)
-admin.site.register(CompetitionRole)
-
+admin.site.register(models.Country)
+admin.site.register(models.UserAccount)
+admin.site.register(models.CompetitionRole)
