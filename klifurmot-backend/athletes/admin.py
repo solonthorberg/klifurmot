@@ -1,7 +1,6 @@
 from django.contrib import admin
-from .models import *
+from .models import Climber, CompetitionRegistration
 
-# Register your models here.
 
 admin.site.register(Climber)
 admin.site.register(CompetitionRegistration)

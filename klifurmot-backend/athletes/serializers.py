@@ -1,39 +1,40 @@
 from rest_framework import serializers
-from accounts.serializers import UserAccountSerializer
-from competitions.serializers import CompetitionCategorySerializer
-from .models import Climber, CompetitionRegistration
 
-class ClimberSerializer(serializers.ModelSerializer):
-    user_account = UserAccountSerializer(read_only=True)
-    
-    class Meta:
-        model = Climber
-        fields = [
-            'id', 'user_account', 'is_simple_athlete', 
-            'simple_name', 'simple_age', 'simple_gender',
-            'created_by', 'created_at', 'last_modified_at', 
-            'last_modified_by', 'deleted'
-        ]
-        read_only_fields = ['created_by', 'last_modified_by', 'created_at', 'last_modified_at']
 
-    def to_representation(self, instance):
-        """Custom representation to handle both simple and regular athletes"""
-        data = super().to_representation(instance)
-        
-        if instance.is_simple_athlete:
-            # For simple athletes, don't include user_account data
-            data['user_account'] = None
+class CreateClimberSerializer(serializers.Serializer):
+    is_simple_athlete = serializers.BooleanField(default=True)
+    name = serializers.CharField(max_length=250, required=False)
+    age = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    gender = serializers.ChoiceField(choices=["KK", "KVK"], required=False)
+    user_account_id = serializers.IntegerField(required=False)
+
+    def validate(self, data):
+        if data.get("is_simple_athlete"):
+            if not data.get("name"):
+                raise serializers.ValidationError(
+                    "name is required for simple athletes"
+                )
+            if not data.get("age"):
+                raise serializers.ValidationError("age is required for simple athletes")
+            if not data.get("gender"):
+                raise serializers.ValidationError(
+                    "gender is required for simple athletes"
+                )
         else:
-            # For regular athletes, don't include simple athlete fields
-            data.pop('simple_name', None)
-            data.pop('simple_age', None) 
-            data.pop('simple_gender', None)
-            
+            if not data.get("user_account_id"):
+                raise serializers.ValidationError(
+                    "user_account_id is required for regular athletes"
+                )
         return data
 
-class CompetitionRegistrationSerializer(serializers.ModelSerializer):
-    climber = ClimberSerializer()
-    competition_category = CompetitionCategorySerializer()
-    class Meta:
-        model = CompetitionRegistration
-        fields = ['id', 'competition', 'competition_category', 'climber', 'created_at']
+
+class UpdateClimberSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=250, required=False)
+    age = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    gender = serializers.ChoiceField(choices=["KK", "KVK"], required=False)
+
+
+class CreateRegistrationSerializer(serializers.Serializer):
+    climber = serializers.IntegerField()
+    competition = serializers.IntegerField()
+    competition_category = serializers.IntegerField()

@@ -2,16 +2,16 @@
 import os
 import sys
 import django
+from accounts.models import Country
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(script_dir)
 sys.path.append(project_root)
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'klifurmot.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "klifurmot.settings")
 
 django.setup()
-
-from accounts.models import Country
 
 countries = [
     {"code": "IS", "name_en": "Iceland", "name_local": "Ísland"},
@@ -24,20 +24,22 @@ countries = [
     {"code": "IT", "name_en": "Italy", "name_local": "Italia"},
     {"code": "FI", "name_en": "Finland", "name_local": "Suomi"},
     {"code": "NL", "name_en": "Netherlands", "name_local": "Nederland"},
-    {"code": "GB", "name_en": "United Kingdom", "name_local": "United Kingdom"}
+    {"code": "GB", "name_en": "United Kingdom", "name_local": "United Kingdom"},
 ]
+
 
 def main():
     print("Loading countries into database...")
-    
+
     for c in countries:
         obj, created = Country.objects.update_or_create(
             country_code=c["code"],
-            defaults={"name_en": c["name_en"], "name_local": c["name_local"]}
+            defaults={"name_en": c["name_en"], "name_local": c["name_local"]},
         )
         print(f"{'Created' if created else 'Updated'}: {obj}")
-    
+
     print(f"\nSuccessfully processed {len(countries)} countries!")
+
 
 if __name__ == "__main__":
     main()
