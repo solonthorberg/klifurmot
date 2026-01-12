@@ -34,4 +34,5 @@ urlpatterns = [
         "categories/<int:category_id>/", views.category_detail, name="category_detail"
     ),
     path("category-groups/", views.category_groups, name="category_groups"),
+    path("boulders/<int:boulder_id>/", views.boulder_detail, name="boulder_detail"),
 ]

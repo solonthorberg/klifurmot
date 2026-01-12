@@ -796,3 +796,64 @@ def get_round(round_id: int) -> CompetitionRound:
 
     except CompetitionRound.DoesNotExist:
         raise ValueError(f"Round with id {round_id} not found")
+
+
+def get_boulder(boulder_id: int) -> dict[str, Any]:
+    try:
+        boulder = Boulder.objects.select_related(
+            "round__competition_category__competition"
+        ).get(id=boulder_id, deleted=False)
+    except Boulder.DoesNotExist:
+        raise ValueError(f"Boulder with id {boulder_id} not found")
+
+    return {
+        "id": boulder.id,
+        "boulder_number": boulder.boulder_number,
+        "section_style": boulder.section_style,
+        "image": boulder.image.url if boulder.image else None,
+        "round_id": boulder.round_id,
+    }
+
+
+def update_boulder(
+    boulder_id: int,
+    user,
+    image=None,
+    **update_data: Any,
+) -> dict[str, Any]:
+    try:
+        boulder = Boulder.objects.select_related(
+            "round__competition_category__competition"
+        ).get(id=boulder_id, deleted=False)
+    except Boulder.DoesNotExist:
+        raise ValueError(f"Boulder with id {boulder_id} not found")
+
+    competition = boulder.round.competition_category.competition
+
+    if competition.status != "not_started":
+        raise PermissionError("Cannot update boulder after competition has started")
+
+    if image is not None:
+        if image == "":
+            if boulder.image:
+                boulder.image.delete(save=False)
+            boulder.image = None
+        else:
+            if boulder.image:
+                boulder.image.delete(save=False)
+            boulder.image = image
+
+    for field, value in update_data.items():
+        if hasattr(boulder, field):
+            setattr(boulder, field, value)
+
+    boulder.last_modified_by = user
+    boulder.save()
+
+    return {
+        "id": boulder.id,
+        "boulder_number": boulder.boulder_number,
+        "section_style": boulder.section_style,
+        "image": boulder.image.url if boulder.image else None,
+        "round_id": boulder.round_id,
+    }

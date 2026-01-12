@@ -182,6 +182,7 @@ class Boulder(models.Model):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     boulder_number = models.IntegerField()
     section_style = models.CharField(max_length=50, default="general")
+    image = models.ImageField(upload_to="boulders/", blank=True, null=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
     )

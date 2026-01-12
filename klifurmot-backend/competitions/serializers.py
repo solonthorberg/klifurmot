@@ -3,7 +3,7 @@ from rest_framework import serializers
 from . import models
 
 
-def validate_competition_image(uploaded_file):
+def validate_image(uploaded_file):
     if uploaded_file.size > 5 * 1024 * 1024:
         raise serializers.ValidationError("Image size cannot exceed 5MB")
 
@@ -46,7 +46,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         if value is None:
             return value
-        validate_competition_image(value)
+        validate_image(value)
         return value
 
     def validate(self, data):
@@ -71,7 +71,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
     def validate_image(self, value):
         if value is None:
             return value
-        validate_competition_image(value)
+        validate_image(value)
         return value
 
     def validate(self, data):
@@ -210,3 +210,14 @@ class BoulderSerializer(serializers.ModelSerializer):
             "boulder_number",
             "section_style",
         ]
+
+
+class UpdateBoulderSerializer(serializers.Serializer):
+    image = serializers.ImageField(required=False, allow_null=True)
+    section_style = serializers.CharField(max_length=50, required=False)
+
+    def validate_image(self, value):
+        if value is None:
+            return value
+        validate_image(value)
+        return value

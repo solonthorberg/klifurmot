@@ -626,3 +626,74 @@ def category_groups(_request):
         data=serializers.CategoryGroupSerializer(result, many=True).data,
         message="Category groups retrieved successfully",
     )
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([AllowAny])
+def boulder_detail(request, boulder_id):
+    if request.method == "GET":
+        try:
+            result = services.get_boulder(boulder_id=boulder_id)
+
+            return utils.success_response(
+                data=result,
+                message="Boulder retrieved successfully",
+            )
+
+        except ValueError as e:
+            return utils.error_response(
+                code="Not_found",
+                message=str(e),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+    if request.method == "PATCH":
+        if not permissions.IsCompetitionAdmin().has_permission(request, None):
+            return utils.error_response(
+                code="Access_denied",
+                message="Competition admin access required",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = serializers.UpdateBoulderSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            errors_dict = cast(Dict[str, Any], serializer.errors)
+            return utils.validation_error_response(serializer_errors=errors_dict)
+
+        try:
+            validated_data = cast(Dict[str, Any], serializer.validated_data)
+            image = validated_data.pop("image", None)
+
+            result = services.update_boulder(
+                boulder_id=boulder_id,
+                user=request.user,
+                image=image,
+                **validated_data,
+            )
+
+            return utils.success_response(
+                data=result,
+                message="Boulder updated successfully",
+            )
+
+        except ValueError as e:
+            return utils.error_response(
+                code="Update_failed",
+                message=str(e),
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        except Exception as e:
+            return utils.error_response(
+                code="Update_failed",
+                message=str(e),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
