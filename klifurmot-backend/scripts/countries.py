@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
+"""
+Seed script to populate countries in the database.
+
+Usage:
+    cd klifurmot-backend
+    python scripts/seed_countries.py
+"""
+
 import os
 import sys
 import django
 from accounts.models import Country
-
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(script_dir)
 sys.path.append(project_root)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "klifurmot.settings")
-
 django.setup()
 
 countries = [
@@ -43,3 +49,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -93,6 +93,21 @@ def delete_competition(competition_id: int) -> None:
         competition = Competition.objects.get(id=competition_id, deleted=False)
 
         with transaction.atomic():
+            Climb.objects.filter(
+                boulder__round__competition_category__competition=competition,
+                deleted=False,
+            ).update(deleted=True)
+
+            ClimberRoundScore.objects.filter(
+                round__competition_category__competition=competition,
+                deleted=False,
+            ).update(deleted=True)
+
+            RoundResult.objects.filter(
+                round__competition_category__competition=competition,
+                deleted=False,
+            ).update(deleted=True)
+
             Boulder.objects.filter(
                 round__competition_category__competition=competition,
                 deleted=False,
@@ -234,10 +249,18 @@ def update_round(
                     Boulder.objects.bulk_create(boulders)
 
                 elif new_boulder_count < current_boulder_count:
-                    Boulder.objects.filter(
+                    boulders_to_delete = Boulder.objects.filter(
                         round=competition_round,
                         boulder_number__gt=new_boulder_count,
-                    ).delete()
+                        deleted=False,
+                    )
+
+                    Climb.objects.filter(
+                        boulder__in=boulders_to_delete,
+                        deleted=False,
+                    ).update(deleted=True)
+
+                    boulders_to_delete.update(deleted=True)
 
                 competition_round.boulder_count = new_boulder_count
 
@@ -269,6 +292,21 @@ def delete_round(round_id: int) -> None:
             raise PermissionError("Cannot delete round after competition has started")
 
         with transaction.atomic():
+            Climb.objects.filter(
+                boulder__round=competition_round,
+                deleted=False,
+            ).update(deleted=True)
+
+            ClimberRoundScore.objects.filter(
+                round=competition_round,
+                deleted=False,
+            ).update(deleted=True)
+
+            RoundResult.objects.filter(
+                round=competition_round,
+                deleted=False,
+            ).update(deleted=True)
+
             Boulder.objects.filter(
                 round=competition_round,
                 deleted=False,
@@ -427,6 +465,21 @@ def delete_category(category_id: int) -> None:
             )
 
         with transaction.atomic():
+            Climb.objects.filter(
+                boulder__round__competition_category=category,
+                deleted=False,
+            ).update(deleted=True)
+
+            ClimberRoundScore.objects.filter(
+                round__competition_category=category,
+                deleted=False,
+            ).update(deleted=True)
+
+            RoundResult.objects.filter(
+                round__competition_category=category,
+                deleted=False,
+            ).update(deleted=True)
+
             Boulder.objects.filter(
                 round__competition_category=category,
                 deleted=False,

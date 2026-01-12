@@ -1,31 +1,45 @@
+import logging
+
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
 from scoring.models import ClimberRoundScore, RoundResult
 from competitions.models import CompetitionCategory, CompetitionRound
+
+
+logger = logging.getLogger(__name__)
 
 
 def FormatCompetitionResults(competition_id):
     categories_data = []
 
     categories = CompetitionCategory.objects.filter(
-        competition_id=competition_id
-    ).prefetch_related('competitionround_set', 'category_group')
+        competition_id=competition_id,
+        deleted=False,
+    ).prefetch_related("competitionround_set", "category_group")
 
     for category in categories:
         rounds_data = []
 
-        for round_obj in category.competitionround_set.all().order_by('round_order'):
+        rounds = category.competitionround_set.filter(deleted=False).order_by(
+            "round_order"
+        )
+
+        for round_obj in rounds:
             round_results = (
-                RoundResult.objects
-                .filter(round=round_obj)
-                .select_related('climber__user_account')
-                .order_by('rank')
+                RoundResult.objects.filter(round=round_obj, deleted=False)
+                .select_related("climber__user_account")
+                .order_by("rank")
             )
 
             climber_ids = [r.climber.id for r in round_results]
             scores_map = {
                 s.climber.id: s
-                for s in ClimberRoundScore.objects.filter(round=round_obj, climber_id__in=climber_ids)
+                for s in ClimberRoundScore.objects.filter(
+                    round=round_obj,
+                    climber_id__in=climber_ids,
+                    deleted=False,
+                )
             }
 
             formatted_results = []
@@ -33,43 +47,50 @@ def FormatCompetitionResults(competition_id):
                 score = scores_map.get(result.climber.id)
                 if not score:
                     continue
-                full_name = (
-                    result.climber.user_account.full_name
-                    if result.climber.user_account and result.climber.user_account.full_name
-                    else result.climber.simple_name
-                    if result.climber.simple_name
-                    else "Name unknown"
+
+                if result.climber.is_simple_athlete:
+                    full_name = result.climber.simple_name or "Name unknown"
+                else:
+                    full_name = (
+                        result.climber.user_account.full_name
+                        if result.climber.user_account
+                        else "Name unknown"
+                    )
+
+                formatted_results.append(
+                    {
+                        "rank": result.rank,
+                        "full_name": full_name,
+                        "tops": score.tops,
+                        "attempts_top": score.attempts_tops,
+                        "zones": score.zones,
+                        "attempts_zone": score.attempts_zones,
+                        "total_score": float(round(score.total_score, 1)),
+                    }
                 )
 
-                formatted_results.append({
-                    "rank": result.rank,
-                    "full_name": full_name,
-                    "tops": score.tops,
-                    "attempts_top": score.attempts_tops,
-                    "zones": score.zones,
-                    "attempts_zone": score.attempts_zones,
-                    "total_score": float(round(score.total_score, 1)),
-                })
-
-            rounds_data.append({
-                "round_name": round_obj.round_group.name,
-                "results": formatted_results
-            })
-
-        categories_data.append({
-            "category": {
-                "id": category.id,
-                "gender": category.gender,
-                "group": {
-                    "id": category.category_group.id,
-                    "name": category.category_group.name
+            rounds_data.append(
+                {
+                    "round_name": round_obj.round_group.name,
+                    "results": formatted_results,
                 }
-            },
-            "rounds": rounds_data
-        })
+            )
+
+        categories_data.append(
+            {
+                "category": {
+                    "id": category.id,
+                    "gender": category.gender,
+                    "group": {
+                        "id": category.category_group.id,
+                        "name": category.category_group.name,
+                    },
+                },
+                "rounds": rounds_data,
+            }
+        )
 
     return categories_data
-
 
 
 def BroadcastScoreUpdate(competition_id):
@@ -79,43 +100,39 @@ def BroadcastScoreUpdate(competition_id):
     async_to_sync(channel_layer.group_send)(
         f"competition_{competition_id}",
         {
-            "type": "send_result_update",
-            "data": data
-        }
+            "type": "score_update",
+            "data": data,
+        },
     )
 
 
-from scoring.utils import BroadcastScoreUpdate 
-
 def AutoAdvanceClimbers(current_round):
-    """
-    Auto-advance climbers to the next round for the same category
-    """
     all_results = RoundResult.objects.filter(
-        round=current_round, 
-        deleted=False
-    ).order_by('rank')
-    
+        round=current_round,
+        deleted=False,
+    ).order_by("rank")
+
     next_round = (
-        CompetitionRound.objects
-        .filter(
+        CompetitionRound.objects.filter(
             competition_category=current_round.competition_category,
-            round_order__gt=current_round.round_order
+            round_order__gt=current_round.round_order,
+            deleted=False,
         )
-        .order_by('round_order')
+        .order_by("round_order")
         .first()
     )
 
     if not next_round:
-        print(" No next round found.")
+        logger.warning(f"No next round found for round {current_round.id}")
         return {"status": "error", "message": "No next round found"}
 
     num_to_advance = next_round.climbers_advance
 
     existing_climber_ids = set(
-        RoundResult.objects
-        .filter(round=next_round)
-        .values_list("climber_id", flat=True)
+        RoundResult.objects.filter(
+            round=next_round,
+            deleted=False,
+        ).values_list("climber_id", flat=True)
     )
 
     selected = []
@@ -135,11 +152,11 @@ def AutoAdvanceClimbers(current_round):
 
     selected.reverse()
 
-    existing_orders = (
-        RoundResult.objects
-        .filter(round=next_round)
-        .values_list('start_order', flat=True)
-    )
+    existing_orders = RoundResult.objects.filter(
+        round=next_round,
+        deleted=False,
+    ).values_list("start_order", flat=True)
+
     max_order = max(existing_orders, default=0) or 0
 
     added = 0
@@ -147,10 +164,11 @@ def AutoAdvanceClimbers(current_round):
         _, created = RoundResult.objects.get_or_create(
             round=next_round,
             climber=result.climber,
+            deleted=False,
             defaults={
                 "start_order": max_order + index,
                 "created_by": result.created_by,
-            }
+            },
         )
         if created:
             added += 1
@@ -160,14 +178,17 @@ def AutoAdvanceClimbers(current_round):
     return {"status": "ok", "advanced": added, "next_round_id": next_round.id}
 
 
-def UpdateRoundScoreForBoulder(boulder):
-    climber = boulder.climber
-    round_obj = boulder.boulder.round
+def UpdateRoundScoreForBoulder(climb):
+    climber = climb.climber
+    round_obj = climb.boulder.round
 
     if not climber or not round_obj:
         return
 
-    boulder_climbs = climber.climb_set.filter(boulder__round=round_obj)
+    boulder_climbs = climber.climb_set.filter(
+        boulder__round=round_obj,
+        deleted=False,
+    )
 
     total_tops = sum(1 for c in boulder_climbs if c.top_reached)
     total_zones = sum(1 for c in boulder_climbs if c.zone_reached)
@@ -183,16 +204,17 @@ def UpdateRoundScoreForBoulder(boulder):
         elif c.zone_reached:
             zone_score += 10 - 0.1 * (c.attempts_zone - 1)
 
-    total_score = round(zone_score + top_score, 1)        
+    total_score = round(zone_score + top_score, 1)
 
     ClimberRoundScore.objects.update_or_create(
         climber=climber,
         round=round_obj,
+        deleted=False,
         defaults={
-            'total_score': total_score,
-            'tops': total_tops,
-            'zones': total_zones,
-            'attempts_tops': attempts_tops,
-            'attempts_zones': attempts_zones,
-        }
+            "total_score": total_score,
+            "tops": total_tops,
+            "zones": total_zones,
+            "attempts_tops": attempts_tops,
+            "attempts_zones": attempts_zones,
+        },
     )

@@ -1,4 +1,6 @@
 from typing import Any, Optional
+
+from django.db import transaction
 from .models import Climber, CompetitionRegistration
 from .utils import calculate_age, get_age_based_category
 from competitions.models import CompetitionRound
@@ -368,13 +370,36 @@ def update_climber(climber_id: int, user, **update_data: Any) -> dict[str, Any]:
 
 
 def delete_climber(climber_id: int) -> None:
+    from scoring.models import Climb, ClimberRoundScore, RoundResult
+
     try:
         climber = Climber.objects.get(id=climber_id, deleted=False)
     except Climber.DoesNotExist:
         raise ValueError(f"Climber with id {climber_id} not found")
 
-    climber.deleted = True
-    climber.save()
+    with transaction.atomic():
+        Climb.objects.filter(
+            climber=climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        ClimberRoundScore.objects.filter(
+            climber=climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        RoundResult.objects.filter(
+            climber=climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        CompetitionRegistration.objects.filter(
+            climber=climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        climber.deleted = True
+        climber.save()
 
 
 def list_registrations(competition_id: Optional[int] = None) -> list[dict[str, Any]]:
@@ -472,6 +497,8 @@ def create_registration(user, **data: Any) -> dict[str, Any]:
 
 
 def delete_registration(registration_id: int) -> None:
+    from scoring.models import Climb, ClimberRoundScore, RoundResult
+
     try:
         registration = CompetitionRegistration.objects.get(
             id=registration_id,
@@ -480,5 +507,24 @@ def delete_registration(registration_id: int) -> None:
     except CompetitionRegistration.DoesNotExist:
         raise ValueError(f"Registration with id {registration_id} not found")
 
-    registration.deleted = True
-    registration.save()
+    with transaction.atomic():
+        Climb.objects.filter(
+            boulder__round__competition_category__competition=registration.competition,
+            climber=registration.climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        ClimberRoundScore.objects.filter(
+            round__competition_category__competition=registration.competition,
+            climber=registration.climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        RoundResult.objects.filter(
+            round__competition_category__competition=registration.competition,
+            climber=registration.climber,
+            deleted=False,
+        ).update(deleted=True)
+
+        registration.deleted = True
+        registration.save()
