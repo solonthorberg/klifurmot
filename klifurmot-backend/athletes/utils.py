@@ -1,39 +1,23 @@
-from datetime import date
+from django.utils import timezone
+from typing import Optional
 
-CATEGORY_LABELS = {
-    "U11": "U11",
-    "U13": "U13",
-    "U15": "U15",
-    "U17": "U17",
-    "U19": "U19",
-    "U21": "U21",
-    "Opinn": "Opinn flokkur"
-}
+from competitions import models
 
-GENDER_LABELS = {
-    "KK": "KK",
-    "KVK": "KVK"
-}
 
-def calculate_age(birth_date):
-    today = date.today()
-    age = today.year - birth_date.year
-    if (today.month, today.day) < (birth_date.month, birth_date.day):
-        age -= 1
+def calculate_age(date_of_birth) -> Optional[int]:
+    if not date_of_birth:
+        return None
+    today = timezone.now().date()
+    age = (
+        today.year
+        - date_of_birth.year
+        - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    )
     return age
 
+
 def get_age_based_category(age):
-    if age <= 11:
-        return "U11"
-    elif age <= 13:
-        return "U13"
-    elif age <= 15:
-        return "U15"
-    elif age <= 17:
-        return "U17"
-    elif age <= 19:
-        return "U19"
-    elif age <= 21:
-        return "U21"
-    else:
-        return "Opinn Flokkur"
+    category = models.CategoryGroup.objects.filter(
+        min_age__lte=age, max_age__gte=age
+    ).first()
+    return category.name if category else None

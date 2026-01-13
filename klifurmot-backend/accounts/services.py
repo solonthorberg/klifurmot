@@ -22,6 +22,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 
 from .models import UserAccount, Country, CompetitionRole
+from athletes.models import Climber
+
 
 logger = logging.getLogger(__name__)
 
@@ -169,8 +171,15 @@ def register(
                 existing_user.username = username
                 existing_user.save()
 
-                refresh = RefreshToken.for_user(existing_user)
+                climber, created = Climber.objects.get_or_create(
+                    user_account=user_account,
+                    defaults={"created_by": existing_user},
+                )
+                if not created and climber.deleted:
+                    climber.deleted = False
+                    climber.save()
 
+                refresh = RefreshToken.for_user(existing_user)
                 logger.info(f"User reactivated: {username} ({email})")
 
                 return {
@@ -201,8 +210,12 @@ def register(
             wingspan_cm=wingspan_cm,
         )
 
-        refresh = RefreshToken.for_user(user)
+        Climber.objects.create(
+            user_account=user_account,
+            created_by=user,
+        )
 
+        refresh = RefreshToken.for_user(user)
         logger.info(f"User registered successfully: {username} ({email})")
 
         return {
