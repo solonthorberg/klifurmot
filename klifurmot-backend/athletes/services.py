@@ -467,19 +467,25 @@ def create_registration(user, **data: Any) -> dict[str, Any]:
     existing = CompetitionRegistration.objects.filter(
         climber=climber,
         competition=competition,
-        deleted=False,
-    ).exists()
+        competition_category=category,
+    ).first()
 
     if existing:
-        raise ValueError("Climber is already registered for this competition")
+        if not existing.deleted:
+            raise ValueError("Climber is already registered for this competition")
 
-    registration = CompetitionRegistration.objects.create(
-        climber=climber,
-        competition=competition,
-        competition_category=category,
-        created_by=user,
-        last_modified_by=user,
-    )
+        existing.deleted = False
+        existing.last_modified_by = user
+        existing.save()
+        registration = existing
+    else:
+        registration = CompetitionRegistration.objects.create(
+            climber=climber,
+            competition=competition,
+            competition_category=category,
+            created_by=user,
+            last_modified_by=user,
+        )
 
     if climber.is_simple_athlete:
         climber_name = climber.simple_name

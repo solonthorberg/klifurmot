@@ -74,23 +74,33 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
         raise ValueError("Climber is not in the start list for this round")
 
     with transaction.atomic():
-        climb, created = Climb.objects.update_or_create(
+        existing = Climb.objects.filter(
             climber=climber,
             boulder=boulder,
-            deleted=False,
-            defaults={
-                "attempts_top": data.get("attempts_top", 0),
-                "attempts_zone": data.get("attempts_zone", 0),
-                "top_reached": data.get("top_reached", False),
-                "zone_reached": data.get("zone_reached", False),
-                "judge": user,
-                "last_modified_by": user,
-            },
-        )
+        ).first()
 
-        if created:
-            climb.created_by = user
-            climb.save()
+        if existing:
+            existing.deleted = False
+            existing.attempts_top = data.get("attempts_top", 0)
+            existing.attempts_zone = data.get("attempts_zone", 0)
+            existing.top_reached = data.get("top_reached", False)
+            existing.zone_reached = data.get("zone_reached", False)
+            existing.judge = user
+            existing.last_modified_by = user
+            existing.save()
+            climb = existing
+        else:
+            climb = Climb.objects.create(
+                climber=climber,
+                boulder=boulder,
+                attempts_top=data.get("attempts_top", 0),
+                attempts_zone=data.get("attempts_zone", 0),
+                top_reached=data.get("top_reached", False),
+                zone_reached=data.get("zone_reached", False),
+                judge=user,
+                created_by=user,
+                last_modified_by=user,
+            )
 
         UpdateRoundScoreForBoulder(climb)
         _update_round_results(boulder.round)
@@ -309,33 +319,50 @@ def add_to_startlist(user, **data: Any) -> dict[str, Any]:
     except Climber.DoesNotExist:
         raise ValueError(f"Climber with id {data['climber']} not found")
 
-    duplicate_order = RoundResult.objects.filter(
-        round=round_obj,
-        start_order=data["start_order"],
-        deleted=False,
-    ).exists()
-
-    if duplicate_order:
-        raise ValueError(
-            f"Start order {data['start_order']} is already taken in this round"
-        )
-
     existing = RoundResult.objects.filter(
         round=round_obj,
         climber=climber,
-        deleted=False,
-    ).exists()
+    ).first()
 
     if existing:
-        raise ValueError("Climber is already in the start list for this round")
+        if not existing.deleted:
+            raise ValueError("Climber is already in the start list for this round")
 
-    result = RoundResult.objects.create(
-        round=round_obj,
-        climber=climber,
-        start_order=data["start_order"],
-        created_by=user,
-        last_modified_by=user,
-    )
+        duplicate_order = RoundResult.objects.filter(
+            round=round_obj,
+            start_order=data["start_order"],
+            deleted=False,
+        ).exists()
+
+        if duplicate_order:
+            raise ValueError(
+                f"Start order {data['start_order']} is already taken in this round"
+            )
+
+        existing.deleted = False
+        existing.start_order = data["start_order"]
+        existing.last_modified_by = user
+        existing.save()
+        result = existing
+    else:
+        duplicate_order = RoundResult.objects.filter(
+            round=round_obj,
+            start_order=data["start_order"],
+            deleted=False,
+        ).exists()
+
+        if duplicate_order:
+            raise ValueError(
+                f"Start order {data['start_order']} is already taken in this round"
+            )
+
+        result = RoundResult.objects.create(
+            round=round_obj,
+            climber=climber,
+            start_order=data["start_order"],
+            created_by=user,
+            last_modified_by=user,
+        )
 
     if climber.is_simple_athlete:
         climber_name = climber.simple_name
