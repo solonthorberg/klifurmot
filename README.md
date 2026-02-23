@@ -1,47 +1,29 @@
-Uppsetning:
+# Klifurmót
 
-1. Búa til .env skrá í rót
-   Á að líta svona út:
+Klifurmót is a solution for climbing competition management for the Icelandic climbing community. Klifurmót handles the complete competition lifecycle from registration through real-time scoring to automated results publication, following the IFSC standards.
 
-   DB_NAME=nafn_a_gagnagrunni
-   DB_USER=notandanafn
-   DB_PASSWORD=lykilord
-   DB_HOST=localhost
-   DB_PORT=5432
+**Live test at [klifurmot.is](https://klifurmot.is)**
 
-   REACT_APP_GOOGLE_CLIENT_ID=
-   GOOGLE_CLIENT_ID=
+## Tech Stack
 
-   VITE_API_URL=
+### Backend
+- **Framework:** Django 5 + Django REST Framework
+- **Database:** PostgreSQL
+- **Real-time:** Django Channels (WebSocket) with channel layers
+- **Auth:** JWT via `djangorestframework-simplejwt` with token rotation and blacklisting, Google OAuth 2.0
+- **Storage:** Django Storages (S3-compatible for media uploads)
+- **Static files:** WhiteNoise
+- **Type checking:** Pyright
 
-2. Virkja Python virtual environment
-   Ef þú ert ekki með venv:
-   python -m venv venv
+### Frontend
+- **Framework:** React 19 with React Router 7
+- **UI:** Material-UI 
+- **Build tool:** Vite 6
+- **HTTP client:** Axios with interceptor-based token refresh
+- **State:** TanStack Query
 
-3. Install dependencies
-   Settu upp öll þau Python-bókasöfn sem verkefnið þarfnast með:
-   pip install -r requirements.txt
-
-4. Gera migrations til að setja upp schemaið
-   Í rótinni þarf að keyra python manage.py makemigrations og síðan python manage.py migrate
-
-5. Keyra verkefnið
-   daphne -p 8000 klifurmot.asgi:application 
-
-6. Install Vite 
-   cd klifurmot-frontend 
-  npm install
-   npm run dev
-
-7. Búa til superuser
-   python manage.py createsuperuser
-   Getur síðan farið á localhost/admin og skráð þig inn
-
-8. Til að hafa live scoring þarf að ná í docker
-   docker run -d -p 6379:6379 redis
-
-   Til að athuga hvort það virkar:
-   docker exec -it redis redis-cli
-   skrifa síðan:
-   ping
-   Ættir að fá "PONG" tilbaka.
+### Infrastructure
+- **ASGI server:** Daphne (WebSocket + HTTP)
+- **CORS:** django-cors-headers
+- **Config:** python-decouple with `.env` files
+- **Database URLs:** dj-database-url
