@@ -134,16 +134,9 @@ def me(request):
             result = services.get_profile(user=request.user)
 
             return utils.success_response(
-                data={
-                    "user": {
-                        "id": result["user"].id,
-                        "username": result["user"].username,
-                        "email": result["user"].email,
-                    },
-                    "profile": serializers.UserProfileResponseSerializer(
-                        result["user_account"]
-                    ).data,
-                },
+                data=serializers.UserProfileResponseSerializer(
+                    result["user_account"]
+                ).data,
                 message="Profile retrieved successfully",
             )
 
