@@ -14,11 +14,14 @@ class UserProfileResponseSerializer(serializers.ModelSerializer):
     nationality = serializers.CharField(
         source="nationality.country_code", allow_null=True
     )
+    user = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = models.UserAccount
         fields = [
+            "id",
+            "user",
             "full_name",
             "gender",
             "date_of_birth",
@@ -28,6 +31,13 @@ class UserProfileResponseSerializer(serializers.ModelSerializer):
             "profile_picture",
             "is_admin",
         ]
+
+    def get_user(self, obj):
+        return {
+            "id": obj.user.id,
+            "username": obj.user.username,
+            "email": obj.user.email,
+        }
 
     def get_profile_picture(self, obj):
         return obj.profile_picture.url if obj.profile_picture else None
