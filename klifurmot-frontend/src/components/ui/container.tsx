@@ -1,6 +1,6 @@
 interface ContainerProps {
     children: React.ReactNode;
-    variant?: 'primary' | 'centered';
+    variant?: 'primary' | 'primaryCenter' | 'centered' | 'tab';
     className?: string;
 }
 
@@ -10,14 +10,15 @@ export default function Container({
     className = '',
 }: ContainerProps) {
     const baseStyles = 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
+
     const variants = {
-        primary: 'flex flex-col items-center justify-center pt-8',
-        centered: 'flex flex-col items-center justify-center h-full pb-30',
+        primary: `${baseStyles} flex flex-col pt-8 pb-8`,
+        primaryCenter: `${baseStyles} flex flex-col items-center justify-center pt-8`,
+        centered: `${baseStyles} flex flex-col items-center justify-center pb-30`,
+        tab: 'flex items-start w-full',
     };
 
     return (
-        <div className={`${baseStyles} ${variants[variant]} ${className}`}>
-            {children}
-        </div>
+        <div className={`${variants[variant]} ${className}`}>{children}</div>
     );
 }

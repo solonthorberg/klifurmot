@@ -539,7 +539,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
                 "id": climber.id,
                 "full_name": climber.simple_name,
                 "age": climber.simple_age,
-                "category_name": category_label,
+                "category_name": category.category_group.name,
             }
         else:
             user_account = climber.user_account
@@ -549,7 +549,11 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
                 "age": calculate_age(user_account.date_of_birth)
                 if user_account and user_account.date_of_birth
                 else None,
-                "category_name": category_label,
+                "category_name": category.category_group.name,
+                "gender": user_account.gender,
+                "nationality": user_account.nationality.country_code
+                if user_account and user_account.nationality
+                else None,
             }
 
         categories[category_label].append(athlete_data)
@@ -680,7 +684,7 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
                     {
                         "start_order": round_result.start_order,
                         "full_name": full_name,
-                        "age_category": category.category_group.name,
+                        "category_name": category.category_group.name,
                     }
                 )
 
@@ -717,68 +721,126 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
     result = []
 
     for category in categories:
-        category_label = f"{category.category_group.name} {category.gender}"
         rounds_data = []
 
-        for competition_round in category.competitionround_set.filter(
-            deleted=False
-        ).order_by("round_order"):
-            scores = (
-                ClimberRoundScore.objects.filter(round=competition_round, deleted=False)
-                .select_related("climber__user_account")
-                .order_by(
-                    "-total_score", "-tops", "-zones", "attempts_tops", "attempts_zones"
+        for round_obj in category.competitionround_set.filter(deleted=False).order_by(
+            "round_order"
+        ):
+            boulders = Boulder.objects.filter(
+                round=round_obj,
+                deleted=False,
+            ).order_by("boulder_number")
+
+            round_results = (
+                RoundResult.objects.filter(
+                    round=round_obj,
+                    deleted=False,
                 )
+                .select_related("climber__user_account")
+                .order_by("rank")
             )
 
-            results_data = []
-            current_rank = 0
-            previous_score = None
+            climber_ids = [r.climber.id for r in round_results]
 
-            for index, score in enumerate(scores):
-                if previous_score is None or (
-                    score.total_score != previous_score.total_score
-                    or score.tops != previous_score.tops
-                    or score.zones != previous_score.zones
-                    or score.attempts_tops != previous_score.attempts_tops
-                    or score.attempts_zones != previous_score.attempts_zones
-                ):
-                    current_rank = index + 1
+            scores_map = {
+                s.climber.id: s
+                for s in ClimberRoundScore.objects.filter(
+                    round=round_obj,
+                    climber_id__in=climber_ids,
+                    deleted=False,
+                )
+            }
 
-                climber = score.climber
+            climbs = (
+                Climb.objects.filter(
+                    boulder__round=round_obj,
+                    climber_id__in=climber_ids,
+                    deleted=False,
+                )
+                .select_related("boulder")
+                .order_by("boulder__boulder_number")
+            )
 
-                if climber.is_simple_athlete:
-                    full_name = climber.simple_name
+            climbs_by_climber: Dict[int, Dict[int, Climb]] = {}
+            for climb in climbs:
+                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = (
+                    climb
+                )
+
+            formatted_results = []
+
+            for rr in round_results:
+                score = scores_map.get(rr.climber.id)
+                if not score:
+                    continue
+
+                if rr.climber.is_simple_athlete:
+                    full_name = rr.climber.simple_name or "Name unknown"
                 else:
                     full_name = (
-                        climber.user_account.full_name if climber.user_account else None
+                        rr.climber.user_account.full_name
+                        if rr.climber.user_account
+                        else "Name unknown"
                     )
 
-                results_data.append(
+                climber_climbs = climbs_by_climber.get(rr.climber.id, {})
+                boulder_scores = []
+
+                for boulder in boulders:
+                    climb = climber_climbs.get(boulder.id)
+                    if climb:
+                        boulder_scores.append(
+                            {
+                                "boulder_number": boulder.boulder_number,
+                                "attempted": True,
+                                "top_reached": climb.top_reached,
+                                "zone_reached": climb.zone_reached,
+                                "attempts_top": climb.attempts_top,
+                                "attempts_zone": climb.attempts_zone,
+                            }
+                        )
+                    else:
+                        boulder_scores.append(
+                            {
+                                "boulder_number": boulder.boulder_number,
+                                "attempted": False,
+                                "top_reached": False,
+                                "zone_reached": False,
+                                "attempts_top": 0,
+                                "attempts_zone": 0,
+                            }
+                        )
+
+                formatted_results.append(
                     {
-                        "rank": current_rank,
-                        "climber_id": climber.id,
+                        "rank": rr.rank,
                         "full_name": full_name,
                         "tops": score.tops,
+                        "attempts_top": score.attempts_tops,
                         "zones": score.zones,
-                        "attempts_tops": score.attempts_tops,
-                        "attempts_zones": score.attempts_zones,
-                        "total_score": float(score.total_score),
+                        "attempts_zone": score.attempts_zones,
+                        "total_score": float(round(score.total_score, 1)),
+                        "boulders": boulder_scores,
                     }
                 )
 
-                previous_score = score
-
             rounds_data.append(
                 {
-                    "round_name": competition_round.round_group.name,
-                    "results": results_data,
+                    "round_name": round_obj.round_group.name,
+                    "results": formatted_results,
                 }
             )
 
         result.append(
             {
-                "category": category_label,
+                "category": {
+                    "id": category.id,
+                    "gender": category.gender,
+                    "group": {
+                        "id": category.category_group.id,
+                        "name": category.category_group.name,
+                    },
+                },
                 "rounds": rounds_data,
             }
         )

@@ -22,10 +22,6 @@ export function useWebSocket(
     options: UseWebSocketOptions = {},
 ): UseWebSocketReturn {
     const {
-        onMessage,
-        onOpen,
-        onClose,
-        onError,
         reconnect = true,
         reconnectInterval = 3000,
         reconnectAttempts = 5,
@@ -39,6 +35,17 @@ export function useWebSocket(
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
         null,
     );
+    const onMessageRef = useRef(options.onMessage);
+    const onOpenRef = useRef(options.onOpen);
+    const onCloseRef = useRef(options.onClose);
+    const onErrorRef = useRef(options.onError);
+
+    useEffect(() => {
+        onMessageRef.current = options.onMessage;
+        onOpenRef.current = options.onOpen;
+        onCloseRef.current = options.onClose;
+        onErrorRef.current = options.onError;
+    });
 
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
@@ -67,12 +74,12 @@ export function useWebSocket(
             ws.onopen = () => {
                 setIsConnected(true);
                 reconnectCountRef.current = 0;
-                onOpen?.();
+                onOpenRef.current?.();
             };
 
             ws.onclose = () => {
                 setIsConnected(false);
-                onClose?.();
+                onCloseRef.current?.();
 
                 if (
                     reconnect &&
@@ -86,17 +93,17 @@ export function useWebSocket(
             };
 
             ws.onerror = (error) => {
-                onError?.(error);
+                onErrorRef.current?.(error);
             };
 
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
                     setLastMessage(data);
-                    onMessage?.(data);
+                    onMessageRef.current?.(data);
                 } catch {
                     setLastMessage(event.data);
-                    onMessage?.(event.data);
+                    onMessageRef.current?.(event.data);
                 }
             };
 
@@ -108,17 +115,7 @@ export function useWebSocket(
         return () => {
             disconnect();
         };
-    }, [
-        url,
-        reconnect,
-        reconnectInterval,
-        reconnectAttempts,
-        onOpen,
-        onClose,
-        onError,
-        onMessage,
-        disconnect,
-    ]);
+    }, [url, reconnect, reconnectInterval, reconnectAttempts, disconnect]);
 
     return { isConnected, lastMessage, send, disconnect };
 }
