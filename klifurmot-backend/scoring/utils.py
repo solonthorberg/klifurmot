@@ -3,98 +3,16 @@ import logging
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+from competitions.services import get_competition_results
 from scoring.models import ClimberRoundScore, RoundResult
-from competitions.models import CompetitionCategory, CompetitionRound
+from competitions.models import CompetitionRound
 
 
 logger = logging.getLogger(__name__)
 
 
-def FormatCompetitionResults(competition_id):
-    categories_data = []
-
-    categories = CompetitionCategory.objects.filter(
-        competition_id=competition_id,
-        deleted=False,
-    ).prefetch_related("competitionround_set", "category_group")
-
-    for category in categories:
-        rounds_data = []
-
-        rounds = category.competitionround_set.filter(deleted=False).order_by(
-            "round_order"
-        )
-
-        for round_obj in rounds:
-            round_results = (
-                RoundResult.objects.filter(round=round_obj, deleted=False)
-                .select_related("climber__user_account")
-                .order_by("rank")
-            )
-
-            climber_ids = [r.climber.id for r in round_results]
-            scores_map = {
-                s.climber.id: s
-                for s in ClimberRoundScore.objects.filter(
-                    round=round_obj,
-                    climber_id__in=climber_ids,
-                    deleted=False,
-                )
-            }
-
-            formatted_results = []
-            for result in round_results:
-                score = scores_map.get(result.climber.id)
-                if not score:
-                    continue
-
-                if result.climber.is_simple_athlete:
-                    full_name = result.climber.simple_name or "Name unknown"
-                else:
-                    full_name = (
-                        result.climber.user_account.full_name
-                        if result.climber.user_account
-                        else "Name unknown"
-                    )
-
-                formatted_results.append(
-                    {
-                        "rank": result.rank,
-                        "full_name": full_name,
-                        "tops": score.tops,
-                        "attempts_top": score.attempts_tops,
-                        "zones": score.zones,
-                        "attempts_zone": score.attempts_zones,
-                        "total_score": float(round(score.total_score, 1)),
-                    }
-                )
-
-            rounds_data.append(
-                {
-                    "round_name": round_obj.round_group.name,
-                    "results": formatted_results,
-                }
-            )
-
-        categories_data.append(
-            {
-                "category": {
-                    "id": category.id,
-                    "gender": category.gender,
-                    "group": {
-                        "id": category.category_group.id,
-                        "name": category.category_group.name,
-                    },
-                },
-                "rounds": rounds_data,
-            }
-        )
-
-    return categories_data
-
-
 def BroadcastScoreUpdate(competition_id):
-    data = FormatCompetitionResults(competition_id)
+    data = get_competition_results(competition_id)
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(

@@ -1,0 +1,43 @@
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+
+import { getErrorMessage } from '@/api';
+import Container from '@/components/ui/container';
+import ErrorMessage from '@/components/ui/errorMessage';
+import LoadingSpinner from '@/components/ui/loadingSpinner';
+import { useCompetition } from '@/hooks/api/useCompetitions';
+import TabButton from '@/components/ui/tabButton';
+
+export default function CompetitionDetailPage() {
+    const { competitionId } = useParams();
+    const { data, isLoading, error } = useCompetition(Number(competitionId));
+    const [tab, setTab] = useState(0);
+
+    const tabs = ['Mót', 'Keppendur', 'Leiðir', 'Ráslisti', 'Niðurstöður'];
+
+    if (isLoading) return <LoadingSpinner />;
+    if (error) return <ErrorMessage message={getErrorMessage(error)} />;
+
+    const competition = data?.data;
+    if (!competition) return <ErrorMessage message="Mót fannst ekki" />;
+
+    return (
+        <Container className='gap-4'>
+            <h1 className="text-3xl font-semibold">{competition.title}</h1>
+            <div>map.tabs((tab, index) => (
+                <div key={index}>
+                    <TabButton>
+                        {tab}
+                    </TabButton>
+                </div>
+                ))</div>
+            <div className="w-full">
+                {tab === 0 && <p>Mót content</p>}
+                {tab === 1 && <p>Keppendur content</p>}
+                {tab === 2 && <p>Leiðir content</p>}
+                {tab === 3 && <p>Ráslisti content</p>}
+                {tab === 4 && <p>Niðurstöður content</p>}
+            </div>
+        </Container>
+    );
+}

@@ -26,7 +26,7 @@ export default function HomePage() {
             </div>
             <Container
                 variant="centered"
-                className="relative z-10 gap-4 text-white "
+                className="relative z-10 gap-4 text-white h-full"
             >
                 <h1 className="text-2xl font-semibold">Klifurmót.is</h1>
                 <p className="text-center">

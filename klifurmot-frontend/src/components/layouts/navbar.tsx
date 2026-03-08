@@ -24,7 +24,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Desktop */}
-                <div className="hidden md:flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-4">
                     {navigationItems.map((item) => (
                         <Link
                             key={item.path}
@@ -36,7 +36,7 @@ export default function Navbar() {
                     ))}
                 </div>
 
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                     {isAuthenticated ? (
                         <>
                             <Link
@@ -65,7 +65,7 @@ export default function Navbar() {
                 {/* Mobile hamburger */}
                 <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    className="md:hidden p-2 rounded hover:bg-primary-hover transition-colors"
+                    className="sm:hidden p-2 rounded hover:bg-primary-hover transition-colors"
                 >
                     <svg
                         className="w-6 h-6"
@@ -94,7 +94,7 @@ export default function Navbar() {
 
             {/* Mobile menu */}
             {menuOpen && (
-                <div className="absolute top-16 left-0 right-0 md:hidden bg-primary border-t border-primary-hover shadow-lg">
+                <div className="absolute top-16 left-0 right-0 sm:hidden bg-primary border-t border-primary-hover shadow-lg">
                     <div className="flex flex-col px-4 py-2">
                         {navigationItems.map((item) => (
                             <Link

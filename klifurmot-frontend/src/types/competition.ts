@@ -117,6 +117,8 @@ export interface CompetitionAthlete {
     full_name: string | null;
     age: number | null;
     category_name: string;
+    gender: string;
+    nationality: string | null;
 }
 
 export interface CompetitionAthletesResponse {
@@ -143,7 +145,7 @@ export interface CategoryBoulders {
 export interface StartlistAthlete {
     start_order: number;
     full_name: string | null;
-    age_category: string;
+    category_name: string;
 }
 
 export interface RoundStartlist {
@@ -156,6 +158,15 @@ export interface CategoryStartlist {
     rounds: RoundStartlist[];
 }
 
+export interface BoulderScore {
+    boulder_number: number;
+    attempted: boolean;
+    top_reached: boolean;
+    zone_reached: boolean;
+    attempts_top: number;
+    attempts_zone: number;
+}
+
 export interface ResultEntry {
     rank: number;
     full_name: string;
@@ -164,6 +175,7 @@ export interface ResultEntry {
     zones: number;
     attempts_zone: number;
     total_score: number;
+    boulders: BoulderScore[];
 }
 
 export interface RoundResults {
