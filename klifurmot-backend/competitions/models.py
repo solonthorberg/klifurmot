@@ -59,6 +59,7 @@ class CategoryGroup(models.Model):
     name = models.CharField(max_length=50)
     min_age = models.IntegerField(null=True, blank=True)
     max_age = models.IntegerField(null=True, blank=True)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["min_age"]

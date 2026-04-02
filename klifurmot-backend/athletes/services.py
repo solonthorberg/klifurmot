@@ -44,6 +44,7 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
                 "user_account_id": user_account.id,
                 "name": user_account.full_name or "Name not provided",
                 "age": age,
+                "gender": user_account.gender,
                 "category": get_age_based_category(age) if age else None,
                 "nationality": user_account.nationality.country_code
                 if user_account.nationality

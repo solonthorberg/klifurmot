@@ -3,6 +3,7 @@ export interface Athlete {
     user_account_id: number;
     name: string;
     age: number;
+    gender: 'KK' | 'KVK' | null;
     category: string;
     nationality: string;
 }

@@ -44,6 +44,7 @@ export interface CategoryGroup {
     name: string;
     min_age: number | null;
     max_age: number | null;
+    is_default: boolean;
 }
 
 export interface CompetitionCategory {

@@ -177,7 +177,7 @@ class CreateCompetitionCategorySerializer(serializers.Serializer):
 class CategoryGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CategoryGroup
-        fields = ["id", "name", "min_age", "max_age"]
+        fields = ["id", "name", "min_age", "max_age", "is_default"]
 
 
 class CompetitionCategorySerializer(serializers.ModelSerializer):

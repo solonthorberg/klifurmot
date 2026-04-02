@@ -46,12 +46,14 @@ export default function BouldersTab({
                     onChange={setSelectedCategory}
                     options={categoryOptions}
                     placeholder="Allir flokkar"
+                    className="flex-1 sm:flex-none"
                 />
                 <Select
                     value={selectedRound}
                     onChange={setSelectedRound}
                     options={roundOptions}
                     placeholder="Allar umferðir"
+                    className="flex-1 sm:flex-none"
                 />
             </div>
             <div className="flex flex-col gap-4 w-full">
