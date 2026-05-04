@@ -8,6 +8,7 @@ import type {
     CreateClimberRequest,
     UpdateClimberRequest,
     CreateRegistrationRequest,
+    AthleteDetail,
 } from '@/types';
 
 export const athletesApi = {
@@ -25,8 +26,8 @@ export const athletesApi = {
 
     getAthleteDetail: async (
         athleteId: number,
-    ): Promise<ApiSuccessResponse<Athlete>> => {
-        const response = await api.get<ApiSuccessResponse<Athlete>>(
+    ): Promise<ApiSuccessResponse<AthleteDetail>> => {
+        const response = await api.get<ApiSuccessResponse<AthleteDetail>>(
             `/athletes/${athleteId}/`,
         );
         return response.data;

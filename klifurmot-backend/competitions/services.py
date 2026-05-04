@@ -737,7 +737,6 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                     deleted=False,
                 )
                 .select_related("climber__user_account")
-                .order_by("rank")
             )
 
             climber_ids = [r.climber.id for r in round_results]
@@ -763,16 +762,40 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
             climbs_by_climber: Dict[int, Dict[int, Climb]] = {}
             for climb in climbs:
-                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = (
-                    climb
-                )
+                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = climb
 
-            formatted_results = []
-
+            # Build and sort climber entries
+            climber_entries = []
             for rr in round_results:
                 score = scores_map.get(rr.climber.id)
                 if not score:
                     continue
+                climber_entries.append({
+                    "climber_id": rr.climber.id,
+                    "rr": rr,
+                    "score": score,
+                })
+
+            def sort_key(entry):
+                score = entry["score"]
+                return (
+                    -float(round(score.total_score, 1)), # descending score
+                    score.attempts_tops, # tiebreaker B: fewer attempts on tops
+                    score.attempts_zones, # tiebreaker C: fewer attempts on zones
+                )
+
+            climber_entries.sort(key=sort_key)
+
+            # Assign ranks, shared rank if all tiebreakers are equal
+            formatted_results = []
+            rank = 1
+            for i, entry in enumerate(climber_entries):
+                if i > 0 and sort_key(entry) != sort_key(climber_entries[i - 1]):
+                    rank = i + 1
+
+                rr = entry["rr"]
+                score = entry["score"]
+                climber_id = entry["climber_id"]
 
                 if rr.climber.is_simple_athlete:
                     full_name = rr.climber.simple_name or "Name unknown"
@@ -783,67 +806,57 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                         else "Name unknown"
                     )
 
-                climber_climbs = climbs_by_climber.get(rr.climber.id, {})
+                climber_climbs = climbs_by_climber.get(climber_id, {})
                 boulder_scores = []
 
                 for boulder in boulders:
                     climb = climber_climbs.get(boulder.id)
                     if climb:
-                        boulder_scores.append(
-                            {
-                                "boulder_number": boulder.boulder_number,
-                                "attempted": True,
-                                "top_reached": climb.top_reached,
-                                "zone_reached": climb.zone_reached,
-                                "attempts_top": climb.attempts_top,
-                                "attempts_zone": climb.attempts_zone,
-                            }
-                        )
+                        boulder_scores.append({
+                            "boulder_number": boulder.boulder_number,
+                            "attempted": True,
+                            "top_reached": climb.top_reached,
+                            "zone_reached": climb.zone_reached,
+                            "attempts_top": climb.attempts_top,
+                            "attempts_zone": climb.attempts_zone,
+                        })
                     else:
-                        boulder_scores.append(
-                            {
-                                "boulder_number": boulder.boulder_number,
-                                "attempted": False,
-                                "top_reached": False,
-                                "zone_reached": False,
-                                "attempts_top": 0,
-                                "attempts_zone": 0,
-                            }
-                        )
+                        boulder_scores.append({
+                            "boulder_number": boulder.boulder_number,
+                            "attempted": False,
+                            "top_reached": False,
+                            "zone_reached": False,
+                            "attempts_top": 0,
+                            "attempts_zone": 0,
+                        })
 
-                formatted_results.append(
-                    {
-                        "rank": rr.rank,
-                        "full_name": full_name,
-                        "tops": score.tops,
-                        "attempts_top": score.attempts_tops,
-                        "zones": score.zones,
-                        "attempts_zone": score.attempts_zones,
-                        "total_score": float(round(score.total_score, 1)),
-                        "boulders": boulder_scores,
-                    }
-                )
+                formatted_results.append({
+                    "rank": rank,
+                    "full_name": full_name,
+                    "tops": score.tops,
+                    "attempts_top": score.attempts_tops,
+                    "zones": score.zones,
+                    "attempts_zone": score.attempts_zones,
+                    "total_score": float(round(score.total_score, 1)),
+                    "boulders": boulder_scores,
+                })
 
-            rounds_data.append(
-                {
-                    "round_name": round_obj.round_group.name,
-                    "results": formatted_results,
-                }
-            )
+            rounds_data.append({
+                "round_name": round_obj.round_group.name,
+                "results": formatted_results,
+            })
 
-        result.append(
-            {
-                "category": {
-                    "id": category.id,
-                    "gender": category.gender,
-                    "group": {
-                        "id": category.category_group.id,
-                        "name": category.category_group.name,
-                    },
+        result.append({
+            "category": {
+                "id": category.id,
+                "gender": category.gender,
+                "group": {
+                    "id": category.category_group.id,
+                    "name": category.category_group.name,
                 },
-                "rounds": rounds_data,
-            }
-        )
+            },
+            "rounds": rounds_data,
+        })
 
     return result
 

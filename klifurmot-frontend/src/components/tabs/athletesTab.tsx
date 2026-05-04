@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import AthleteCard from '../cards/athleteCard';
 import Container from '../ui/container';
 import ErrorMessage from '../ui/errorMessage';
 import LoadingSpinner from '../ui/loadingSpinner';
@@ -9,6 +8,7 @@ import Select from '../ui/select';
 
 import { getErrorMessage } from '@/api';
 import { useCompetitionAthletes } from '@/hooks/api/useCompetitions';
+import AthleteRegisterCard from '../cards/athleteRegisterCard';
 
 export default function AthletesTab({
     competitionId,
@@ -103,7 +103,7 @@ export default function AthletesTab({
                                             </thead>
                                             <tbody>
                                                 {athletes.map((a) => (
-                                                    <AthleteCard
+                                                    <AthleteRegisterCard
                                                         key={a.id}
                                                         athlete={a}
                                                     />

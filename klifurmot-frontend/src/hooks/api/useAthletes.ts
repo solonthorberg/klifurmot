@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Athlete } from '@/types/athlete';
 
 import { athletesApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
@@ -12,7 +13,7 @@ import type {
 // Public athletes
 
 export function useAthletes(search?: string) {
-    return useQuery({
+    return useQuery<{ data: Athlete[] }>({
         queryKey: ['athletes', search],
         queryFn: () => athletesApi.listAthletes(search),
     });
@@ -26,7 +27,7 @@ export function useAthlete(athleteId: number) {
     });
 }
 
-// Admin climbers
+// Admin panel climbers
 
 export function useClimbers(search?: string) {
     return useQuery({

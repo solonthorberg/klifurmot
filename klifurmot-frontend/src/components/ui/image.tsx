@@ -15,7 +15,7 @@ export default function Image({
 
     const variants = {
         card: 'aspect-square',
-        thumbnail: 'w-16 h-16 rounded-full',
+        thumbnail: 'w-40 h-40 rounded-full',
     };
 
     return image ? (

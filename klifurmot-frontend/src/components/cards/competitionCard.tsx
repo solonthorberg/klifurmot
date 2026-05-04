@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-
-import Image from '../ui/image';
+import Image from '@/components/ui/image';
 
 import type { Competition } from '@/types';
 

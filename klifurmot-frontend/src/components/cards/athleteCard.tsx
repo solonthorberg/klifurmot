@@ -1,14 +1,17 @@
 import type { Athlete } from '@/types';
-import { getFlagEmoji } from '@/utils/getFlagEmoji';
 
-export default function AthleteCard({ athlete }: { athlete: Athlete }) {
+interface AthleteCardProps {
+    athlete: Athlete;
+    onClick?: () => Promise<void> | void;
+}
+
+export default function AthleteCard({ athlete, onClick }: AthleteCardProps) {
     return (
-        <div className="flex">
+        <button onClick={onClick} className="flex flex-col cursor-pointer text-left gap-1 border border-outline rounded-lg p-4 hover:shadow-md transition-shadow">
             <p>{athlete.name}</p>
-            <div>
-                <p>{getFlagEmoji(athlete.nationality)}</p>
-                <p>{athlete.age}</p>
+            <div className="flex gap-4 text-gray-500">
+                <span>{`${athlete.age} ára`}</span>
             </div>
-        </div>
+        </button>
     );
 }

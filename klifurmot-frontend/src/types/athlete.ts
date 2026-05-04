@@ -8,6 +8,36 @@ export interface Athlete {
     nationality: string;
 }
 
+export interface AthleteDetail {
+    id: number;
+    user_account_id: number;
+    full_name: string;
+    age: number;
+    height_cm: null;
+    wingspan_cm: null;
+    profile_picture: null;
+    gender: string;
+    nationality: string;
+    category: string;
+    competitions_count: number;
+    wins_count: number;
+    competition_results: CompetitionResult[];
+}
+
+export interface CompetitionResult {
+    id: number;
+    title: string;
+    category: string;
+    start_date: Date;
+    results: Result[];
+}
+
+export interface Result {
+    round_name: string;
+    round_order: number;
+    rank: number;
+}
+
 export interface Climber {
     id: number;
     is_simple_athlete: boolean;
