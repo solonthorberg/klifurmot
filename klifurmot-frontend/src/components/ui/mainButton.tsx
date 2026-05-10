@@ -16,11 +16,11 @@ export default function MainButton({
     className = '',
 }: ButtonProps) {
     const baseStyles =
-        'rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
+        'rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variants = {
-        primary: 'bg-primary text-white hover:bg-primary-hover',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+        primary: 'bg-primary text-white hover:bg-primary-hover transition-all duration-200 ease-in-out hover:scale-110 active:scale-95',
+        secondary: 'bg-primary text-white hover:bg-primary-hover',
     };
 
     const sizes = {

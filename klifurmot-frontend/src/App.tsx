@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { Notifications } from '@/components/ui/notifications';
 import Router from '@/routes/router';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -15,14 +16,19 @@ const queryClient = new QueryClient({
     },
 });
 
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 export default function App() {
     return (
-        <QueryClientProvider client={queryClient}>
-            <BrowserRouter>
-                <Notifications />
-                <Router />
-            </BrowserRouter>
-            <ReactQueryDevtools initialIsOpen={false} />
-        </QueryClientProvider>
+        <GoogleOAuthProvider clientId={CLIENT_ID}>
+            <QueryClientProvider client={queryClient}>
+                <BrowserRouter>
+                    <Notifications />
+                    <Router />
+                </BrowserRouter>
+                <ReactQueryDevtools initialIsOpen={false} />
+            </QueryClientProvider>
+
+        </GoogleOAuthProvider>
     );
 }

@@ -26,9 +26,11 @@ export interface RegisterRequest {
     password: string;
     password2: string;
     full_name: string;
-    gender?: string;
-    date_of_birth?: string;
-    nationality?: string;
+    gender: string;
+    nationality: string;
+    date_of_birth: string;
+    height_cm?: string;
+    wingspan_cm?: string;
 }
 
 export interface PasswordResetRequest {
@@ -39,4 +41,10 @@ export interface LoginResponse {
     access: string;
     refresh: string;
     user: User;
+}
+
+export interface Countries {
+    country_code: string;
+    name_en: string;
+    name_local: string;
 }

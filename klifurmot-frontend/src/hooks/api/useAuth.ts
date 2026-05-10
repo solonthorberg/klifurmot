@@ -97,3 +97,12 @@ export function useAuth() {
         logout,
     };
 }
+
+export function useCountries() {
+    return useQuery({
+        queryKey: ['countries'],
+        queryFn: authApi.getCountries,
+        retry: false,
+        staleTime: 1000 * 60 * 5,
+    });
+}

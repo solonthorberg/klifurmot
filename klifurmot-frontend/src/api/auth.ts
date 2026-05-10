@@ -2,6 +2,7 @@ import { api } from './client';
 
 import type {
     ApiSuccessResponse,
+    Countries,
     LoginRequest,
     LoginResponse,
     PasswordResetRequest,
@@ -63,6 +64,12 @@ export const authApi = {
             '/auth/google-login/',
             { token },
         );
+        return response.data;
+    },
+
+    getCountries: async (): Promise<ApiSuccessResponse<Countries[]>> => {
+        const response =
+            await api.get<ApiSuccessResponse<Countries[]>>('/countries/');
         return response.data;
     },
 };

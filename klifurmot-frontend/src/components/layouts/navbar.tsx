@@ -17,7 +17,7 @@ export default function Navbar() {
     ];
 
     return (
-        <nav className="sticky top-0 h-16 bg-primary text-white shadow-sm">
+        <nav className="sticky z-10 top-0 h-16 bg-primary text-white shadow-sm">
             <div className="h-full max-w-7xl mx-auto px-6 flex items-center justify-between">
                 <Link to="/" className="text-xl font-bold">
                     Klifurmót
