@@ -69,7 +69,7 @@ export default function AthleteDetailPage() {
                 </thead>
                 <tbody>
                     {athlete.competition_results.map((a) => (
-                        <tr className="border-b border-outline last:border-0">
+                        <tr key={a.id} className="border-b border-outline last:border-0">
                             <td className="px-4 py-3">{a.title}</td>
                             <td className="px-4 py-3">{a.category}</td>
                             <td className="px-4 py-3 ">
@@ -78,8 +78,8 @@ export default function AthleteDetailPage() {
                                 )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                                {a.results.map((r) => (
-                                    <p>{r.round_name}: {r.round_order}</p>
+                                {a.results.map((r, id) => (
+                                    <p key={id}>{r.round_name}: {r.round_order}</p>
                                 ))}
                             </td>
                         </tr>

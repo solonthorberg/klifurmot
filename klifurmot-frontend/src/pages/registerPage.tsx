@@ -163,32 +163,6 @@ export default function RegisterPage() {
                         />
                         {errors.nationality && <p className="text-red-500">{errors.nationality.message}</p>}
                     </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="height_cm">Hæð (cm)</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('height_cm')}
-                                id="height_cm"
-                                type="number"
-                                placeholder="178"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.height_cm && <p className="text-red-500">{errors.height_cm.message}</p>}
-                    </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="wingspan_cm">Vænghaf (cm)</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('wingspan_cm')}
-                                id="wingspan_cm"
-                                type="number"
-                                placeholder="185"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.wingspan_cm && <p className="text-red-500">{errors.wingspan_cm.message}</p>}
-                    </div>
                     <MainButton variant='secondary' disabled={isRegistering}>
                         {isRegistering ? 'Skrái aðgang...' : 'Skrá aðgang'}
                     </MainButton>

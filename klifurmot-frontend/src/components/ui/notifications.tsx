@@ -6,7 +6,7 @@ export function Notifications() {
     if (notifications.length === 0) return null;
 
     return (
-        <div className="fixed top-2 inset-x-0 mx-auto w-fit z-2 flex flex-col gap-2 animate-fade-in">
+        <div className="fixed top-2 inset-x-0 mx-auto w-fit z-20 flex flex-col gap-2 animate-fade-in">
             {notifications.map((notification) => (
                 <div
                     key={notification.id}

@@ -9,7 +9,7 @@ interface AuthState {
     refreshToken: string | null;
     isAuthenticated: boolean;
 
-    setTokens: (access: string, refresh: string) => void;
+    setTokens: (access: string) => void;
     setUserAccount: (userAccount: UserAccount) => void;
     clearTokens: () => void;
 }
@@ -22,10 +22,9 @@ export const useAuthStore = create<AuthState>()(
             refreshToken: null,
             isAuthenticated: false,
 
-            setTokens: (access, refresh) =>
+            setTokens: (access) =>
                 set({
                     accessToken: access,
-                    refreshToken: refresh,
                     isAuthenticated: true,
                 }),
 
@@ -42,9 +41,6 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                userAccount: state.userAccount,
-                accessToken: state.accessToken,
-                refreshToken: state.refreshToken,
                 isAuthenticated: state.isAuthenticated,
             }),
         },

@@ -10,6 +10,7 @@ import HomePage from '@/pages/homePage';
 import NotFoundPage from '@/pages/notFoundPage';
 import LoginPage from '@/pages/loginPage';
 import RegisterPage from '@/pages/registerPage';
+import ProfilePage from '@/pages/profilePage';
 
 export default function Router() {
     return (
@@ -26,6 +27,7 @@ export default function Router() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 <Route path="*" element={<NotFoundPage />} />
             </Route>
         </Routes>

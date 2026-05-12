@@ -325,10 +325,10 @@ def generate_unique_username(email: str, max_length: int = 150) -> str:
     return f"{base_username[:20]}_{timestamp}"
 
 
-def logout(refresh_token) -> Dict[str, Any]:
+def logout(refresh_token_str) -> Dict[str, Any]:
     """Logout user by blacklisting their refresh token"""
     try:
-        token = RefreshToken(refresh_token)
+        token = RefreshToken(refresh_token_str)
         token.blacklist()
 
         logger.info("User logged out successfully (token blacklisted)")
@@ -343,6 +343,16 @@ def logout(refresh_token) -> Dict[str, Any]:
         logger.error(f"Unexpected error during logout: {str(e)}")
         raise ValueError(f"Logout failed: {str(e)}")
 
+def refresh_token(refresh_token_str) -> Dict[str, Any]:
+    try:
+        token = RefreshToken(refresh_token_str)
+        access = str(token.access_token)
+        result = {"access": access}
+        if settings.SIMPLE_JWT.get("ROTATE_REFRESH_TOKENS"):
+            result["refresh"] = str(token)
+        return result
+    except TokenError as e:
+        raise ValueError(f"Invalid or expired refresh token: {str(e)}")
 
 def get_competition_roles(
     user: User, competition_id: Optional[int] = None, role: Optional[str] = None

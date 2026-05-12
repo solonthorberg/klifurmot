@@ -5,6 +5,7 @@ import { authApi, getErrorMessage } from '@/api';
 import { useAuthStore } from '@/stores';
 import { notify } from '@/stores/notificationStore';
 import type { LoginRequest, RegisterRequest } from '@/types';
+import { useEffect } from 'react';
 
 export function useAuth() {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ export function useAuth() {
         clearTokens,
         userAccount,
         isAuthenticated,
+        setUserAccount,
     } = useAuthStore();
 
     const meQuery = useQuery({
@@ -26,10 +28,16 @@ export function useAuth() {
         staleTime: 1000 * 60 * 5,
     });
 
+    useEffect(() => {
+        if (meQuery.data?.data) {
+            setUserAccount(meQuery.data.data);
+        }
+    }, [meQuery.data]);
+
     const loginMutation = useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(data),
         onSuccess: ({ data, message }) => {
-            setTokens(data.access, data.refresh);
+            setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
             navigate('/');
@@ -41,7 +49,9 @@ export function useAuth() {
 
     const registerMutation = useMutation({
         mutationFn: (data: RegisterRequest) => authApi.register(data),
-        onSuccess: ({ message }) => {
+        onSuccess: ({ data, message }) => {
+            setTokens(data.access);
+            queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
             navigate('/login');
         },
@@ -53,7 +63,7 @@ export function useAuth() {
     const googleAuthMutation = useMutation({
         mutationFn: (credential: string) => authApi.googleAuth(credential),
         onSuccess: ({ data, message }) => {
-            setTokens(data.access, data.refresh);
+            setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
             navigate('/');
@@ -66,7 +76,7 @@ export function useAuth() {
     const logout = async () => {
         try {
             if (refreshToken) {
-                await authApi.logout(refreshToken);
+                await authApi.logout();
             }
         } catch {
             // Ignore logout errors

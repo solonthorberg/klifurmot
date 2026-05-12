@@ -2,6 +2,7 @@ import { api } from './client';
 
 import type {
     ApiSuccessResponse,
+    AuthResponse,
     Countries,
     LoginRequest,
     LoginResponse,
@@ -23,22 +24,21 @@ export const authApi = {
 
     register: async (
         data: RegisterRequest,
-    ): Promise<ApiSuccessResponse<null>> => {
+    ): Promise<ApiSuccessResponse<AuthResponse>> => {
         const response = await api.post('/auth/register/', data);
         return response.data;
     },
 
-    logout: async (refresh: string): Promise<ApiSuccessResponse<null>> => {
-        const response = await api.post('/auth/logout/', { refresh });
+    logout: async (): Promise<ApiSuccessResponse<null>> => {
+        const response = await api.post('/auth/logout/');
         return response.data;
     },
 
-    refreshToken: async (
-        refresh: string,
-    ): Promise<ApiSuccessResponse<{ access: string; refresh: string }>> => {
-        const response = await api.post<
-            ApiSuccessResponse<{ access: string; refresh: string }>
-        >('/auth/refresh/', { refresh });
+    refreshToken: async (): Promise<ApiSuccessResponse<{ access: string }>> => {
+        const response =
+            await api.post<ApiSuccessResponse<{ access: string }>>(
+                '/auth/refresh/',
+            );
         return response.data;
     },
 

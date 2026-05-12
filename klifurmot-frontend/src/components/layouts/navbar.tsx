@@ -1,10 +1,10 @@
+import { useAuth } from '@/hooks/api/useAuth';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { useAuthStore } from '@/stores/authStore';
 
 export default function Navbar() {
-    const { isAuthenticated, clearTokens, userAccount } = useAuthStore();
+    const { isAuthenticated, logout, userAccount } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
 
     const navigationItems = [
@@ -24,7 +24,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Desktop */}
-                <div className="hidden sm:flex items-center gap-4">
+                <div className="hidden mx-auto sm:flex items-center gap-4">
                     {navigationItems.map((item) => (
                         <Link
                             key={item.path}
@@ -39,18 +39,18 @@ export default function Navbar() {
                 <div className="hidden sm:flex items-center gap-2">
                     {isAuthenticated ? (
                         <>
+                            <button
+                                onClick={logout}
+                                className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"
+                            >
+                                Útskrá
+                            </button>
                             <Link
                                 to="/profile"
                                 className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"
                             >
                                 {userAccount?.user.username}
                             </Link>
-                            <button
-                                onClick={clearTokens}
-                                className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"
-                            >
-                                Útskrá
-                            </button>
                         </>
                     ) : (
                         <Link

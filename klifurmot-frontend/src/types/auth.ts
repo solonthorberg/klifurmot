@@ -29,17 +29,24 @@ export interface RegisterRequest {
     gender: string;
     nationality: string;
     date_of_birth: string;
-    height_cm?: string;
-    wingspan_cm?: string;
 }
 
 export interface PasswordResetRequest {
     email: string;
 }
 
+export interface AuthResponse {
+    access: string;
+    user: {
+        id: number;
+        username: string;
+        email: string;
+        full_name: string;
+    };
+}
+
 export interface LoginResponse {
     access: string;
-    refresh: string;
     user: User;
 }
 

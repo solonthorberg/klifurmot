@@ -27,18 +27,6 @@ export const registerSchema = z
                 message: 'Fæðingardagur getur ekki verið í framtíðinni',
             }),
         nationality: z.string().min(1, 'Vinsamlegast veldu þjóðerni'),
-        height_cm: z
-            .string()
-            .refine((val) => !val || Number(val) >= 0, {
-                message: 'Hæð getur ekki verið minna en 0 cm',
-            })
-            .optional(),
-        wingspan_cm: z
-            .string()
-            .refine((val) => !val || Number(val) >= 0, {
-                message: 'Vænghaf getur ekki verið minna en 0 cm',
-            })
-            .optional(),
     })
     .refine((data) => data.password === data.password2, {
         message: 'Lykilorð stemma ekki',
@@ -46,3 +34,24 @@ export const registerSchema = z
     });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
+
+export const profileSchema = z.object({
+    profile_image: z.ZodFile,
+    username: z
+        .string()
+        .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir'),
+    height_cm: z
+        .string()
+        .refine((val) => !val || Number(val) >= 0, {
+            message: 'Hæð getur ekki verið minna en 0 cm',
+        })
+        .optional(),
+    wingspan_cm: z
+        .string()
+        .refine((val) => !val || Number(val) >= 0, {
+            message: 'Vænghaf getur ekki verið minna en 0 cm',
+        })
+        .optional(),
+});
+
+export type ProfileFormData = z.infer<typeof profileSchema>;

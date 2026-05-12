@@ -5,6 +5,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { Notifications } from '@/components/ui/notifications';
 import Router from '@/routes/router';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import { useAuthStore } from './stores';
+import { useEffect } from 'react';
+import { authApi } from './api';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -16,6 +19,20 @@ const queryClient = new QueryClient({
     },
 });
 
+function SilentRefresh() {
+    const { isAuthenticated, setTokens, clearTokens } = useAuthStore();
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            authApi.refreshToken()
+                .then(({ data }) => setTokens(data.access))
+                .catch(() => clearTokens());
+        }
+    }, []);
+
+    return null;
+}
+
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export default function App() {
@@ -23,6 +40,7 @@ export default function App() {
         <GoogleOAuthProvider clientId={CLIENT_ID}>
             <QueryClientProvider client={queryClient}>
                 <BrowserRouter>
+                    <SilentRefresh />
                     <Notifications />
                     <Router />
                 </BrowserRouter>
