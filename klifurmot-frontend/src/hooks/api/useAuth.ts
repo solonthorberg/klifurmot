@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi, getErrorMessage } from '@/api';
 import { useAuthStore } from '@/stores';
 import { notify } from '@/stores/notificationStore';
-import type { LoginRequest, RegisterRequest } from '@/types';
+import type { LoginRequest, RegisterRequest, UpdateUserAccount } from '@/types';
 import { useEffect } from 'react';
 
 export function useAuth() {
@@ -33,6 +33,21 @@ export function useAuth() {
             setUserAccount(meQuery.data.data);
         }
     }, [meQuery.data, setUserAccount]);
+
+    const meMutation = useMutation({
+        mutationFn: (data: UpdateUserAccount) => authApi.updateMe(data),
+        onSuccess: (success) => {
+            notify.success(success.message);
+
+            if (success.data) {
+                setUserAccount(success.data);
+            }
+            queryClient.invalidateQueries({ queryKey: ['me'] });
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
 
     const loginMutation = useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(data),
@@ -90,15 +105,17 @@ export function useAuth() {
 
     return {
         userAccount: meQuery.data?.data ?? userAccount,
+
+        updateUserAccount: meMutation.mutate,
+        isUpdatingUserAccount: meMutation.isPending,
+
         isAuthenticated,
         isLoading: meQuery.isLoading,
 
         login: loginMutation.mutate,
-        loginAsync: loginMutation.mutateAsync,
         isLoggingIn: loginMutation.isPending,
 
         register: registerMutation.mutate,
-        registerAsync: registerMutation.mutateAsync,
         isRegistering: registerMutation.isPending,
 
         googleAuth: googleAuthMutation.mutate,

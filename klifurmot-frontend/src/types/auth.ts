@@ -13,6 +13,15 @@ export interface UserAccount {
     nationality: string | null;
     is_admin: boolean;
     profile_picture: string | null;
+    height_cm?: number;
+    wingspan_cm?: number;
+}
+
+export interface UpdateUserAccount {
+    username: string;
+    height_cm: number | null;
+    wingspan_cm: number | null;
+    profile_image?: File | string | null;
 }
 
 export interface LoginRequest {

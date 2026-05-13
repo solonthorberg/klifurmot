@@ -53,9 +53,9 @@ export default function AthletesTab({
                     placeholder="Allir flokkar"
                 />
             </div>
-            <div className="flex flex-col gap-4 w-full text-center">
+            <div className="flex flex-col gap-4 w-full">
                 {filteredAthletes.length === 0 ? (
-                    <p className="text-gray-500">Engir keppendur skráðir...</p>
+                    <p className="text-gray-500 mx-auto">Engir keppendur skráðir...</p>
                 ) : (
                     categoryNames
                         .filter(

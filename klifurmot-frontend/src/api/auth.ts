@@ -8,6 +8,7 @@ import type {
     LoginResponse,
     PasswordResetRequest,
     RegisterRequest,
+    UpdateUserAccount,
     UserAccount,
 } from '@/types';
 
@@ -54,6 +55,16 @@ export const authApi = {
 
     getMe: async (): Promise<ApiSuccessResponse<UserAccount>> => {
         const response = await api.get<ApiSuccessResponse<UserAccount>>('/me/');
+        return response.data;
+    },
+
+    updateMe: async (
+        data: UpdateUserAccount,
+    ): Promise<ApiSuccessResponse<UserAccount>> => {
+        const response = await api.patch<ApiSuccessResponse<UserAccount>>(
+            '/me/',
+            data,
+        );
         return response.data;
     },
 

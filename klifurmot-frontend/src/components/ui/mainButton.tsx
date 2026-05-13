@@ -3,6 +3,7 @@ interface ButtonProps {
     onClick?: () => Promise<void> | void;
     variant?: 'primary' | 'secondary';
     size?: 'small' | 'medium' | 'large';
+    type?: string;
     disabled?: boolean;
     className?: string;
 }
@@ -12,6 +13,7 @@ export default function MainButton({
     onClick,
     variant = 'primary',
     size = 'medium',
+    type = 'button',
     disabled,
     className = '',
 }: ButtonProps) {
@@ -19,7 +21,8 @@ export default function MainButton({
         'rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variants = {
-        primary: 'bg-primary text-white hover:bg-primary-hover transition-all duration-200 ease-in-out hover:scale-110 active:scale-95',
+        primary:
+            'bg-primary text-white hover:bg-primary-hover transition-all duration-200 ease-in-out hover:scale-110 active:scale-95',
         secondary: 'bg-primary text-white hover:bg-primary-hover',
     };
 
@@ -33,6 +36,7 @@ export default function MainButton({
         <button
             onClick={onClick}
             disabled={disabled}
+            type={type as 'submit' | 'button' | 'reset'}
             className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
         >
             {children}

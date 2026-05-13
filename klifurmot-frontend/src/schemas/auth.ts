@@ -37,22 +37,18 @@ export const registerSchema = z
 export type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const profileSchema = z.object({
-    profile_image: z.ZodFile,
+    profile_image: z.any().optional(),
     username: z
         .string()
         .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir')
         .max(15, 'Notendanafn má ekki fara yfir 15 stafi'),
-    height_cm: z
-        .string()
-        .refine((val) => !val || Number(val) >= 0, {
-            message: 'Hæð getur ekki verið minna en 0 cm',
-        })
+    height_cm: z.coerce
+        .number()
+        .min(0, 'Hæð getur ekki verið minna en 0 cm')
         .optional(),
-    wingspan_cm: z
-        .string()
-        .refine((val) => !val || Number(val) >= 0, {
-            message: 'Vænghaf getur ekki verið minna en 0 cm',
-        })
+    wingspan_cm: z.coerce
+        .number()
+        .min(0, 'Vænghaf getur ekki verið minna en 0 cm')
         .optional(),
 });
 

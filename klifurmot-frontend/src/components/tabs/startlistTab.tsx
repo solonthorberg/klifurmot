@@ -56,15 +56,15 @@ export default function StartlistTab({
                     className="flex-1 sm:flex-none"
                 />
             </div>
-            <div className="flex flex-col gap-4 w-full text-center">
+            <div className="flex flex-col gap-4 w-full">
                 {filteredCategories.length === 0 ? (
-                    <p className="text-gray-500">Engar leiðir skráðar...</p>
+                    <p className="text-gray-500 mx-auto">Engar leiðir skráðar...</p>
                 ) : (
                     filteredCategories.map((c) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
-                                  (r) => r.round_name === selectedRound,
-                              )
+                                (r) => r.round_name === selectedRound,
+                            )
                             : c.rounds;
                         if (rounds.length === 0) return null;
                         return (

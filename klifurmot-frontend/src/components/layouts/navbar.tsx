@@ -12,7 +12,7 @@ export default function Navbar() {
         { label: 'Keppendur', path: '/athletes' },
         { label: 'Um Okkur', path: '/about' },
         ...(userAccount?.is_admin
-            ? [{ label: 'Stjórnborð', path: '/controlpanel' }]
+            ? [{ label: 'Stjórnborð', path: '/admin-panel' }]
             : []),
     ];
 

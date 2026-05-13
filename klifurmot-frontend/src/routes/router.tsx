@@ -11,11 +11,13 @@ import NotFoundPage from '@/pages/notFoundPage';
 import LoginPage from '@/pages/loginPage';
 import RegisterPage from '@/pages/registerPage';
 import ProfilePage from '@/pages/profilePage';
+import { ProtectedRoutes } from './protectedRoutes';
 
 export default function Router() {
     return (
         <Routes>
             <Route element={<MainLayout />}>
+                <Route path="*" element={<NotFoundPage />} />
                 <Route path="/" element={<HomePage />} />
                 <Route path="/competitions" element={<CompetitionsPage />} />
                 <Route
@@ -27,8 +29,12 @@ export default function Router() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<NotFoundPage />} />
+                <Route element={<ProtectedRoutes />}>
+                    <Route path="/profile" element={<ProfilePage />} />
+                </Route>
+                <Route element={<ProtectedRoutes requiredRole='admin' />}>
+                    <Route path="/admin-panel" element={<ProfilePage />} />
+                </Route>
             </Route>
         </Routes>
     );
