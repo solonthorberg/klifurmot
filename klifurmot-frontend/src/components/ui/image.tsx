@@ -1,6 +1,6 @@
 interface ImageProps {
-    image: string | null;
-    alt: string;
+    image: string | null | undefined;
+    alt: string | null | undefined;
     variant?: 'card' | 'thumbnail';
     className?: string;
 }

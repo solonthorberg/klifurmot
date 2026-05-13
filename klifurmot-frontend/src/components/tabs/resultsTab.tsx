@@ -53,12 +53,12 @@ export default function ResultsTab({
 
     const filteredCategories = selectedCategory
         ? categories.filter(
-            (c) => c.category.id.toString() === selectedCategory,
-        )
+              (c) => c.category.id.toString() === selectedCategory,
+          )
         : categories;
 
     return (
-        <Container variant="tab" className="flex-col">
+        <Container variant="tab" className="flex-col gap-4">
             <div className="flex gap-4 w-full justify-center">
                 <Select
                     value={selectedCategory}
@@ -75,7 +75,7 @@ export default function ResultsTab({
                     className="flex-1 sm:flex-none"
                 />
             </div>
-            <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-col gap-4 w-full text-center">
                 {filteredCategories.length === 0 ? (
                     <p className="text-gray-500">
                         Engar niðurstöður skráðar...
@@ -84,8 +84,8 @@ export default function ResultsTab({
                     filteredCategories.map((c) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
-                                (r) => r.round_name === selectedRound,
-                            )
+                                  (r) => r.round_name === selectedRound,
+                              )
                             : c.rounds;
                         if (rounds.length === 0) return null;
                         const label = `${c.category.group.name} ${c.category.gender}`;

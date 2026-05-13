@@ -39,7 +39,7 @@ export default function AthletesTab({
     );
 
     return (
-        <Container variant="tab" className="flex-col">
+        <Container variant="tab" className="flex-col gap-4">
             <div className="flex gap-4 w-full">
                 <SearchBar
                     value={search}
@@ -53,7 +53,7 @@ export default function AthletesTab({
                     placeholder="Allir flokkar"
                 />
             </div>
-            <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-col gap-4 w-full text-center">
                 {filteredAthletes.length === 0 ? (
                     <p className="text-gray-500">Engir keppendur skráðir...</p>
                 ) : (

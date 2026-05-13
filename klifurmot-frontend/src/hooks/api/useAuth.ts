@@ -32,7 +32,7 @@ export function useAuth() {
         if (meQuery.data?.data) {
             setUserAccount(meQuery.data.data);
         }
-    }, [meQuery.data]);
+    }, [meQuery.data, setUserAccount]);
 
     const loginMutation = useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(data),
@@ -40,7 +40,7 @@ export function useAuth() {
             setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
-            navigate('/');
+            navigate('/profile');
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));
@@ -66,7 +66,7 @@ export function useAuth() {
             setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
-            navigate('/');
+            navigate('/profile');
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));
@@ -84,7 +84,7 @@ export function useAuth() {
             clearTokens();
             queryClient.clear();
             notify.success('Logged out');
-            navigate('/login');
+            navigate('/');
         }
     };
 

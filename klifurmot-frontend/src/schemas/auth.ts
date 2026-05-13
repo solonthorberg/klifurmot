@@ -11,7 +11,8 @@ export const registerSchema = z
     .object({
         username: z
             .string()
-            .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir'),
+            .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafi')
+            .max(15, 'Notendanafn má ekki fara yfir 15 stafi'),
         email: z.string().email('Vinsamlegast sláðu inn gilt netfang'),
         password: z
             .string()
@@ -39,7 +40,8 @@ export const profileSchema = z.object({
     profile_image: z.ZodFile,
     username: z
         .string()
-        .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir'),
+        .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir')
+        .max(15, 'Notendanafn má ekki fara yfir 15 stafi'),
     height_cm: z
         .string()
         .refine((val) => !val || Number(val) >= 0, {
