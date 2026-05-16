@@ -29,6 +29,15 @@ export const competitionsApi = {
         return response.data;
     },
 
+    listPublicCompetitions: async (): Promise<
+        ApiSuccessResponse<Competition[]>
+    > => {
+        const response = await api.get<ApiSuccessResponse<Competition[]>>(
+            '/competitions/public/',
+        );
+        return response.data;
+    },
+
     getCompetition: async (
         competitionId: number,
     ): Promise<ApiSuccessResponse<Competition>> => {

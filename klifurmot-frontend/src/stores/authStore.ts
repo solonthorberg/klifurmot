@@ -10,7 +10,7 @@ interface AuthState {
     isAuthenticated: boolean;
 
     setTokens: (access: string) => void;
-    setUserAccount: (userAccount: UserAccount) => void;
+    setUserAccount: (userAccount: UserAccount | null) => void;
     clearTokens: () => void;
 }
 
@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                isAuthenticated: state.isAuthenticated,
+                isAuthenticated: state.accessToken,
             }),
         },
     ),

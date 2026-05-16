@@ -1,9 +1,11 @@
 import logging
+from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from typing import Dict, Any, Optional, cast
+from django.conf import settings
 
 from . import permissions
 from core import utils
@@ -166,9 +168,9 @@ def me(request):
             if "profile_picture" in request.FILES:
                 uploaded_file = request.FILES["profile_picture"]
                 try:
-                    serializer.validate_profile_picture(uploaded_file)
+                    serializers.validate_profile_picture(uploaded_file)
                     profile_picture = uploaded_file
-                except serializers.ValidationError as e:
+                except ValidationError as e:
                     return utils.error_response(
                         code="Invalid_file",
                         message=str(e),
@@ -195,16 +197,9 @@ def me(request):
             )
 
             return utils.success_response(
-                data={
-                    "user": {
-                        "id": result["user"].id,
-                        "username": result["user"].username,
-                        "email": result["user"].email,
-                    },
-                    "profile": serializers.UserProfileResponseSerializer(
-                        result["user_account"]
-                    ).data,
-                },
+                data=serializers.UserProfileResponseSerializer(
+                    result["user_account"]
+                ).data,
                 message="Profile updated successfully",
             )
 
@@ -275,7 +270,7 @@ def login(request):
             key="refresh_token",
             value=result["refresh"],
             httponly=True,
-            secure=False,
+            secure=not settings.DEBUG,
             samesite="Lax",
             max_age=60 * 60 * 24 * 7,
         )
@@ -347,7 +342,7 @@ def google_login(request):
             key="refresh_token",
             value=result["refresh"],
             httponly=True,
-            secure=False,
+            secure=not settings.DEBUG,
             samesite="Lax",
             max_age=60 * 60 * 24 * 7,
         )
@@ -444,7 +439,7 @@ def register(request):
             key="refresh_token",
             value=result["refresh"],
             httponly=True,
-            secure=False,
+            secure=not settings.DEBUG,
             samesite="Lax",
             max_age=60 * 60 * 24 * 7,
         )
@@ -475,7 +470,7 @@ def register(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def logout(request):
     refresh_token = request.COOKIES.get("refresh_token")
     if not refresh_token:
@@ -485,13 +480,14 @@ def logout(request):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     try:
-        result = services.logout(refresh_token=refresh_token)
+        result = services.logout(request=request, refresh_token_str=refresh_token)
         response = utils.success_response(
             data=None,
             message=result["message"],
             status_code=status.HTTP_200_OK,
         )
         response.delete_cookie("refresh_token")
+        response.delete_cookie("sessionid")
         return response
     except ValueError as e:
         return utils.error_response(
@@ -506,6 +502,7 @@ def logout(request):
             message="Logout failed",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -529,7 +526,7 @@ def refresh_token(request):
                 key="refresh_token",
                 value=result["refresh"],
                 httponly=True,
-                secure=False,
+                secure=not settings.DEBUG,
                 samesite="Lax",
                 max_age=60 * 60 * 24 * 7,
             )
@@ -547,6 +544,7 @@ def refresh_token(request):
             message="Token refresh failed",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])

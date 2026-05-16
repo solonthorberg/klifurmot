@@ -11,7 +11,7 @@ from core import utils
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def athletes(request):
+def public_athletes(request):
     search = request.query_params.get("search")
 
     result = services.list_public_athletes(search=search)
@@ -24,7 +24,7 @@ def athletes(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def athlete_detail(_, athlete_id):
+def public_athlete_detail(_, athlete_id):
     try:
         result = services.get_athlete_detail(athlete_id=athlete_id)
 
@@ -43,7 +43,7 @@ def athlete_detail(_, athlete_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def admin_athletes(request):
+def athletes(request):
     if request.method == "GET":
         search = request.query_params.get("search")
 
@@ -92,7 +92,7 @@ def admin_athletes(request):
 
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def admin_athlete_detail(request, climber_id):
+def athlete_detail(request, climber_id):
     if request.method == "GET":
         try:
             result = services.get_climber(climber_id=climber_id)

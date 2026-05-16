@@ -31,6 +31,8 @@ export function useAuth() {
     useEffect(() => {
         if (meQuery.data?.data) {
             setUserAccount(meQuery.data.data);
+        } else {
+            setUserAccount(null);
         }
     }, [meQuery.data, setUserAccount]);
 
@@ -91,15 +93,15 @@ export function useAuth() {
     const logout = async () => {
         try {
             if (refreshToken) {
-                await authApi.logout();
+                const result = await authApi.logout();
+                console.log('logout result:', result);
             }
-        } catch {
-            // Ignore logout errors
+        } catch (e) {
+            console.log('logout error:', e);
         } finally {
             clearTokens();
             queryClient.clear();
             notify.success('Logged out');
-            navigate('/');
         }
     };
 
@@ -109,7 +111,7 @@ export function useAuth() {
         updateUserAccount: meMutation.mutate,
         isUpdatingUserAccount: meMutation.isPending,
 
-        isAuthenticated,
+        isAuthenticated: !!accessToken,
         isLoading: meQuery.isLoading,
 
         login: loginMutation.mutate,

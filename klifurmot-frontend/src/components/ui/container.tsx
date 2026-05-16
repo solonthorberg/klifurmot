@@ -19,6 +19,6 @@ export default function Container({
     };
 
     return (
-        <div className={`${variants[variant]} ${className}`}>{children}</div>
+        <div className={`${className} ${variants[variant]}`}>{children}</div>
     );
 }

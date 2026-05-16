@@ -22,7 +22,7 @@ export default function HomePage() {
                             'radial-gradient(circle, transparent 10%, black 95%)',
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black" />
+                <div className="absolute inset-0 bg-linear-to-b from-black/30 via-black/50 to-black" />
             </div>
             <Container
                 variant="centered"
@@ -32,7 +32,7 @@ export default function HomePage() {
                 <p className="text-center">
                     Rauntímastjórnun móta fyrir klifrara, dómara og stjórnendur.
                 </p>
-                <MainButton onClick={() => navigate('/competitions')}>
+                <MainButton animated onClick={() => navigate('/competitions')}>
                     Skoða mót
                 </MainButton>
             </Container>

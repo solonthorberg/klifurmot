@@ -37,7 +37,7 @@ export const registerSchema = z
 export type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const profileSchema = z.object({
-    profile_image: z.any().optional(),
+    profile_picture: z.any().optional(),
     username: z
         .string()
         .min(2, 'Notendanafn verður að vera að minnsta kosti 2 stafir')

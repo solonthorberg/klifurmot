@@ -61,9 +61,21 @@ export const authApi = {
     updateMe: async (
         data: UpdateUserAccount,
     ): Promise<ApiSuccessResponse<UserAccount>> => {
+        const formData = new FormData();
+        formData.append('username', data.username);
+        if (data.height_cm != null)
+            formData.append('height_cm', String(data.height_cm));
+        if (data.wingspan_cm != null)
+            formData.append('wingspan_cm', String(data.wingspan_cm));
+        if (data.profile_picture instanceof File)
+            formData.append('profile_picture', data.profile_picture);
+
         const response = await api.patch<ApiSuccessResponse<UserAccount>>(
             '/me/',
-            data,
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            },
         );
         return response.data;
     },

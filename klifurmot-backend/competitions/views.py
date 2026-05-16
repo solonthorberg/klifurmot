@@ -12,8 +12,23 @@ from core import utils
 logger = logging.getLogger(__name__)
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET"])
 @permission_classes([AllowAny])
+def public_competitions(request):
+    if request.method == "GET":
+        year_param = request.query_params.get("year")
+        year = int(year_param) if year_param and year_param.isdigit() else None
+
+        result = services.list_public_competitions(year=year)
+
+        return utils.success_response(
+            data=serializers.CompetitionSerializer(result, many=True).data,
+            message="Competitions retrieved successfully",
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([permissions.IsAdmin])
 def competitions(request):
     if request.method == "GET":
         year_param = request.query_params.get("year")

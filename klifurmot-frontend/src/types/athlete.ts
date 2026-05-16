@@ -38,7 +38,7 @@ export interface Result {
     rank: number;
 }
 
-export interface Climber {
+export interface AthleteAdmin {
     id: number;
     is_simple_athlete: boolean;
     simple_name: string | null;
@@ -67,7 +67,7 @@ export interface Registration {
     category: string;
 }
 
-export interface CreateClimberRequest {
+export interface CreateAthleteRequestAdmin {
     is_simple_athlete: boolean;
     name?: string;
     age?: number;
@@ -75,7 +75,7 @@ export interface CreateClimberRequest {
     user_account_id?: number;
 }
 
-export interface UpdateClimberRequest {
+export interface UpdateAthleteRequestAdmin {
     name?: string;
     age?: number;
     gender?: 'KK' | 'KVK';

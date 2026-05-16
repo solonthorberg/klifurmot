@@ -1,4 +1,4 @@
-import Icon from "./icons";
+import Icon from './icons';
 
 interface SelectOption {
     value: string;
@@ -10,7 +10,7 @@ interface SelectProps {
     onChange: (value: string) => void;
     options: SelectOption[];
     placeholder?: string;
-    variant?: "primary" | "input";
+    variant?: 'primary' | 'input';
     className?: string;
 }
 
@@ -19,13 +19,13 @@ export default function Select({
     onChange,
     options,
     placeholder,
-    variant = "primary",
+    variant = 'primary',
     className = '',
 }: SelectProps) {
     const variants = {
-        primary: "border-1 border-outline text-gray-500 rounded-lg",
-        input: "rounded-md outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary text-gray-400",
-    }
+        primary: 'border-1 border-outline text-gray-500 rounded-lg',
+        input: 'rounded-md outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary text-gray-400',
+    };
 
     const baseStyles = `appearance-none px-3 py-2 bg-transparent h-10 pr-8 w-full ${variants[variant]}`;
 
@@ -34,7 +34,7 @@ export default function Select({
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className={`${baseStyles} ${value ? 'text-gray-900' : 'text-gray-500'}`}
+                className={`${baseStyles} ${value ? 'text-gray-900' : 'text-gray-300'}`}
             >
                 {placeholder && <option value="">{placeholder}</option>}
                 {options.map((opt) => (
@@ -44,7 +44,11 @@ export default function Select({
                 ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                <Icon variant="chevronDown" size={16} className="text-gray-400" />
+                <Icon
+                    variant="chevronDown"
+                    size={16}
+                    className="text-gray-400"
+                />
             </div>
         </div>
     );

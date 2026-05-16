@@ -27,7 +27,7 @@ export default function RegisterPage() {
         <Container variant="primaryCenter" className="animate-fade-in">
             <div className="flex flex-col gap-8 p-8 justify-center w-full max-w-lg border border-outline rounded-lg">
                 <h3 className="font-semibold text-2xl text-center">
-                    {'Innskráning'}
+                    {'Nýskráning'}
                 </h3>
 
                 <form
@@ -198,7 +198,7 @@ export default function RegisterPage() {
                             </p>
                         )}
                     </div>
-                    <MainButton variant="secondary" disabled={isRegistering}>
+                    <MainButton type="submit" disabled={isRegistering}>
                         {isRegistering ? 'Skrái aðgang...' : 'Skrá aðgang'}
                     </MainButton>
                 </form>

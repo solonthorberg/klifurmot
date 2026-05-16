@@ -11,7 +11,7 @@ export default function CompetitionCard({
     return (
         <Link
             to={`/competitions/${competition.id}`}
-            className="flex sm:flex-row flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border-1 border-outline animate-fade-in"
+            className="flex sm:flex-row flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline animate-fade-in"
         >
             <Image
                 image={competition.image}

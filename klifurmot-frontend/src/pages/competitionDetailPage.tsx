@@ -58,7 +58,7 @@ export default function CompetitionDetailPage() {
                     )}
                     {tab === 4 && <ResultsTab competitionId={competition.id} />}
                 </div>
-            </div>{' '}
+            </div>
         </Container>
     );
 }

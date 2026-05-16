@@ -12,6 +12,7 @@ import LoginPage from '@/pages/loginPage';
 import RegisterPage from '@/pages/registerPage';
 import ProfilePage from '@/pages/profilePage';
 import { ProtectedRoutes } from './protectedRoutes';
+import AdminPanel from '@/pages/adminPanel';
 
 export default function Router() {
     return (
@@ -32,8 +33,8 @@ export default function Router() {
                 <Route element={<ProtectedRoutes />}>
                     <Route path="/profile" element={<ProfilePage />} />
                 </Route>
-                <Route element={<ProtectedRoutes requiredRole='admin' />}>
-                    <Route path="/admin-panel" element={<ProfilePage />} />
+                <Route element={<ProtectedRoutes requiredRole="admin" />}>
+                    <Route path="/admin-panel" element={<AdminPanel />} />
                 </Route>
             </Route>
         </Routes>

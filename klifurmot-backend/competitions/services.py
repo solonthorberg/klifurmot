@@ -144,6 +144,15 @@ def get_competition(competition_id: int) -> Competition:
 
 
 def list_competitions(year: Optional[int] = None) -> list[Competition]:
+    queryset = Competition.objects.filter(deleted=False)
+
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+
+    return list(queryset.order_by("-start_date"))
+
+
+def list_public_competitions(year: Optional[int] = None) -> list[Competition]:
     queryset = Competition.objects.filter(visible=True, deleted=False)
 
     if year:
@@ -731,13 +740,10 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                 deleted=False,
             ).order_by("boulder_number")
 
-            round_results = (
-                RoundResult.objects.filter(
-                    round=round_obj,
-                    deleted=False,
-                )
-                .select_related("climber__user_account")
-            )
+            round_results = RoundResult.objects.filter(
+                round=round_obj,
+                deleted=False,
+            ).select_related("climber__user_account")
 
             climber_ids = [r.climber.id for r in round_results]
 
@@ -762,7 +768,9 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
             climbs_by_climber: Dict[int, Dict[int, Climb]] = {}
             for climb in climbs:
-                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = climb
+                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = (
+                    climb
+                )
 
             # Build and sort climber entries
             climber_entries = []
@@ -770,18 +778,20 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                 score = scores_map.get(rr.climber.id)
                 if not score:
                     continue
-                climber_entries.append({
-                    "climber_id": rr.climber.id,
-                    "rr": rr,
-                    "score": score,
-                })
+                climber_entries.append(
+                    {
+                        "climber_id": rr.climber.id,
+                        "rr": rr,
+                        "score": score,
+                    }
+                )
 
             def sort_key(entry):
                 score = entry["score"]
                 return (
-                    -float(round(score.total_score, 1)), # descending score
-                    score.attempts_tops, # tiebreaker B: fewer attempts on tops
-                    score.attempts_zones, # tiebreaker C: fewer attempts on zones
+                    -float(round(score.total_score, 1)),  # descending score
+                    score.attempts_tops,  # tiebreaker B: fewer attempts on tops
+                    score.attempts_zones,  # tiebreaker C: fewer attempts on zones
                 )
 
             climber_entries.sort(key=sort_key)
@@ -812,51 +822,61 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                 for boulder in boulders:
                     climb = climber_climbs.get(boulder.id)
                     if climb:
-                        boulder_scores.append({
-                            "boulder_number": boulder.boulder_number,
-                            "attempted": True,
-                            "top_reached": climb.top_reached,
-                            "zone_reached": climb.zone_reached,
-                            "attempts_top": climb.attempts_top,
-                            "attempts_zone": climb.attempts_zone,
-                        })
+                        boulder_scores.append(
+                            {
+                                "boulder_number": boulder.boulder_number,
+                                "attempted": True,
+                                "top_reached": climb.top_reached,
+                                "zone_reached": climb.zone_reached,
+                                "attempts_top": climb.attempts_top,
+                                "attempts_zone": climb.attempts_zone,
+                            }
+                        )
                     else:
-                        boulder_scores.append({
-                            "boulder_number": boulder.boulder_number,
-                            "attempted": False,
-                            "top_reached": False,
-                            "zone_reached": False,
-                            "attempts_top": 0,
-                            "attempts_zone": 0,
-                        })
+                        boulder_scores.append(
+                            {
+                                "boulder_number": boulder.boulder_number,
+                                "attempted": False,
+                                "top_reached": False,
+                                "zone_reached": False,
+                                "attempts_top": 0,
+                                "attempts_zone": 0,
+                            }
+                        )
 
-                formatted_results.append({
-                    "rank": rank,
-                    "full_name": full_name,
-                    "tops": score.tops,
-                    "attempts_top": score.attempts_tops,
-                    "zones": score.zones,
-                    "attempts_zone": score.attempts_zones,
-                    "total_score": float(round(score.total_score, 1)),
-                    "boulders": boulder_scores,
-                })
+                formatted_results.append(
+                    {
+                        "rank": rank,
+                        "full_name": full_name,
+                        "tops": score.tops,
+                        "attempts_top": score.attempts_tops,
+                        "zones": score.zones,
+                        "attempts_zone": score.attempts_zones,
+                        "total_score": float(round(score.total_score, 1)),
+                        "boulders": boulder_scores,
+                    }
+                )
 
-            rounds_data.append({
-                "round_name": round_obj.round_group.name,
-                "results": formatted_results,
-            })
+            rounds_data.append(
+                {
+                    "round_name": round_obj.round_group.name,
+                    "results": formatted_results,
+                }
+            )
 
-        result.append({
-            "category": {
-                "id": category.id,
-                "gender": category.gender,
-                "group": {
-                    "id": category.category_group.id,
-                    "name": category.category_group.name,
+        result.append(
+            {
+                "category": {
+                    "id": category.id,
+                    "gender": category.gender,
+                    "group": {
+                        "id": category.category_group.id,
+                        "name": category.category_group.name,
+                    },
                 },
-            },
-            "rounds": rounds_data,
-        })
+                "rounds": rounds_data,
+            }
+        )
 
     return result
 

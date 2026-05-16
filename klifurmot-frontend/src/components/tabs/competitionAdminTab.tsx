@@ -1,19 +1,19 @@
-import { useState } from 'react';
-
 import { getErrorMessage } from '@/api';
 import CompetitionCard from '@/components/cards/competitionCard';
-import Container from '@/components/ui/container';
 import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import SearchBar from '@/components/ui/searchBar';
 import Select from '@/components/ui/select';
-import { usePublicCompetitions } from '@/hooks/api/useCompetitions';
 
-export default function CompetitionsPage() {
-    const { data, isLoading, error } = usePublicCompetitions();
+import { useCompetitions } from '@/hooks/api/useCompetitions';
+import { useState } from 'react';
+import Container from '../ui/container';
+
+export default function CompetitionAdminTab() {
+    const { data, isLoading, error } = useCompetitions();
     const [search, setSearch] = useState('');
     const [year, setYear] = useState('');
-    const [eventStatus, setEventStatus] = useState('not_started');
+    const [eventStatus, setEventStatus] = useState('');
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;
@@ -47,7 +47,6 @@ export default function CompetitionsPage() {
 
     return (
         <Container variant="primaryCenter" className="gap-4">
-            <h2 className="text-2xl font-semibold">Mót</h2>
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-3xl">
                 <SearchBar
                     className="w-full sm:flex-1"

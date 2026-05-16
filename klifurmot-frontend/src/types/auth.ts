@@ -21,7 +21,7 @@ export interface UpdateUserAccount {
     username: string;
     height_cm: number | null;
     wingspan_cm: number | null;
-    profile_image?: File | string | null;
+    profile_picture?: File | string | null;
 }
 
 export interface LoginRequest {

@@ -10,10 +10,10 @@ export default function Navbar() {
     const navigationItems = [
         { label: 'Mót', path: '/competitions' },
         { label: 'Keppendur', path: '/athletes' },
-        { label: 'Um Okkur', path: '/about' },
         ...(userAccount?.is_admin
             ? [{ label: 'Stjórnborð', path: '/admin-panel' }]
             : []),
+        { label: 'Um Okkur', path: '/about' },
     ];
 
     return (
@@ -39,12 +39,6 @@ export default function Navbar() {
                 <div className="hidden lg:flex justify-end gap-2">
                     {isAuthenticated ? (
                         <>
-                            <button
-                                onClick={logout}
-                                className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"
-                            >
-                                Útskrá
-                            </button>
                             <Link
                                 to="/profile"
                                 className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"

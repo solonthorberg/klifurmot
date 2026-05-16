@@ -21,6 +21,13 @@ export function useCompetitions() {
     });
 }
 
+export function usePublicCompetitions() {
+    return useQuery({
+        queryKey: ['competitions', 'admin'],
+        queryFn: competitionsApi.listPublicCompetitions,
+    });
+}
+
 export function useCompetition(competitionId: number) {
     return useQuery({
         queryKey: ['competitions', competitionId],

@@ -10,7 +10,7 @@ export function Notifications() {
             {notifications.map((notification) => (
                 <div
                     key={notification.id}
-                    className={`min-w-[280px] px-4 py-3 rounded-lg shadow-lg flex justify-between items-center
+                    className={`min-w-70 px-4 py-3 rounded-lg shadow-lg flex justify-between items-center
                         ${notification.type === 'success' ? 'bg-green-600 text-white' : ''}
                         ${notification.type === 'error' ? 'bg-red-600 text-white' : ''}
                         ${notification.type === 'warning' ? 'bg-yellow-500 text-black' : ''}
