@@ -1,4 +1,5 @@
 import { useNotificationStore } from '@/stores/notificationStore';
+import Icon from './icons';
 
 export function Notifications() {
     const { notifications, removeNotification } = useNotificationStore();
@@ -22,7 +23,7 @@ export function Notifications() {
                         onClick={() => removeNotification(notification.id)}
                         className="ml-4 text-lg font-bold opacity-70 hover:opacity-100"
                     >
-                        ×
+                        <Icon variant="exit" />
                     </button>
                 </div>
             ))}

@@ -20,7 +20,8 @@ export const registerSchema = z
         password2: z.string(),
         full_name: z
             .string()
-            .min(2, 'Fullt nafn verður að vera að minnsta kosti 2 stafir'),
+            .min(2, 'Fullt nafn verður að vera að minnsta kosti 2 stafir')
+            .max(50, 'Fullt nafn má ekki fara yfir 50 stafi'),
         gender: z.enum(['KK', 'KVK'], { message: 'Vinsamlegast veldu kyn' }),
         date_of_birth: z
             .string()
@@ -48,7 +49,7 @@ export const profileSchema = z.object({
         .optional(),
     wingspan_cm: z.coerce
         .number()
-        .min(0, 'Vænghaf getur ekki verið minna en 0 cm')
+        .min(0, 'Faðmur getur ekki verið minna en 0 cm')
         .optional(),
 });
 

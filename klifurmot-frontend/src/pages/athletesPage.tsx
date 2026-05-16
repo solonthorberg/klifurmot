@@ -10,7 +10,7 @@ import SearchBar from '@/components/ui/searchBar';
 import Select from '@/components/ui/select';
 import { usePublicAthletes } from '@/hooks/api/useAthletes';
 import { useCategoryGroups } from '@/hooks/api/useCompetitions';
-import type { Athlete } from '@/types/athlete';
+import type { PublicAthlete } from '@/types/athlete';
 
 export default function AthletesPage() {
     const [search, setSearch] = useState('');
@@ -22,7 +22,7 @@ export default function AthletesPage() {
     const { data: athletesData, isLoading, error } = usePublicAthletes();
     const { data: categoryData } = useCategoryGroups();
 
-    const athletes = (athletesData?.data as Athlete[]) ?? [];
+    const athletes = (athletesData?.data as PublicAthlete[]) ?? [];
     const categoryGroups = categoryData?.data ?? [];
 
     const filteredAthletes = useMemo(() => {
@@ -82,7 +82,9 @@ export default function AthletesPage() {
             </div>
             <div className="flex flex-col gap-2 w-full max-w-2xl animate-fade-in">
                 {filteredAthletes.length === 0 ? (
-                    <p className="text-gray-500">Engir keppendur fundust...</p>
+                    <p className="text-gray-500 text-center">
+                        Engir keppendur fundust...
+                    </p>
                 ) : (
                     filteredAthletes.map((a) => (
                         <AthleteCard

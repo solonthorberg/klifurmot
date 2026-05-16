@@ -55,7 +55,9 @@ export default function AthletesTab({
             </div>
             <div className="flex flex-col gap-4 w-full">
                 {filteredAthletes.length === 0 ? (
-                    <p className="text-gray-500 mx-auto">Engir keppendur skráðir...</p>
+                    <p className="text-gray-500 mx-auto">
+                        Engir keppendur skráðir...
+                    </p>
                 ) : (
                     categoryNames
                         .filter(

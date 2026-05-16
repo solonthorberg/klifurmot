@@ -21,7 +21,10 @@ export default function ProfilePage() {
                 alt={user.full_name}
                 variant="thumbnail"
             />
-            <h3>{user.user.username}</h3>
+            <div className="flex gap-1">
+                <h3 className="font-semibold">{user.user.username}</h3>
+                <h3 className="text-gray-500 text-sm">{`id: ${user.user.id}`}</h3>
+            </div>
             {editing ? (
                 <EditProfileTab onDone={() => setEditing(false)} />
             ) : (

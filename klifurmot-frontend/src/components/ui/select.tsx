@@ -10,8 +10,10 @@ interface SelectProps {
     onChange: (value: string) => void;
     options: SelectOption[];
     placeholder?: string;
+    label?: string;
     variant?: 'primary' | 'input';
     className?: string;
+    error?: string;
 }
 
 export default function Select({
@@ -19,8 +21,10 @@ export default function Select({
     onChange,
     options,
     placeholder,
+    label,
     variant = 'primary',
     className = '',
+    error,
 }: SelectProps) {
     const variants = {
         primary: 'border-1 border-outline text-gray-500 rounded-lg',
@@ -30,26 +34,30 @@ export default function Select({
     const baseStyles = `appearance-none px-3 py-2 bg-transparent h-10 pr-8 w-full ${variants[variant]}`;
 
     return (
-        <div className={`relative h-10 ${className}`}>
-            <select
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className={`${baseStyles} ${value ? 'text-gray-900' : 'text-gray-300'}`}
-            >
-                {placeholder && <option value="">{placeholder}</option>}
-                {options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                <Icon
-                    variant="chevronDown"
-                    size={16}
-                    className="text-gray-400"
-                />
+        <div className={`${className}`}>
+            {label && <label className="text-gray-700">{label}</label>}
+            <div className={`relative h-10`}>
+                <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={`${baseStyles} ${value ? 'text-gray-900' : 'text-gray-300'}`}
+                >
+                    {placeholder && <option value="">{placeholder}</option>}
+                    {options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                    <Icon
+                        variant="chevronDown"
+                        size={16}
+                        className="text-gray-400"
+                    />
+                </div>
             </div>
+            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
         </div>
     );
 }

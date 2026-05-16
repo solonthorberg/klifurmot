@@ -7,10 +7,85 @@ import LoadingSpinner from '@/components/ui/loadingSpinner';
 import SearchBar from '@/components/ui/searchBar';
 import Select from '@/components/ui/select';
 import { useCategoryGroups } from '@/hooks/api/useCompetitions';
-import { useAthletes } from '@/hooks/api/useAthletes';
+import { useAthletes, useCreateAthlete } from '@/hooks/api/useAthletes';
 import AthleteAdminCard from '../cards/athleteAdminCard';
+import MainButton from '../ui/mainButton';
+import Modal from '../ui/modal';
+import { Controller, useForm } from 'react-hook-form';
+import {
+    createAthleteSchema,
+    type CreateAthleteRequest,
+} from '@/schemas/athlete';
+import { zodResolver } from '@hookform/resolvers/zod';
+import Input from '../ui/input';
+
+function CreateAthlete({ onClose }: { onClose: () => void }) {
+    const { mutate } = useCreateAthlete();
+    const {
+        register,
+        handleSubmit,
+        control,
+        formState: { errors },
+    } = useForm<CreateAthleteRequest>({
+        resolver: zodResolver(createAthleteSchema),
+        defaultValues: { is_simple_athlete: true },
+    });
+
+    const err = errors as Record<string, { message?: string }>;
+
+    return (
+        <Modal onClose={onClose} className="animate-fade-in">
+            <h2 className="text-lg font-semibold mb-4">
+                Nýr keppandi án aðgang
+            </h2>
+            <form
+                onSubmit={handleSubmit((data) => {
+                    mutate(data, { onSuccess: onClose });
+                })}
+                className="flex flex-col gap-3"
+            >
+                <>
+                    <Input
+                        {...register('name')}
+                        placeholder="Nafn"
+                        error={err.name?.message}
+                    />
+
+                    <Input
+                        {...register('age' as never, {
+                            valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Aldur"
+                        error={err.age?.message}
+                    />
+                    <Controller
+                        name={'gender' as never}
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                options={[
+                                    { value: 'KK', label: 'KK' },
+                                    { value: 'KVK', label: 'KVK' },
+                                ]}
+                                placeholder="Kyn"
+                                value={field.value}
+                                onChange={field.onChange}
+                                error={err.gender?.message}
+                            />
+                        )}
+                    />
+                </>
+                <MainButton type="submit" className="w-full">
+                    Staðfesta
+                </MainButton>
+            </form>
+        </Modal>
+    );
+}
 
 export default function AthletesAdminTab() {
+    const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGender, setSelectedGender] = useState('');
@@ -23,27 +98,34 @@ export default function AthletesAdminTab() {
     const filteredAthletes = useMemo(() => {
         const list = athletesData?.data ?? [];
         return list.filter((a) => {
-            const name = a.is_simple_athlete
-                ? a.simple_name
-                : a.user_account?.full_name;
-
-            const gender = a.is_simple_athlete
-                ? a.simple_gender
-                : a.user_account?.gender;
-
-            const matchesSearch = (name ?? '')
+            const matchesSearch = (a.name ?? '')
                 .toLowerCase()
                 .includes(search.toLowerCase());
 
-            const matchesGender = !selectedGender || gender === selectedGender;
+            const matchesCategory =
+                !selectedCategory || a.category === selectedCategory;
+
+            const matchesGender =
+                !selectedGender || a.gender === selectedGender;
 
             const matchesSimple =
                 !selectedSimple ||
                 String(a.is_simple_athlete) === selectedSimple;
 
-            return matchesSearch && matchesGender && matchesSimple;
+            return (
+                matchesSearch &&
+                matchesCategory &&
+                matchesGender &&
+                matchesSimple
+            );
         });
-    }, [athletesData, search, selectedGender, selectedSimple]);
+    }, [
+        athletesData,
+        search,
+        selectedCategory,
+        selectedGender,
+        selectedSimple,
+    ]);
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;
@@ -61,12 +143,15 @@ export default function AthletesAdminTab() {
     ];
 
     const simpleOptions = [
-        { value: 'true', label: 'Gestkeppandi' },
-        { value: 'false', label: 'Skráður keppandi' },
+        { value: 'true', label: 'Án aðgang' },
+        { value: 'false', label: 'Með aðgang' },
     ];
 
     return (
         <Container variant="primaryCenter" className="gap-4 max-w-xl">
+            <MainButton onClick={() => setOpen(true)} className="w-full">
+                + Keppandi
+            </MainButton>
             <div className="flex flex-col gap-4 w-full">
                 <SearchBar
                     className="w-full sm:flex-1"
@@ -92,24 +177,31 @@ export default function AthletesAdminTab() {
                         value={selectedSimple}
                         onChange={setSelectedSimple}
                         options={simpleOptions}
-                        placeholder="Allir keppendur"
+                        placeholder="Allir"
                         className="flex-1"
                     />
                 </div>
             </div>
-            <div className="flex flex-col gap-2 w-full max-w-2xl animate-fade-in">
+            <div className="flex flex-col gap-2 w-full">
                 {filteredAthletes.length === 0 ? (
-                    <p className="text-gray-500">Engir keppendur fundust...</p>
+                    <p className="text-gray-500 text-center">
+                        Engir keppendur fundust...
+                    </p>
                 ) : (
                     filteredAthletes.map((a) => (
                         <AthleteAdminCard
                             key={a.id}
                             athlete={a}
-                            onClick={() => navigate(`/athletes/${a.id}`)}
+                            onClick={
+                                a.is_simple_athlete
+                                    ? undefined
+                                    : () => navigate(`/athletes/${a.id}`)
+                            }
                         />
                     ))
                 )}
             </div>
+            {open && <CreateAthlete onClose={() => setOpen(false)} />}
         </Container>
     );
 }

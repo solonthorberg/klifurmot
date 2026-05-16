@@ -88,4 +88,3 @@ class CompetitionRegistration(models.Model):
 
     def __str__(self):
         return f"{self.climber} in {self.competition_category}"
-

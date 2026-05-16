@@ -11,7 +11,7 @@ function ProfileField({
     return (
         <div>
             <label>{label}</label>
-            <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300">
+            <div className="flex items-center h-10 rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300">
                 <p className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900">
                     {value ?? 'Ekki skráð'}
                 </p>
@@ -24,7 +24,7 @@ export default function ViewProfileTab({ onDone }: { onDone: () => void }) {
     const { logout, userAccount } = useAuth();
 
     return (
-        <div className="flex w-full flex-col gap-2 animate-fade-in">
+        <div className="flex w-full flex-col gap-4 animate-fade-in">
             <ProfileField label="Fullt nafn" value={userAccount?.full_name} />
             <ProfileField label="Netfang" value={userAccount?.user.email} />
             <ProfileField
@@ -38,19 +38,19 @@ export default function ViewProfileTab({ onDone }: { onDone: () => void }) {
                 value={userAccount?.height_cm?.toString()}
             />
             <ProfileField
-                label="Vænghaf (cm)"
+                label="Faðmur (cm)"
                 value={userAccount?.wingspan_cm?.toString()}
             />
-            <MainButton className="mt-2" onClick={onDone}>
-                Breyta upplýsingum
-            </MainButton>
-            <MainButton
-                variant="outline"
-                onClick={logout}
-                className="px-3 py-2 mt-2 rounded hover:bg-primary-hover transition-colors"
-            >
-                Útskrá
-            </MainButton>
+            <div className="flex w-full flex-col gap-1 mt-2">
+                <MainButton onClick={onDone}>Breyta upplýsingum</MainButton>
+                <MainButton
+                    variant="outline"
+                    onClick={logout}
+                    className="px-3 py-2 mt-2 rounded hover:bg-primary-hover transition-colors"
+                >
+                    Útskrá
+                </MainButton>
+            </div>
         </div>
     );
 }

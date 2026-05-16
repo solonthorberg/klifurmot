@@ -167,6 +167,34 @@ def athlete_detail(request, climber_id):
             )
 
 
+@api_view(["POST"])
+def link_simple_athlete(request, climber_id: int):
+    user_account_id = request.data.get("user_account_id")
+    if not user_account_id:
+        return utils.error_response(
+            code="Validation_error",
+            message="user_account_id is required",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        climber = services.link_climber(
+            request.user, climber_id=climber_id, user_account_id=user_account_id
+        )
+        return utils.success_response(data=climber, status_code=status.HTTP_201_CREATED)
+    except ValueError as e:
+        return utils.error_response(
+            code="Link_failed",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    except Exception as e:
+        return utils.error_response(
+            code="Link_failed",
+            message=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
 def registrations(request):

@@ -1,7 +1,7 @@
-import type { Athlete } from '@/types';
+import type { PublicAthlete } from '@/types';
 
 interface AthleteCardProps {
-    athlete: Athlete;
+    athlete: PublicAthlete;
     onClick?: () => Promise<void> | void;
 }
 

@@ -10,16 +10,16 @@ export default function HomePage() {
             <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
-                    backgroundImage: "url('/klifurmot-home-image.jpg.webp')",
+                    backgroundImage: "url('/klifurmot-home-image.jpg')",
                 }}
             >
                 <div
-                    className="absolute inset-0 backdrop-blur-[2px]"
+                    className="absolute inset-0 backdrop-blur-[1px]"
                     style={{
                         maskImage:
-                            'radial-gradient(circle, transparent 10%, black 95%)',
+                            'radial-gradient(circle, transparent 5%, black 95%)',
                         WebkitMaskImage:
-                            'radial-gradient(circle, transparent 10%, black 95%)',
+                            'radial-gradient(circle, transparent 5%, black 95%)',
                     }}
                 />
                 <div className="absolute inset-0 bg-linear-to-b from-black/30 via-black/50 to-black" />

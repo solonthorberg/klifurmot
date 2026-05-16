@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Athlete } from '@/types/athlete';
+import type { PublicAthlete } from '@/types/athlete';
 
 import { athletesApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
@@ -13,7 +13,7 @@ import type {
 // Public athletes
 
 export function usePublicAthletes(search?: string) {
-    return useQuery<{ data: Athlete[] }>({
+    return useQuery<{ data: PublicAthlete[] }>({
         queryKey: ['athletes', search],
         queryFn: () => athletesApi.listPublicAthletes(search),
     });

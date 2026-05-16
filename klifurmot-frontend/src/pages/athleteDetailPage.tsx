@@ -37,15 +37,19 @@ export default function AthleteDetailPage() {
                             Hæð
                         </span>
                         <span className="text-gray-500">
-                            {athlete.height_cm} cm
+                            {athlete.height_cm
+                                ? `${athlete.height_cm} cm`
+                                : '-'}
                         </span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-sm text-muted-foreground">
-                            Vænghaf
+                            Faðmur
                         </span>
                         <span className="text-gray-500">
-                            {athlete.wingspan_cm} cm
+                            {athlete.wingspan_cm
+                                ? `${athlete.wingspan_cm} cm`
+                                : '-'}
                         </span>
                     </div>
 

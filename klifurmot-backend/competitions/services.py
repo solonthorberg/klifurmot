@@ -106,6 +106,7 @@ def delete_competition(competition_id: int) -> None:
             RoundResult.objects.filter(
                 round__competition_category__competition=competition,
                 deleted=False,
+                climber__deleted=False,
             ).update(deleted=True)
 
             Boulder.objects.filter(
@@ -314,6 +315,7 @@ def delete_round(round_id: int) -> None:
             RoundResult.objects.filter(
                 round=competition_round,
                 deleted=False,
+                climber__deleted=False,
             ).update(deleted=True)
 
             Boulder.objects.filter(
@@ -521,6 +523,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
         CompetitionRegistration.objects.filter(
             competition_id=competition_id,
             deleted=False,
+            climber__deleted=False,
         )
         .select_related(
             "climber__user_account",
@@ -559,7 +562,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
                 if user_account and user_account.date_of_birth
                 else None,
                 "category_name": category.category_group.name,
-                "gender": user_account.gender,
+                "gender": user_account.gender if user_account else None,
                 "nationality": user_account.nationality.country_code
                 if user_account and user_account.nationality
                 else None,

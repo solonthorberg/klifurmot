@@ -2,22 +2,22 @@ import { api } from './client';
 
 import type {
     ApiSuccessResponse,
-    Athlete,
+    PublicAthlete,
     AthleteAdmin,
     Registration,
     CreateAthleteRequestAdmin,
     UpdateAthleteRequestAdmin,
     CreateRegistrationRequest,
-    AthleteDetail,
+    PublicAthleteDetail,
 } from '@/types';
 
 export const athletesApi = {
     // Public endpoints
     listPublicAthletes: async (
         search?: string,
-    ): Promise<ApiSuccessResponse<Athlete[]>> => {
+    ): Promise<ApiSuccessResponse<PublicAthlete[]>> => {
         const params = search ? { search } : {};
-        const response = await api.get<ApiSuccessResponse<Athlete[]>>(
+        const response = await api.get<ApiSuccessResponse<PublicAthlete[]>>(
             '/athletes/public',
             { params },
         );
@@ -26,8 +26,8 @@ export const athletesApi = {
 
     getPublicAthleteDetail: async (
         athleteId: number,
-    ): Promise<ApiSuccessResponse<AthleteDetail>> => {
-        const response = await api.get<ApiSuccessResponse<AthleteDetail>>(
+    ): Promise<ApiSuccessResponse<PublicAthleteDetail>> => {
+        const response = await api.get<ApiSuccessResponse<PublicAthleteDetail>>(
             `/athletes/public/${athleteId}/`,
         );
         return response.data;

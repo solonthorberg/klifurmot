@@ -10,6 +10,9 @@ urlpatterns = [
         views.public_athlete_detail,
         name="public_athlete_detail",
     ),
+    path(
+        "<int:climber_id>/link/", views.link_simple_athlete, name="link_simple_athlete"
+    ),
     path("registrations/", views.registrations, name="registrations"),
     path(
         "registrations/<int:registration_id>/",

@@ -53,8 +53,8 @@ export default function ResultsTab({
 
     const filteredCategories = selectedCategory
         ? categories.filter(
-            (c) => c.category.id.toString() === selectedCategory,
-        )
+              (c) => c.category.id.toString() === selectedCategory,
+          )
         : categories;
 
     return (
@@ -84,8 +84,8 @@ export default function ResultsTab({
                     filteredCategories.map((c) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
-                                (r) => r.round_name === selectedRound,
-                            )
+                                  (r) => r.round_name === selectedRound,
+                              )
                             : c.rounds;
                         if (rounds.length === 0) return null;
                         const label = `${c.category.group.name} ${c.category.gender}`;
@@ -125,12 +125,14 @@ export default function ResultsTab({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {round.results.map((r) => (
-                                                        <ResultCard
-                                                            key={r.rank}
-                                                            athlete={r}
-                                                        />
-                                                    ))}
+                                                    {round.results.map(
+                                                        (r, id) => (
+                                                            <ResultCard
+                                                                key={id}
+                                                                athlete={r}
+                                                            />
+                                                        ),
+                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>

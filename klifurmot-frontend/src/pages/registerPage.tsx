@@ -1,5 +1,6 @@
 import Container from '@/components/ui/container';
 import Icon from '@/components/ui/icons';
+import Input from '@/components/ui/input';
 import MainButton from '@/components/ui/mainButton';
 import Select from '@/components/ui/select';
 import { useAuth, useCountries } from '@/hooks/api/useAuth';
@@ -27,177 +28,112 @@ export default function RegisterPage() {
         <Container variant="primaryCenter" className="animate-fade-in">
             <div className="flex flex-col gap-8 p-8 justify-center w-full max-w-lg border border-outline rounded-lg">
                 <h3 className="font-semibold text-2xl text-center">
-                    {'Nýskráning'}
+                    Nýskráning
                 </h3>
-
                 <form
                     onSubmit={handleSubmit((data) => registerUser(data))}
-                    className="w-full grid grid-cols-1 gap-x-6 gap-y-8"
+                    className="w-full grid grid-cols-1 gap-x-4 gap-y-4"
                 >
-                    <div className="cols-span-4">
-                        <label htmlFor="username">Notendanafn</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('username')}
-                                id="username"
-                                type="text"
-                                placeholder="biggi"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.username && (
-                            <p className="text-red-500">
-                                {errors.username.message}
-                            </p>
-                        )}
-                    </div>
-                    <div className="cols-span-4">
-                        <label>Fullt Nafn</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('full_name')}
-                                id="full_name"
-                                type="text"
-                                placeholder="Birgir Óli"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.full_name && (
-                            <p className="text-red-500">
-                                {errors.full_name.message}
-                            </p>
-                        )}
-                    </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="email">Netfang</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('email')}
-                                id="email"
-                                type="email"
-                                placeholder="biggi@netfang.is"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.email && (
-                            <p className="text-red-500">
-                                {errors.email.message}
-                            </p>
-                        )}
-                    </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="password">Lykilorð</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('password')}
-                                id="password"
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="biggi123"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword((prev) => !prev)}
-                                className="text-gray-400 pr-3"
-                            >
-                                <Icon
-                                    variant={showPassword ? 'eyeOff' : 'eye'}
-                                    size={20}
-                                />
-                            </button>
-                        </div>
-                        {errors.password && (
-                            <p className="text-red-500">
-                                {errors.password.message}
-                            </p>
-                        )}
-                    </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="password">Staðfesta lykilorð</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('password2')}
-                                id="password2"
-                                type="password"
-                                placeholder="biggi123"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                            />
-                        </div>
-                        {errors.password2 && (
-                            <p className="text-red-500">
-                                {errors.password2.message}
-                            </p>
-                        )}
-                    </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="gender">Kyn</label>
-                        <Controller
-                            name="gender"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    value={field.value ?? ''}
-                                    onChange={field.onChange}
-                                    placeholder="Kyn"
-                                    className="w-full"
-                                    variant="input"
-                                    options={[
-                                        { value: 'KK', label: 'KK' },
-                                        { value: 'KVK', label: 'Kona' },
-                                    ]}
-                                />
-                            )}
+                    <Input
+                        {...register('username')}
+                        id="username"
+                        type="text"
+                        label="Notendanafn"
+                        placeholder="biggi"
+                        error={errors.username?.message}
+                    />
+                    <Input
+                        {...register('full_name')}
+                        id="full_name"
+                        type="text"
+                        label="Fullt Nafn"
+                        placeholder="Birgir Óli"
+                        error={errors.full_name?.message}
+                    />
+                    <Input
+                        {...register('email')}
+                        id="email"
+                        type="email"
+                        label="Netfang"
+                        placeholder="biggi@netfang.is"
+                        error={errors.email?.message}
+                    />
+                    <div className="flex flex-col gap-1">
+                        <Input
+                            {...register('password')}
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            label="Lykilorð"
+                            placeholder="biggi123"
+                            error={errors.password?.message}
                         />
-                        {errors.gender && (
-                            <p className="text-red-500">
-                                {errors.gender.message}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="cols-span-4">
-                        <label htmlFor="date_of_birth">Fæðingardagur</label>
-                        <div className="flex items-center rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-secondary">
-                            <input
-                                {...register('date_of_birth')}
-                                id="date_of_birth"
-                                type="date"
-                                className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900 focus:outline-none"
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="relative text-gray-400 self-end text-sm flex items-center gap-1"
+                        >
+                            <Icon
+                                variant={showPassword ? 'eyeOff' : 'eye'}
+                                size={16}
+                                className="absolute right-1 bottom-13"
                             />
-                        </div>
-                        {errors.date_of_birth && (
-                            <p className="text-red-500">
-                                {errors.date_of_birth.message}
-                            </p>
-                        )}
+                        </button>
                     </div>
-                    <div className="cols-span-4">
-                        <label htmlFor="nationality">Þjóðerni</label>
-                        <Controller
-                            name="nationality"
-                            control={control}
-                            render={({ field }) => (
-                                <Select
-                                    value={field.value ?? ''}
-                                    onChange={field.onChange}
-                                    placeholder="Veldu þjóðerni"
-                                    variant="input"
-                                    className="w-full"
-                                    options={
-                                        countries?.map((c) => ({
-                                            value: c.country_code,
-                                            label: c.name_local,
-                                        })) ?? []
-                                    }
-                                />
-                            )}
-                        />
-                        {errors.nationality && (
-                            <p className="text-red-500">
-                                {errors.nationality.message}
-                            </p>
+                    <Input
+                        {...register('password2')}
+                        id="password2"
+                        type="password"
+                        label="Staðfesta lykilorð"
+                        placeholder="biggi123"
+                        error={errors.password2?.message}
+                    />
+                    <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                value={field.value ?? ''}
+                                onChange={field.onChange}
+                                label="Kyn"
+                                placeholder="Kyn"
+                                className="w-full"
+                                variant="input"
+                                options={[
+                                    { value: 'KK', label: 'KK' },
+                                    { value: 'KVK', label: 'KVK' },
+                                ]}
+                                error={errors.gender?.message}
+                            />
                         )}
-                    </div>
+                    />
+                    <Input
+                        {...register('date_of_birth')}
+                        id="date_of_birth"
+                        type="date"
+                        label="Fæðingardagur"
+                        error={errors.date_of_birth?.message}
+                    />
+                    <Controller
+                        name="nationality"
+                        control={control}
+                        render={({ field }) => (
+                            <Select
+                                value={field.value ?? ''}
+                                onChange={field.onChange}
+                                label="Þjóðerni"
+                                placeholder="Veldu þjóðerni"
+                                variant="input"
+                                className="w-full"
+                                options={
+                                    countries?.map((c) => ({
+                                        value: c.country_code,
+                                        label: c.name_local,
+                                    })) ?? []
+                                }
+                                error={errors.nationality?.message}
+                            />
+                        )}
+                    />
                     <MainButton type="submit" disabled={isRegistering}>
                         {isRegistering ? 'Skrái aðgang...' : 'Skrá aðgang'}
                     </MainButton>

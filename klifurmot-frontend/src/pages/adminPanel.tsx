@@ -4,9 +4,10 @@ import Container from '@/components/ui/container';
 import TabButton from '@/components/ui/tabButton';
 import { useSearchParams } from 'react-router-dom';
 import AthletesAdminTab from '@/components/tabs/athletesAdminTab';
+import RoundAdminTab from '@/components/tabs/roundAdminTab';
 
 export default function AdminPanel() {
-    const tabs = ['Mót', 'Flokkar', 'Keppendur'];
+    const tabs = ['Mót', 'Flokkar', 'Umferðir', 'Keppendur'];
     const [searchParams, setSearchParams] = useSearchParams();
     const tab = Number(searchParams.get('tab') ?? 0);
     const setTab = (index: number) => {
@@ -33,7 +34,8 @@ export default function AdminPanel() {
                 <div key={tab} className="animate-fade-in">
                     {tab === 0 && <CompetitionAdminTab />}
                     {tab === 1 && <CategoryAdminTab />}
-                    {tab === 2 && <AthletesAdminTab />}
+                    {tab === 2 && <RoundAdminTab />}
+                    {tab === 3 && <AthletesAdminTab />}
                 </div>
             </div>{' '}
         </Container>
