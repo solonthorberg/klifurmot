@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import Icon from './icons';
+import Icon from '../ui/icons';
 
 export default function Modal({
     children,
@@ -11,7 +11,7 @@ export default function Modal({
     className?: string;
 }) {
     const BaseClass =
-        'relative bg-white rounded-2xl p-6 w-full max-w-md shadow-xl mx-4';
+        'relative bg-background rounded-2xl p-6 w-full max-w-md shadow-xl mx-4';
 
     return (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">

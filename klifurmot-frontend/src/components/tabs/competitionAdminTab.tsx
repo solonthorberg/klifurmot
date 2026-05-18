@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/api';
-import CompetitionCard from '@/components/cards/competitionCard';
 import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import SearchBar from '@/components/ui/searchBar';
@@ -8,12 +7,16 @@ import Select from '@/components/ui/select';
 import { useCompetitions } from '@/hooks/api/useCompetitions';
 import { useState } from 'react';
 import Container from '../ui/container';
+import CompetitionAdminCard from '../cards/competitionAdminCard';
+import MainButton from '../ui/mainButton';
+import { useNavigate } from 'react-router-dom';
 
 export default function CompetitionAdminTab() {
     const { data, isLoading, error } = useCompetitions();
     const [search, setSearch] = useState('');
     const [year, setYear] = useState('');
     const [eventStatus, setEventStatus] = useState('');
+    const navigate = useNavigate();
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;
@@ -47,6 +50,13 @@ export default function CompetitionAdminTab() {
 
     return (
         <Container variant="primaryCenter" className="gap-4">
+            <div className="flex flex-col gap-4 w-full max-w-lg">
+                <MainButton
+                    onClick={() => navigate('/admin-panel/create-competition')}
+                >
+                    + Mót
+                </MainButton>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4 w-full max-w-3xl">
                 <SearchBar
                     className="w-full sm:flex-1"
@@ -77,7 +87,7 @@ export default function CompetitionAdminTab() {
                     </p>
                 ) : (
                     filteredCompetitions.map((c) => (
-                        <CompetitionCard key={c.id} competition={c} />
+                        <CompetitionAdminCard key={c.id} competition={c} />
                     ))
                 )}
             </div>

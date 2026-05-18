@@ -16,7 +16,7 @@ export default function CategoryAdminTab() {
     return (
         <Container variant="primaryCenter" className="max-w-xl gap-4">
             {categoryGroups.map((c) => (
-                <CategoryCard category={c} />
+                <CategoryCard key={c.id} category={c} />
             ))}
         </Container>
     );

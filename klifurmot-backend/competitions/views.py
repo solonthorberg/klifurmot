@@ -280,7 +280,7 @@ def list_rounds(request):
 
 @api_view(["POST"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def create_round(request, competition_id):
+def create_round(request, competition_id, category_id):
     serializer = serializers.CreateRoundSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -292,6 +292,7 @@ def create_round(request, competition_id):
 
         result = services.create_round(
             competition_id=competition_id,
+            competition_category=category_id,
             user=request.user,
             **validated_data,
         )
@@ -480,25 +481,9 @@ def round_groups(_request):
 
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
-def categories(request):
+def categories(request, competition_id):
     if request.method == "GET":
-        competition_id = request.query_params.get("competition_id")
-
-        if not competition_id:
-            return utils.error_response(
-                code="Missing_parameter",
-                message="competition_id is required",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if not competition_id.isdigit():
-            return utils.error_response(
-                code="Invalid_parameter",
-                message="competition_id must be a number",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        result = services.list_categories(competition_id=int(competition_id))
+        result = services.list_categories(competition_id=competition_id)
 
         return utils.success_response(
             data=serializers.CompetitionCategorySerializer(result, many=True).data,
@@ -523,7 +508,7 @@ def categories(request):
             validated_data = cast(Dict[str, Any], serializer.validated_data)
 
             result = services.create_category(
-                competition_id=validated_data["competition"],
+                competition_id=competition_id,
                 category_group_id=validated_data["category_group"],
                 gender=validated_data["gender"],
                 user=request.user,

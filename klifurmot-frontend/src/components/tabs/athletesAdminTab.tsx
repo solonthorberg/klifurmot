@@ -10,11 +10,11 @@ import { useCategoryGroups } from '@/hooks/api/useCompetitions';
 import { useAthletes, useCreateAthlete } from '@/hooks/api/useAthletes';
 import AthleteAdminCard from '../cards/athleteAdminCard';
 import MainButton from '../ui/mainButton';
-import Modal from '../ui/modal';
+import Modal from '../modals/modal';
 import { Controller, useForm } from 'react-hook-form';
 import {
-    createAthleteSchema,
-    type CreateAthleteRequest,
+    CreateAthleteSchema,
+    type CreateAthleteFormData,
 } from '@/schemas/athlete';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Input from '../ui/input';
@@ -26,12 +26,10 @@ function CreateAthlete({ onClose }: { onClose: () => void }) {
         handleSubmit,
         control,
         formState: { errors },
-    } = useForm<CreateAthleteRequest>({
-        resolver: zodResolver(createAthleteSchema),
+    } = useForm<CreateAthleteFormData>({
+        resolver: zodResolver(CreateAthleteSchema),
         defaultValues: { is_simple_athlete: true },
     });
-
-    const err = errors as Record<string, { message?: string }>;
 
     return (
         <Modal onClose={onClose} className="animate-fade-in">
@@ -42,40 +40,39 @@ function CreateAthlete({ onClose }: { onClose: () => void }) {
                 onSubmit={handleSubmit((data) => {
                     mutate(data, { onSuccess: onClose });
                 })}
-                className="flex flex-col gap-3"
+                className="flex flex-col gap-4"
             >
-                <>
-                    <Input
-                        {...register('name')}
-                        placeholder="Nafn"
-                        error={err.name?.message}
-                    />
+                <Input
+                    {...register('name')}
+                    placeholder="Nafn"
+                    error={errors.name?.message}
+                />
 
-                    <Input
-                        {...register('age' as never, {
-                            valueAsNumber: true,
-                        })}
-                        type="number"
-                        placeholder="Aldur"
-                        error={err.age?.message}
-                    />
-                    <Controller
-                        name={'gender' as never}
-                        control={control}
-                        render={({ field }) => (
-                            <Select
-                                options={[
-                                    { value: 'KK', label: 'KK' },
-                                    { value: 'KVK', label: 'KVK' },
-                                ]}
-                                placeholder="Kyn"
-                                value={field.value}
-                                onChange={field.onChange}
-                                error={err.gender?.message}
-                            />
-                        )}
-                    />
-                </>
+                <Input
+                    {...register('age' as never, {
+                        valueAsNumber: true,
+                    })}
+                    type="number"
+                    placeholder="Aldur"
+                    error={errors.age?.message}
+                />
+                <Controller
+                    name={'gender' as never}
+                    control={control}
+                    render={({ field }) => (
+                        <Select
+                            options={[
+                                { value: 'KK', label: 'KK' },
+                                { value: 'KVK', label: 'KVK' },
+                            ]}
+                            placeholder="Kyn"
+                            value={field.value}
+                            onChange={field.onChange}
+                            inputClassName="bg-white"
+                            error={errors.gender?.message}
+                        />
+                    )}
+                />
                 <MainButton type="submit" className="w-full">
                     Staðfesta
                 </MainButton>

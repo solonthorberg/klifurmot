@@ -60,14 +60,14 @@ export default function CompetitionsPage() {
                         onChange={setEventStatus}
                         options={statusOptions}
                         placeholder="Staða"
-                        className="flex-1 sm:flex-none"
+                        className="flex-1 sm:flex-none bg-transparent"
                     />
                     <Select
                         value={year}
                         onChange={setYear}
                         options={yearOptions}
                         placeholder="Ár"
-                        className="flex-1 sm:flex-none"
+                        className="flex-1 sm:flex-none bg-transparent"
                     />
                 </div>
             </div>

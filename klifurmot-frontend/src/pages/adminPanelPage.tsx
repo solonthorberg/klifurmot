@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import AthletesAdminTab from '@/components/tabs/athletesAdminTab';
 import RoundAdminTab from '@/components/tabs/roundAdminTab';
 
-export default function AdminPanel() {
+export default function AdminPanelPage() {
     const tabs = ['Mót', 'Flokkar', 'Umferðir', 'Keppendur'];
     const [searchParams, setSearchParams] = useSearchParams();
     const tab = Number(searchParams.get('tab') ?? 0);

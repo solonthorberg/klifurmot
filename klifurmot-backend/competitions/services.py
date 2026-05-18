@@ -150,7 +150,8 @@ def list_competitions(year: Optional[int] = None) -> list[Competition]:
     if year:
         queryset = queryset.filter(start_date__year=year)
 
-    return list(queryset.order_by("-start_date"))
+    queryset = queryset.order_by("-start_date").select_related("created_by")
+    return list(queryset)
 
 
 def list_public_competitions(year: Optional[int] = None) -> list[Competition]:

@@ -1,17 +1,19 @@
+import type {
+    CreateCategoryFormData,
+    CreateCompetitionFormData,
+    CreateRoundFormData,
+} from '@/schemas/competition';
 import { api } from './client';
 
 import type {
     ApiSuccessResponse,
     Competition,
-    CreateCompetitionRequest,
     UpdateCompetitionRequest,
     RoundGroup,
     CategoryGroup,
     CompetitionCategory,
-    CreateCategoryRequest,
     UpdateCategoryRequest,
     Round,
-    CreateRoundRequest,
     UpdateRoundRequest,
     Boulder,
     UpdateBoulderRequest,
@@ -48,7 +50,7 @@ export const competitionsApi = {
     },
 
     createCompetition: async (
-        data: CreateCompetitionRequest,
+        data: CreateCompetitionFormData,
     ): Promise<ApiSuccessResponse<Competition>> => {
         const formData = new FormData();
         formData.append('title', data.title);
@@ -159,10 +161,11 @@ export const competitionsApi = {
 
     createRound: async (
         competitionId: number,
-        data: CreateRoundRequest,
+        categoryId: number,
+        data: CreateRoundFormData,
     ): Promise<ApiSuccessResponse<Round>> => {
         const response = await api.post<ApiSuccessResponse<Round>>(
-            `/competitions/${competitionId}/rounds/`,
+            `/competitions/${competitionId}/categories/${categoryId}/rounds/`,
             data,
         );
         return response.data;
@@ -225,11 +228,12 @@ export const competitionsApi = {
     },
 
     createCategory: async (
-        data: CreateCategoryRequest,
+        competitionId: number,
+        data: CreateCategoryFormData,
     ): Promise<ApiSuccessResponse<CompetitionCategory>> => {
         const response = await api.post<
             ApiSuccessResponse<CompetitionCategory>
-        >('/competitions/categories/', data);
+        >(`/competitions/${competitionId}/categories/`, data);
         return response.data;
     },
 

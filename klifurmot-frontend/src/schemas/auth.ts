@@ -1,13 +1,13 @@
 import * as z from 'zod';
 
-export const loginSchema = z.object({
+export const LoginSchema = z.object({
     email: z.string().email('Vinsamlegast sláðu inn gilt netfang'),
     password: z.string().min(1, 'Vinsamlegast sláðu inn gilt lykilorð'),
 });
 
-export type LoginFormData = z.infer<typeof loginSchema>;
+export type LoginFormData = z.infer<typeof LoginSchema>;
 
-export const registerSchema = z
+export const RegisterSchema = z
     .object({
         username: z
             .string()
@@ -35,9 +35,9 @@ export const registerSchema = z
         path: ['password2'],
     });
 
-export type RegisterFormData = z.infer<typeof registerSchema>;
+export type RegisterFormData = z.infer<typeof RegisterSchema>;
 
-export const profileSchema = z.object({
+export const ProfileSchema = z.object({
     profile_picture: z.any().optional(),
     username: z
         .string()
@@ -53,4 +53,4 @@ export const profileSchema = z.object({
         .optional(),
 });
 
-export type ProfileFormData = z.infer<typeof profileSchema>;
+export type ProfileFormData = z.infer<typeof ProfileSchema>;

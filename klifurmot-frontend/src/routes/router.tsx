@@ -12,7 +12,9 @@ import LoginPage from '@/pages/loginPage';
 import RegisterPage from '@/pages/registerPage';
 import ProfilePage from '@/pages/profilePage';
 import { ProtectedRoutes } from './protectedRoutes';
-import AdminPanel from '@/pages/adminPanel';
+import CreateCompetitionPage from '@/pages/createCompetitionPage';
+import AdminPanelDetailsPage from '@/pages/adminPanelDetailsPage';
+import AdminPanelPage from '@/pages/adminPanelPage';
 
 export default function Router() {
     return (
@@ -34,7 +36,15 @@ export default function Router() {
                     <Route path="/profile" element={<ProfilePage />} />
                 </Route>
                 <Route element={<ProtectedRoutes requiredRole="admin" />}>
-                    <Route path="/admin-panel" element={<AdminPanel />} />
+                    <Route path="/admin-panel" element={<AdminPanelPage />} />
+                    <Route
+                        path="/admin-panel/:competitionId"
+                        element={<AdminPanelDetailsPage />}
+                    />
+                    <Route
+                        path="/admin-panel/create-competition"
+                        element={<CreateCompetitionPage />}
+                    />
                 </Route>
             </Route>
         </Routes>

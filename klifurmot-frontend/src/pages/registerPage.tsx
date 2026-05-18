@@ -4,7 +4,7 @@ import Input from '@/components/ui/input';
 import MainButton from '@/components/ui/mainButton';
 import Select from '@/components/ui/select';
 import { useAuth, useCountries } from '@/hooks/api/useAuth';
-import { registerSchema, type RegisterFormData } from '@/schemas/auth';
+import { RegisterSchema, type RegisterFormData } from '@/schemas/auth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -19,7 +19,7 @@ export default function RegisterPage() {
         control,
         formState: { errors },
     } = useForm<RegisterFormData>({
-        resolver: zodResolver(registerSchema),
+        resolver: zodResolver(RegisterSchema),
     });
 
     const countries = data?.data;
@@ -97,6 +97,7 @@ export default function RegisterPage() {
                                 label="Kyn"
                                 placeholder="Kyn"
                                 className="w-full"
+                                inputClassName="bg-white"
                                 variant="input"
                                 options={[
                                     { value: 'KK', label: 'KK' },
@@ -124,6 +125,7 @@ export default function RegisterPage() {
                                 placeholder="Veldu þjóðerni"
                                 variant="input"
                                 className="w-full"
+                                inputClassName="bg-white"
                                 options={
                                     countries?.map((c) => ({
                                         value: c.country_code,

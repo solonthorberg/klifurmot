@@ -3,15 +3,15 @@ import Image from '@/components/ui/image';
 
 import type { Competition } from '@/types';
 
-export default function CompetitionCard({
+export default function CompetitionAdminCard({
     competition,
 }: {
     competition: Competition;
 }) {
     return (
         <Link
-            to={`/competitions/${competition.id}`}
-            className="flex sm:flex-row flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline animate-fade-in"
+            to={`/admin-panel/${competition.id}`}
+            className="flex sm:flex-row flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline"
         >
             <Image
                 image={competition.image}
@@ -27,6 +27,9 @@ export default function CompetitionCard({
                     )}{' '}
                     -{' '}
                     {new Date(competition.end_date).toLocaleDateString('is-IS')}
+                </p>
+                <p className="text-gray-500 text-sm">
+                    {`Stofnandi: ${competition.created_by}`}
                 </p>
             </div>
         </Link>

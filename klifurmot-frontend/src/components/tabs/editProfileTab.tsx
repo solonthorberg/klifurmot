@@ -1,6 +1,6 @@
 import { useAuth } from '@/hooks/api/useAuth';
 import { useForm, type Resolver } from 'react-hook-form';
-import { profileSchema, type ProfileFormData } from '@/schemas/auth';
+import { ProfileSchema, type ProfileFormData } from '@/schemas/auth';
 import MainButton from '../ui/mainButton';
 import Input from '../ui/input';
 import { useRef, useState } from 'react';
@@ -14,7 +14,7 @@ export default function EditProfileTab({ onDone }: { onDone: () => void }) {
         setValue,
         formState: { errors },
     } = useForm<ProfileFormData>({
-        resolver: zodResolver(profileSchema) as Resolver<ProfileFormData>,
+        resolver: zodResolver(ProfileSchema) as Resolver<ProfileFormData>,
         defaultValues: {
             username: userAccount?.user.username ?? '',
             height_cm: userAccount?.height_cm ?? undefined,

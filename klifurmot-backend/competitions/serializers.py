@@ -88,7 +88,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
 
 
 class CompetitionSerializer(serializers.ModelSerializer):
-    """For listing and retrieving competitions"""
+    created_by = serializers.CharField(source="created_by.username", read_only=True)
 
     class Meta:
         model = models.Competition
@@ -103,9 +103,10 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "visible",
             "status",
             "created_at",
+            "created_by",
             "last_modified_at",
         ]
-        read_only_fields = ["id", "created_at", "last_modified_at"]
+        read_only_fields = ["id", "created_at", "created_by", "last_modified_at"]
 
 
 class RoundSerializer(serializers.ModelSerializer):
@@ -126,7 +127,6 @@ class RoundSerializer(serializers.ModelSerializer):
 
 
 class CreateRoundSerializer(serializers.Serializer):
-    competition_category = serializers.IntegerField()
     round_group = serializers.IntegerField()
     round_order = serializers.IntegerField(min_value=1)
     climbers_advance = serializers.IntegerField(min_value=0, default=0)
@@ -169,7 +169,6 @@ class RoundGroupSerializer(serializers.ModelSerializer):
 
 
 class CreateCompetitionCategorySerializer(serializers.Serializer):
-    competition = serializers.IntegerField()
     category_group = serializers.IntegerField()
     gender = serializers.ChoiceField(choices=["KK", "KVK"])
 

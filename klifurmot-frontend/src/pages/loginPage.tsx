@@ -3,7 +3,7 @@ import MainButton from '@/components/ui/mainButton';
 import { useAuth } from '@/hooks/api/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { loginSchema, type LoginFormData } from '@/schemas/auth';
+import { LoginSchema, type LoginFormData } from '@/schemas/auth';
 import Icon from '@/components/ui/icons';
 import Input from '@/components/ui/input';
 import { useState } from 'react';
@@ -18,7 +18,7 @@ export default function LoginPage() {
         handleSubmit,
         formState: { errors },
     } = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+        resolver: zodResolver(LoginSchema),
     });
 
     return (

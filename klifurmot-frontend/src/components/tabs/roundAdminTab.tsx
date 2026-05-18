@@ -16,7 +16,7 @@ export default function RoundAdminTab() {
     return (
         <Container variant="primaryCenter" className="max-w-xl gap-4">
             {roundGroups.map((c) => (
-                <RoundGroupCard round={c} />
+                <RoundGroupCard key={c.id} round={c} />
             ))}
         </Container>
     );

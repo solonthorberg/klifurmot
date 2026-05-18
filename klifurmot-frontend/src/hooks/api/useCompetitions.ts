@@ -4,14 +4,16 @@ import { competitionsApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
 import { notify } from '@/stores/notificationStore';
 import type {
-    CreateCompetitionRequest,
     UpdateCompetitionRequest,
-    CreateCategoryRequest,
     UpdateCategoryRequest,
-    CreateRoundRequest,
     UpdateRoundRequest,
     UpdateBoulderRequest,
 } from '@/types';
+import type {
+    CreateCategoryFormData,
+    CreateCompetitionFormData,
+    CreateRoundFormData,
+} from '@/schemas/competition';
 
 // Competitions
 export function useCompetitions() {
@@ -40,7 +42,7 @@ export function useCreateCompetition() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateCompetitionRequest) =>
+        mutationFn: (data: CreateCompetitionFormData) =>
             competitionsApi.createCompetition(data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
@@ -144,15 +146,16 @@ export function useRound(roundId: number) {
 
 export function useCreateRound() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: ({
             competitionId,
+            categoryId,
             data,
         }: {
             competitionId: number;
-            data: CreateRoundRequest;
-        }) => competitionsApi.createRound(competitionId, data),
+            categoryId: number;
+            data: CreateRoundFormData;
+        }) => competitionsApi.createRound(competitionId, categoryId, data),
         onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({
                 queryKey: ['rounds', competitionId],
@@ -242,13 +245,17 @@ export function useCategories(competitionId: number) {
 
 export function useCreateCategory() {
     const queryClient = useQueryClient();
-
     return useMutation({
-        mutationFn: (data: CreateCategoryRequest) =>
-            competitionsApi.createCategory(data),
-        onSuccess: ({ message }, { competition }) => {
+        mutationFn: ({
+            competitionId,
+            data,
+        }: {
+            competitionId: number;
+            data: CreateCategoryFormData;
+        }) => competitionsApi.createCategory(competitionId, data),
+        onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({
-                queryKey: ['categories', competition],
+                queryKey: ['categories', competitionId],
             });
             notify.success(message);
         },

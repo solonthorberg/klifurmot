@@ -9,8 +9,8 @@ function ProfileField({
     value: string | null | undefined;
 }) {
     return (
-        <div>
-            <label>{label}</label>
+        <div className="flex flex-col gap-1">
+            <label className="text-gray-700">{label}</label>
             <div className="flex items-center h-10 rounded-md bg-white pl-2 outline-1 -outline-offset-1 outline-gray-300">
                 <p className="block min-w-0 grow py-1.5 pr-3 pl-1 text-base text-gray-900">
                     {value ?? 'Ekki skráð'}
@@ -41,12 +41,12 @@ export default function ViewProfileTab({ onDone }: { onDone: () => void }) {
                 label="Faðmur (cm)"
                 value={userAccount?.wingspan_cm?.toString()}
             />
-            <div className="flex w-full flex-col gap-1 mt-2">
+            <div className="flex w-full flex-col gap-2 mt-2">
                 <MainButton onClick={onDone}>Breyta upplýsingum</MainButton>
                 <MainButton
                     variant="outline"
                     onClick={logout}
-                    className="px-3 py-2 mt-2 rounded hover:bg-primary-hover transition-colors"
+                    className="px-3 py-2 rounded hover:bg-primary-hover transition-colors"
                 >
                     Útskrá
                 </MainButton>

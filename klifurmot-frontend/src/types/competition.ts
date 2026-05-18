@@ -1,3 +1,8 @@
+import type {
+    CreateCategoryFormData,
+    CreateRoundFormData,
+} from '@/schemas/competition';
+
 export interface Competition {
     id: number;
     title: string;
@@ -7,19 +12,21 @@ export interface Competition {
     location: string | null;
     image: string | null;
     visible: boolean;
-    status: string;
+    status: 'not_started' | 'in_progress' | 'finished';
     created_at: string;
+    created_by: string;
     last_modified_at: string;
 }
 
-export interface CreateCompetitionRequest {
-    title: string;
-    description?: string;
-    start_date: string;
-    end_date: string;
-    location?: string;
-    image?: File;
-    visible?: boolean;
+export interface DraftCategory extends CreateCategoryFormData {
+    key: string;
+    category_group_name: string;
+    rounds: DraftRound[];
+}
+
+export interface DraftRound extends CreateRoundFormData {
+    key: string;
+    round_group_name: string;
 }
 
 export interface UpdateCompetitionRequest {
@@ -55,12 +62,6 @@ export interface CompetitionCategory {
     gender: 'KK' | 'KVK';
 }
 
-export interface CreateCategoryRequest {
-    competition: number;
-    category_group: number;
-    gender: 'KK' | 'KVK';
-}
-
 export interface UpdateCategoryRequest {
     category_group?: number;
     gender?: 'KK' | 'KVK';
@@ -77,17 +78,6 @@ export interface Round {
     end_date: string | null;
     is_self_scoring: boolean;
     completed: boolean;
-}
-
-export interface CreateRoundRequest {
-    competition_category: number;
-    round_group: number;
-    round_order: number;
-    climbers_advance?: number;
-    boulder_count?: number;
-    start_date?: string;
-    end_date?: string;
-    is_self_scoring?: boolean;
 }
 
 export interface UpdateRoundRequest {
