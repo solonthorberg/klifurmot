@@ -1,24 +1,28 @@
+import type {
+    CreateCategoryFormData,
+    CreateCompetitionFormData,
+    CreateRoundFormData,
+    UpdateCategoryFormData,
+    UpdateCompetitionFormData,
+    UpdateRoundFormData,
+} from '@/schemas/competition';
 import { api } from './client';
 
 import type {
     ApiSuccessResponse,
     Competition,
-    CreateCompetitionRequest,
-    UpdateCompetitionRequest,
     RoundGroup,
     CategoryGroup,
     CompetitionCategory,
-    CreateCategoryRequest,
-    UpdateCategoryRequest,
     Round,
-    CreateRoundRequest,
-    UpdateRoundRequest,
     Boulder,
     UpdateBoulderRequest,
     CompetitionAthletesResponse,
     CategoryBoulders,
     CategoryStartlist,
     CategoryResults,
+    Rounds,
+    RoundData,
 } from '@/types';
 
 export const competitionsApi = {
@@ -26,6 +30,15 @@ export const competitionsApi = {
     listCompetitions: async (): Promise<ApiSuccessResponse<Competition[]>> => {
         const response =
             await api.get<ApiSuccessResponse<Competition[]>>('/competitions/');
+        return response.data;
+    },
+
+    listPublicCompetitions: async (): Promise<
+        ApiSuccessResponse<Competition[]>
+    > => {
+        const response = await api.get<ApiSuccessResponse<Competition[]>>(
+            '/competitions/public/',
+        );
         return response.data;
     },
 
@@ -39,7 +52,7 @@ export const competitionsApi = {
     },
 
     createCompetition: async (
-        data: CreateCompetitionRequest,
+        data: CreateCompetitionFormData,
     ): Promise<ApiSuccessResponse<Competition>> => {
         const formData = new FormData();
         formData.append('title', data.title);
@@ -63,7 +76,7 @@ export const competitionsApi = {
 
     updateCompetition: async (
         competitionId: number,
-        data: UpdateCompetitionRequest,
+        data: UpdateCompetitionFormData,
     ): Promise<ApiSuccessResponse<Competition>> => {
         const formData = new FormData();
         if (data.title) formData.append('title', data.title);
@@ -74,7 +87,7 @@ export const competitionsApi = {
         if (data.image) formData.append('image', data.image);
         if (data.visible !== undefined)
             formData.append('visible', String(data.visible));
-        if (data.remove_image) formData.append('remove_image', 'true');
+        // if (data.remove_image) formData.append('remove_image', 'true');
 
         const response = await api.patch<ApiSuccessResponse<Competition>>(
             `/competitions/${competitionId}/`,
@@ -131,8 +144,8 @@ export const competitionsApi = {
     // Rounds
     listRounds: async (
         competitionId: number,
-    ): Promise<ApiSuccessResponse<Round[]>> => {
-        const response = await api.get<ApiSuccessResponse<Round[]>>(
+    ): Promise<ApiSuccessResponse<RoundData>> => {
+        const response = await api.get<ApiSuccessResponse<RoundData>>(
             '/competitions/rounds/',
             {
                 params: { competition_id: competitionId },
@@ -150,10 +163,11 @@ export const competitionsApi = {
 
     createRound: async (
         competitionId: number,
-        data: CreateRoundRequest,
+        categoryId: number,
+        data: CreateRoundFormData,
     ): Promise<ApiSuccessResponse<Round>> => {
         const response = await api.post<ApiSuccessResponse<Round>>(
-            `/competitions/${competitionId}/rounds/`,
+            `/competitions/${competitionId}/categories/${categoryId}/rounds/`,
             data,
         );
         return response.data;
@@ -161,7 +175,7 @@ export const competitionsApi = {
 
     updateRound: async (
         roundId: number,
-        data: UpdateRoundRequest,
+        data: UpdateRoundFormData,
     ): Promise<ApiSuccessResponse<Round>> => {
         const response = await api.patch<ApiSuccessResponse<Round>>(
             `/competitions/rounds/${roundId}/`,
@@ -216,17 +230,18 @@ export const competitionsApi = {
     },
 
     createCategory: async (
-        data: CreateCategoryRequest,
+        competitionId: number,
+        data: CreateCategoryFormData,
     ): Promise<ApiSuccessResponse<CompetitionCategory>> => {
         const response = await api.post<
             ApiSuccessResponse<CompetitionCategory>
-        >('/competitions/categories/', data);
+        >(`/competitions/${competitionId}/categories/`, data);
         return response.data;
     },
 
     updateCategory: async (
         categoryId: number,
-        data: UpdateCategoryRequest,
+        data: UpdateCategoryFormData,
     ): Promise<ApiSuccessResponse<CompetitionCategory>> => {
         const response = await api.patch<
             ApiSuccessResponse<CompetitionCategory>

@@ -13,6 +13,15 @@ export interface UserAccount {
     nationality: string | null;
     is_admin: boolean;
     profile_picture: string | null;
+    height_cm?: number;
+    wingspan_cm?: number;
+}
+
+export interface UpdateUserAccount {
+    username: string;
+    height_cm: number | null;
+    wingspan_cm: number | null;
+    profile_picture?: File | string | null;
 }
 
 export interface LoginRequest {
@@ -26,17 +35,32 @@ export interface RegisterRequest {
     password: string;
     password2: string;
     full_name: string;
-    gender?: string;
-    date_of_birth?: string;
-    nationality?: string;
+    gender: string;
+    nationality: string;
+    date_of_birth: string;
 }
 
 export interface PasswordResetRequest {
     email: string;
 }
 
+export interface AuthResponse {
+    access: string;
+    user: {
+        id: number;
+        username: string;
+        email: string;
+        full_name: string;
+    };
+}
+
 export interface LoginResponse {
     access: string;
-    refresh: string;
     user: User;
+}
+
+export interface Countries {
+    country_code: string;
+    name_en: string;
+    name_local: string;
 }

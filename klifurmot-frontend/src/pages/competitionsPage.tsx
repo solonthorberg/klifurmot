@@ -7,10 +7,10 @@ import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import SearchBar from '@/components/ui/searchBar';
 import Select from '@/components/ui/select';
-import { useCompetitions } from '@/hooks/api/useCompetitions';
+import { usePublicCompetitions } from '@/hooks/api/useCompetitions';
 
 export default function CompetitionsPage() {
-    const { data, isLoading, error } = useCompetitions();
+    const { data, isLoading, error } = usePublicCompetitions();
     const [search, setSearch] = useState('');
     const [year, setYear] = useState('');
     const [eventStatus, setEventStatus] = useState('not_started');
@@ -60,14 +60,14 @@ export default function CompetitionsPage() {
                         onChange={setEventStatus}
                         options={statusOptions}
                         placeholder="Staða"
-                        className="flex-1 sm:flex-none"
+                        className="flex-1 sm:flex-none bg-transparent"
                     />
                     <Select
                         value={year}
                         onChange={setYear}
                         options={yearOptions}
                         placeholder="Ár"
-                        className="flex-1 sm:flex-none"
+                        className="flex-1 sm:flex-none bg-transparent"
                     />
                 </div>
             </div>

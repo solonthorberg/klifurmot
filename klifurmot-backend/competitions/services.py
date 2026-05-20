@@ -106,6 +106,7 @@ def delete_competition(competition_id: int) -> None:
             RoundResult.objects.filter(
                 round__competition_category__competition=competition,
                 deleted=False,
+                climber__deleted=False,
             ).update(deleted=True)
 
             Boulder.objects.filter(
@@ -144,6 +145,16 @@ def get_competition(competition_id: int) -> Competition:
 
 
 def list_competitions(year: Optional[int] = None) -> list[Competition]:
+    queryset = Competition.objects.filter(deleted=False)
+
+    if year:
+        queryset = queryset.filter(start_date__year=year)
+
+    queryset = queryset.order_by("-start_date").select_related("created_by")
+    return list(queryset)
+
+
+def list_public_competitions(year: Optional[int] = None) -> list[Competition]:
     queryset = Competition.objects.filter(visible=True, deleted=False)
 
     if year:
@@ -305,6 +316,7 @@ def delete_round(round_id: int) -> None:
             RoundResult.objects.filter(
                 round=competition_round,
                 deleted=False,
+                climber__deleted=False,
             ).update(deleted=True)
 
             Boulder.objects.filter(
@@ -512,6 +524,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
         CompetitionRegistration.objects.filter(
             competition_id=competition_id,
             deleted=False,
+            climber__deleted=False,
         )
         .select_related(
             "climber__user_account",
@@ -550,7 +563,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
                 if user_account and user_account.date_of_birth
                 else None,
                 "category_name": category.category_group.name,
-                "gender": user_account.gender,
+                "gender": user_account.gender if user_account else None,
                 "nationality": user_account.nationality.country_code
                 if user_account and user_account.nationality
                 else None,
@@ -731,14 +744,10 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                 deleted=False,
             ).order_by("boulder_number")
 
-            round_results = (
-                RoundResult.objects.filter(
-                    round=round_obj,
-                    deleted=False,
-                )
-                .select_related("climber__user_account")
-                .order_by("rank")
-            )
+            round_results = RoundResult.objects.filter(
+                round=round_obj,
+                deleted=False,
+            ).select_related("climber__user_account")
 
             climber_ids = [r.climber.id for r in round_results]
 
@@ -767,12 +776,40 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                     climb
                 )
 
-            formatted_results = []
-
+            # Build and sort climber entries
+            climber_entries = []
             for rr in round_results:
                 score = scores_map.get(rr.climber.id)
                 if not score:
                     continue
+                climber_entries.append(
+                    {
+                        "climber_id": rr.climber.id,
+                        "rr": rr,
+                        "score": score,
+                    }
+                )
+
+            def sort_key(entry):
+                score = entry["score"]
+                return (
+                    -float(round(score.total_score, 1)),  # descending score
+                    score.attempts_tops,  # tiebreaker B: fewer attempts on tops
+                    score.attempts_zones,  # tiebreaker C: fewer attempts on zones
+                )
+
+            climber_entries.sort(key=sort_key)
+
+            # Assign ranks, shared rank if all tiebreakers are equal
+            formatted_results = []
+            rank = 1
+            for i, entry in enumerate(climber_entries):
+                if i > 0 and sort_key(entry) != sort_key(climber_entries[i - 1]):
+                    rank = i + 1
+
+                rr = entry["rr"]
+                score = entry["score"]
+                climber_id = entry["climber_id"]
 
                 if rr.climber.is_simple_athlete:
                     full_name = rr.climber.simple_name or "Name unknown"
@@ -783,7 +820,7 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                         else "Name unknown"
                     )
 
-                climber_climbs = climbs_by_climber.get(rr.climber.id, {})
+                climber_climbs = climbs_by_climber.get(climber_id, {})
                 boulder_scores = []
 
                 for boulder in boulders:
@@ -813,7 +850,7 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
                 formatted_results.append(
                     {
-                        "rank": rr.rank,
+                        "rank": rank,
                         "full_name": full_name,
                         "tops": score.tops,
                         "attempts_top": score.attempts_tops,

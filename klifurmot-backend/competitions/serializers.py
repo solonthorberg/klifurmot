@@ -88,7 +88,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
 
 
 class CompetitionSerializer(serializers.ModelSerializer):
-    """For listing and retrieving competitions"""
+    created_by = serializers.CharField(source="created_by.username", read_only=True)
 
     class Meta:
         model = models.Competition
@@ -103,18 +103,29 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "visible",
             "status",
             "created_at",
+            "created_by",
             "last_modified_at",
         ]
-        read_only_fields = ["id", "created_at", "last_modified_at"]
+        read_only_fields = ["id", "created_at", "created_by", "last_modified_at"]
 
 
 class RoundSerializer(serializers.ModelSerializer):
+    category_group_name = serializers.CharField(
+        source="competition_category.category_group.name", read_only=True
+    )
+
+    gender = serializers.CharField(source="competition_category.gender", read_only=True)
+    round_group_name = serializers.CharField(source="round_group.name", read_only=True)
+
     class Meta:
         model = models.CompetitionRound
         fields = [
             "id",
             "competition_category",
+            "category_group_name",
+            "gender",
             "round_group",
+            "round_group_name",
             "round_order",
             "climbers_advance",
             "boulder_count",
@@ -122,11 +133,11 @@ class RoundSerializer(serializers.ModelSerializer):
             "end_date",
             "is_self_scoring",
             "completed",
+            "status",
         ]
 
 
 class CreateRoundSerializer(serializers.Serializer):
-    competition_category = serializers.IntegerField()
     round_group = serializers.IntegerField()
     round_order = serializers.IntegerField(min_value=1)
     climbers_advance = serializers.IntegerField(min_value=0, default=0)
@@ -169,7 +180,6 @@ class RoundGroupSerializer(serializers.ModelSerializer):
 
 
 class CreateCompetitionCategorySerializer(serializers.Serializer):
-    competition = serializers.IntegerField()
     category_group = serializers.IntegerField()
     gender = serializers.ChoiceField(choices=["KK", "KVK"])
 
@@ -177,7 +187,7 @@ class CreateCompetitionCategorySerializer(serializers.Serializer):
 class CategoryGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.CategoryGroup
-        fields = ["id", "name", "min_age", "max_age"]
+        fields = ["id", "name", "min_age", "max_age", "is_default"]
 
 
 class CompetitionCategorySerializer(serializers.ModelSerializer):

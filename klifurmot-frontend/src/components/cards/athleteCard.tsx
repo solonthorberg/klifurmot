@@ -1,19 +1,20 @@
-import type { CompetitionAthlete } from '@/types';
-import { getFlagEmoji } from '@/utils/getFlagEmoji';
+import type { PublicAthlete } from '@/types';
 
-export default function AthleteCard({
-    athlete,
-}: {
-    athlete: CompetitionAthlete;
-}) {
+interface AthleteCardProps {
+    athlete: PublicAthlete;
+    onClick?: () => Promise<void> | void;
+}
+
+export default function AthleteCard({ athlete, onClick }: AthleteCardProps) {
     return (
-        <tr className="border-b border-outline last:border-0">
-            <td className="px-4 py-3">{athlete.full_name}</td>
-            <td className="px-4 py-3">{athlete.category_name}</td>
-            <td className="px-4 py-3 ">{athlete.gender}</td>
-            <td className="px-4 py-3 text-right">
-                {getFlagEmoji(athlete.nationality)}
-            </td>
-        </tr>
+        <button
+            onClick={onClick}
+            className="flex flex-col cursor-pointer text-left gap-1 border border-outline rounded-lg p-4 hover:shadow-md transition-shadow"
+        >
+            <p>{athlete.name}</p>
+            <div className="flex gap-4 text-gray-500">
+                <span>{`${athlete.age} ára`}</span>
+            </div>
+        </button>
     );
 }

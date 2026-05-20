@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { PublicAthlete } from '@/types/athlete';
 
 import { athletesApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
@@ -11,44 +12,44 @@ import type {
 
 // Public athletes
 
-export function useAthletes(search?: string) {
-    return useQuery({
+export function usePublicAthletes(search?: string) {
+    return useQuery<{ data: PublicAthlete[] }>({
         queryKey: ['athletes', search],
-        queryFn: () => athletesApi.listAthletes(search),
+        queryFn: () => athletesApi.listPublicAthletes(search),
     });
 }
 
-export function useAthlete(athleteId: number) {
+export function usePublicAthlete(athleteId: number) {
     return useQuery({
         queryKey: ['athletes', athleteId],
-        queryFn: () => athletesApi.getAthleteDetail(athleteId),
+        queryFn: () => athletesApi.getPublicAthleteDetail(athleteId),
         enabled: !!athleteId,
     });
 }
 
-// Admin climbers
+// Admin panel climbers
 
-export function useClimbers(search?: string) {
+export function useAthletes(search?: string) {
     return useQuery({
         queryKey: ['climbers', search],
-        queryFn: () => athletesApi.listAllClimbers(search),
+        queryFn: () => athletesApi.listAthletes(search),
     });
 }
 
-export function useClimber(climberId: number) {
+export function useAthlete(climberId: number) {
     return useQuery({
         queryKey: ['climbers', climberId],
-        queryFn: () => athletesApi.getClimber(climberId),
+        queryFn: () => athletesApi.getAthlete(climberId),
         enabled: !!climberId,
     });
 }
 
-export function useCreateClimber() {
+export function useCreateAthlete() {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: (data: CreateClimberRequest) =>
-            athletesApi.createClimber(data),
+            athletesApi.createAthlete(data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['climbers'] });
             queryClient.invalidateQueries({ queryKey: ['athletes'] });
@@ -60,7 +61,7 @@ export function useCreateClimber() {
     });
 }
 
-export function useUpdateClimber() {
+export function useUpdateAthlete() {
     const queryClient = useQueryClient();
 
     return useMutation({
@@ -70,7 +71,7 @@ export function useUpdateClimber() {
         }: {
             climberId: number;
             data: UpdateClimberRequest;
-        }) => athletesApi.updateClimber(climberId, data),
+        }) => athletesApi.updateAthlete(climberId, data),
         onSuccess: ({ message }, { climberId }) => {
             queryClient.invalidateQueries({ queryKey: ['climbers'] });
             queryClient.invalidateQueries({
@@ -85,11 +86,11 @@ export function useUpdateClimber() {
     });
 }
 
-export function useDeleteClimber() {
+export function useDeleteAthlete() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (climberId: number) => athletesApi.deleteClimber(climberId),
+        mutationFn: (climberId: number) => athletesApi.deleteAthlete(climberId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['climbers'] });
             queryClient.invalidateQueries({ queryKey: ['athletes'] });

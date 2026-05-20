@@ -39,24 +39,26 @@ export default function BouldersTab({
         : categories;
 
     return (
-        <Container variant="tab" className="flex-col">
+        <Container variant="tab" className="flex-col gap-4">
             <div className="flex gap-4 w-full justify-center">
                 <Select
                     value={selectedCategory}
                     onChange={setSelectedCategory}
                     options={categoryOptions}
                     placeholder="Allir flokkar"
+                    className="flex-1 sm:flex-none"
                 />
                 <Select
                     value={selectedRound}
                     onChange={setSelectedRound}
                     options={roundOptions}
                     placeholder="Allar umferðir"
+                    className="flex-1 sm:flex-none"
                 />
             </div>
             <div className="flex flex-col gap-4 w-full">
                 {filteredCategories.length === 0 ? (
-                    <p className="text-gray-500">Engar leiðir skráðar...</p>
+                    <p className="text-gray-500 mx-auto">Engar leiðir skráðar...</p>
                 ) : (
                     filteredCategories.map((c) => {
                         const rounds = selectedRound

@@ -20,7 +20,6 @@ from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
-
 from .models import UserAccount, Country, CompetitionRole
 from athletes.models import Climber
 
@@ -325,10 +324,10 @@ def generate_unique_username(email: str, max_length: int = 150) -> str:
     return f"{base_username[:20]}_{timestamp}"
 
 
-def logout(refresh_token) -> Dict[str, Any]:
+def logout(request, refresh_token_str) -> Dict[str, Any]:
     """Logout user by blacklisting their refresh token"""
     try:
-        token = RefreshToken(refresh_token)
+        token = RefreshToken(refresh_token_str)
         token.blacklist()
 
         logger.info("User logged out successfully (token blacklisted)")
@@ -342,6 +341,21 @@ def logout(refresh_token) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Unexpected error during logout: {str(e)}")
         raise ValueError(f"Logout failed: {str(e)}")
+
+
+def refresh_token(refresh_token_str) -> Dict[str, Any]:
+    try:
+        token = RefreshToken(refresh_token_str)
+        user_id = token["user_id"]
+        user = User.objects.get(id=user_id)
+        token.blacklist()
+        new_token = RefreshToken.for_user(user)
+        return {
+            "access": str(new_token.access_token),
+            "refresh": str(new_token),
+        }
+    except TokenError as e:
+        raise ValueError(f"Invalid or expired refresh token: {str(e)}")
 
 
 def get_competition_roles(
@@ -557,12 +571,20 @@ def reset_password(
 
 def logout_all_sessions(user: User) -> None:
     """Invalidate all active sessions for a user by blacklisting all refresh tokens"""
-    from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+    from rest_framework_simplejwt.token_blacklist.models import (
+        OutstandingToken,
+        BlacklistedToken,
+    )
 
     tokens = OutstandingToken.objects.filter(user_id=user.id)
-
+    already_blacklisted = set(
+        BlacklistedToken.objects.filter(token__in=tokens).values_list(
+            "token_id", flat=True
+        )
+    )
     for token in tokens:
-        if not hasattr(token, "blacklistedtoken"):
+        if token.id not in already_blacklisted:
             RefreshToken(token.token).blacklist()
 
     logger.info(f"All sessions terminated for user: {user.username}")

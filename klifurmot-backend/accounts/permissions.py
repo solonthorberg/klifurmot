@@ -8,6 +8,8 @@ class IsAdmin(IsAuthenticated):
     """
 
     def has_permission(self, request, _view):
+        if not request.user or not request.user.is_authenticated:
+            return False
         return getattr(request.user.profile, "is_admin", False)
 
 

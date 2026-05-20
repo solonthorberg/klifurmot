@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import AthleteCard from '../cards/athleteCard';
+import AthleteRegisterCard from '../cards/athleteRegisterCard';
 import Container from '../ui/container';
 import ErrorMessage from '../ui/errorMessage';
 import LoadingSpinner from '../ui/loadingSpinner';
@@ -44,7 +44,7 @@ export default function AthletesTab({
                 <SearchBar
                     value={search}
                     onChange={setSearch}
-                    placeholder="Leita að keppanda..."
+                    placeholder="Leita..."
                 />
                 <Select
                     value={selectedCategory}
@@ -103,7 +103,7 @@ export default function AthletesTab({
                                             </thead>
                                             <tbody>
                                                 {athletes.map((a) => (
-                                                    <AthleteCard
+                                                    <AthleteRegisterCard
                                                         key={a.id}
                                                         athlete={a}
                                                     />

@@ -2,80 +2,81 @@ import { api } from './client';
 
 import type {
     ApiSuccessResponse,
-    Athlete,
-    Climber,
+    PublicAthlete,
+    AthleteAdmin,
     Registration,
-    CreateClimberRequest,
-    UpdateClimberRequest,
+    CreateAthleteRequestAdmin,
+    UpdateAthleteRequestAdmin,
     CreateRegistrationRequest,
+    PublicAthleteDetail,
 } from '@/types';
 
 export const athletesApi = {
     // Public endpoints
+    listPublicAthletes: async (
+        search?: string,
+    ): Promise<ApiSuccessResponse<PublicAthlete[]>> => {
+        const params = search ? { search } : {};
+        const response = await api.get<ApiSuccessResponse<PublicAthlete[]>>(
+            '/athletes/public',
+            { params },
+        );
+        return response.data;
+    },
+
+    getPublicAthleteDetail: async (
+        athleteId: number,
+    ): Promise<ApiSuccessResponse<PublicAthleteDetail>> => {
+        const response = await api.get<ApiSuccessResponse<PublicAthleteDetail>>(
+            `/athletes/public/${athleteId}/`,
+        );
+        return response.data;
+    },
+
+    // Admin endpoints
     listAthletes: async (
         search?: string,
-    ): Promise<ApiSuccessResponse<Athlete[]>> => {
+    ): Promise<ApiSuccessResponse<AthleteAdmin[]>> => {
         const params = search ? { search } : {};
-        const response = await api.get<ApiSuccessResponse<Athlete[]>>(
+        const response = await api.get<ApiSuccessResponse<AthleteAdmin[]>>(
             '/athletes/',
             { params },
         );
         return response.data;
     },
 
-    getAthleteDetail: async (
-        athleteId: number,
-    ): Promise<ApiSuccessResponse<Athlete>> => {
-        const response = await api.get<ApiSuccessResponse<Athlete>>(
-            `/athletes/${athleteId}/`,
-        );
-        return response.data;
-    },
-
-    // Admin endpoints
-    listAllClimbers: async (
-        search?: string,
-    ): Promise<ApiSuccessResponse<Climber[]>> => {
-        const params = search ? { search } : {};
-        const response = await api.get<ApiSuccessResponse<Climber[]>>(
-            '/athletes/admin/',
-            { params },
-        );
-        return response.data;
-    },
-
-    getClimber: async (
+    getAthlete: async (
         climberId: number,
-    ): Promise<ApiSuccessResponse<Climber>> => {
-        const response = await api.get<ApiSuccessResponse<Climber>>(
-            `/athletes/admin/${climberId}/`,
+    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
+        const response = await api.get<ApiSuccessResponse<AthleteAdmin>>(
+            `/athletes/${climberId}/`,
         );
         return response.data;
     },
 
-    createClimber: async (
-        data: CreateClimberRequest,
-    ): Promise<ApiSuccessResponse<Climber>> => {
-        const response = await api.post<ApiSuccessResponse<Climber>>(
-            '/athletes/admin/',
+    createAthlete: async (
+        data: CreateAthleteRequestAdmin,
+    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
+        const response = await api.post<ApiSuccessResponse<AthleteAdmin>>(
+            '/athletes/',
             data,
         );
         return response.data;
     },
 
-    updateClimber: async (
+    updateAthlete: async (
         climberId: number,
-        data: UpdateClimberRequest,
-    ): Promise<ApiSuccessResponse<Climber>> => {
-        const response = await api.patch<ApiSuccessResponse<Climber>>(
-            `/athletes/admin/${climberId}/`,
+        data: UpdateAthleteRequestAdmin,
+    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
+        const response = await api.patch<ApiSuccessResponse<AthleteAdmin>>(
+            `/athletes/${climberId}/`,
             data,
         );
         return response.data;
     },
 
-    deleteClimber: async (climberId: number): Promise<void> => {
-        await api.delete(`/athletes/admin/${climberId}/`);
+    deleteAthlete: async (climberId: number): Promise<void> => {
+        await api.delete(`/athletes/${climberId}/`);
     },
 
     // Registration endpoints

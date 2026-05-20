@@ -2,10 +2,13 @@ import { api } from './client';
 
 import type {
     ApiSuccessResponse,
+    AuthResponse,
+    Countries,
     LoginRequest,
     LoginResponse,
     PasswordResetRequest,
     RegisterRequest,
+    UpdateUserAccount,
     UserAccount,
 } from '@/types';
 
@@ -22,22 +25,21 @@ export const authApi = {
 
     register: async (
         data: RegisterRequest,
-    ): Promise<ApiSuccessResponse<null>> => {
+    ): Promise<ApiSuccessResponse<AuthResponse>> => {
         const response = await api.post('/auth/register/', data);
         return response.data;
     },
 
-    logout: async (refresh: string): Promise<ApiSuccessResponse<null>> => {
-        const response = await api.post('/auth/logout/', { refresh });
+    logout: async (): Promise<ApiSuccessResponse<null>> => {
+        const response = await api.post('/auth/logout/');
         return response.data;
     },
 
-    refreshToken: async (
-        refresh: string,
-    ): Promise<ApiSuccessResponse<{ access: string; refresh: string }>> => {
-        const response = await api.post<
-            ApiSuccessResponse<{ access: string; refresh: string }>
-        >('/auth/refresh/', { refresh });
+    refreshToken: async (): Promise<ApiSuccessResponse<{ access: string }>> => {
+        const response =
+            await api.post<ApiSuccessResponse<{ access: string }>>(
+                '/auth/refresh/',
+            );
         return response.data;
     },
 
@@ -56,6 +58,28 @@ export const authApi = {
         return response.data;
     },
 
+    updateMe: async (
+        data: UpdateUserAccount,
+    ): Promise<ApiSuccessResponse<UserAccount>> => {
+        const formData = new FormData();
+        formData.append('username', data.username);
+        if (data.height_cm != null)
+            formData.append('height_cm', String(data.height_cm));
+        if (data.wingspan_cm != null)
+            formData.append('wingspan_cm', String(data.wingspan_cm));
+        if (data.profile_picture instanceof File)
+            formData.append('profile_picture', data.profile_picture);
+
+        const response = await api.patch<ApiSuccessResponse<UserAccount>>(
+            '/me/',
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            },
+        );
+        return response.data;
+    },
+
     googleAuth: async (
         token: string,
     ): Promise<ApiSuccessResponse<LoginResponse>> => {
@@ -63,6 +87,12 @@ export const authApi = {
             '/auth/google-login/',
             { token },
         );
+        return response.data;
+    },
+
+    getCountries: async (): Promise<ApiSuccessResponse<Countries[]>> => {
+        const response =
+            await api.get<ApiSuccessResponse<Countries[]>>('/countries/');
         return response.data;
     },
 };

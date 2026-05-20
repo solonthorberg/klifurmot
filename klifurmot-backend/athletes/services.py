@@ -1,5 +1,6 @@
 from typing import Any, Optional
 
+from accounts.models import UserAccount
 from django.db import transaction
 from .models import Climber, CompetitionRegistration
 from .utils import calculate_age, get_age_based_category
@@ -44,6 +45,7 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
                 "user_account_id": user_account.id,
                 "name": user_account.full_name or "Name not provided",
                 "age": age,
+                "gender": user_account.gender,
                 "category": get_age_based_category(age) if age else None,
                 "nationality": user_account.nationality.country_code
                 if user_account.nationality
@@ -230,63 +232,22 @@ def list_all_climbers(search: Optional[str] = None) -> list[dict[str, Any]]:
 
 
 def create_climber(user, **data: Any) -> dict[str, Any]:
-    is_simple_athlete = data.get("is_simple_athlete", True)
+    climber = Climber.objects.create(
+        simple_name=data["name"],
+        simple_age=data["age"],
+        simple_gender=data["gender"],
+        is_simple_athlete=True,
+        created_by=user,
+        last_modified_by=user,
+    )
 
-    if is_simple_athlete:
-        climber = Climber.objects.create(
-            simple_name=data["name"],
-            simple_age=data["age"],
-            simple_gender=data["gender"],
-            is_simple_athlete=True,
-            created_by=user,
-            last_modified_by=user,
-        )
-
-        return {
-            "id": climber.id,
-            "is_simple_athlete": True,
-            "name": climber.simple_name,
-            "age": climber.simple_age,
-            "gender": climber.simple_gender,
-        }
-
-    else:
-        from accounts.models import UserAccount
-
-        try:
-            user_account = UserAccount.objects.get(id=data["user_account_id"])
-        except UserAccount.DoesNotExist:
-            raise ValueError(
-                f"User account with id {data['user_account_id']} not found"
-            )
-
-        existing = Climber.objects.filter(
-            user_account=user_account, deleted=False
-        ).exists()
-        if existing:
-            raise ValueError("Climber already exists for this user account")
-
-        climber = Climber.objects.create(
-            user_account=user_account,
-            is_simple_athlete=False,
-            created_by=user,
-            last_modified_by=user,
-        )
-
-        age = (
-            calculate_age(user_account.date_of_birth)
-            if user_account.date_of_birth
-            else None
-        )
-
-        return {
-            "id": climber.id,
-            "is_simple_athlete": False,
-            "user_account_id": user_account.id,
-            "name": user_account.full_name,
-            "age": age,
-            "gender": user_account.gender,
-        }
+    return {
+        "id": climber.id,
+        "is_simple_athlete": True,
+        "name": climber.simple_name,
+        "age": climber.simple_age,
+        "gender": climber.simple_gender,
+    }
 
 
 def get_climber(climber_id: int) -> dict[str, Any]:
@@ -400,6 +361,58 @@ def delete_climber(climber_id: int) -> None:
 
         climber.deleted = True
         climber.save()
+
+
+def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
+    """
+    Links a simple climber to a user account.
+    Soft-deletes any existing climber tied to that account.
+    """
+    from accounts.models import UserAccount
+    from django.db import transaction
+
+    try:
+        climber = Climber.objects.get(
+            id=climber_id, is_simple_athlete=True, deleted=False
+        )
+    except Climber.DoesNotExist:
+        raise ValueError(f"Simple climber with id {climber_id} not found")
+
+    try:
+        user_account = UserAccount.objects.get(id=user_account_id)
+    except UserAccount.DoesNotExist:
+        raise ValueError(f"User account with id {user_account_id} not found")
+
+    with transaction.atomic():
+        existing = (
+            Climber.objects.select_for_update()
+            .filter(user_account=user_account, deleted=False)
+            .first()
+        )
+        if existing:
+            existing.user_account = None
+            existing.deleted = True
+            existing.last_modified_by = user
+            existing.save()
+
+        climber.user_account = user_account
+        climber.is_simple_athlete = False
+        climber.simple_name = None
+        climber.simple_age = None
+        climber.simple_gender = None
+        climber.last_modified_by = user
+        climber.save()
+
+    return {
+        "id": climber.id,
+        "is_simple_athlete": False,
+        "user_account_id": user_account.id,
+        "name": user_account.full_name,
+        "age": calculate_age(user_account.date_of_birth)
+        if user_account.date_of_birth
+        else None,
+        "gender": user_account.gender,
+    }
 
 
 def list_registrations(competition_id: Optional[int] = None) -> list[dict[str, Any]]:

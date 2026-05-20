@@ -59,6 +59,7 @@ class CategoryGroup(models.Model):
     name = models.CharField(max_length=50)
     min_age = models.IntegerField(null=True, blank=True)
     max_age = models.IntegerField(null=True, blank=True)
+    is_default = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["min_age"]
@@ -181,7 +182,9 @@ class CompetitionRound(models.Model):
 class Boulder(models.Model):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     boulder_number = models.IntegerField()
-    section_style = models.CharField(max_length=50, default="general")
+    section_style = models.CharField(
+        max_length=50, default="general", null=True, blank=True
+    )
     image = models.ImageField(upload_to="boulders/", blank=True, null=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"

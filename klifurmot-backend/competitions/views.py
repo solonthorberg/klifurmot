@@ -3,6 +3,7 @@ from typing import Any, cast, Dict
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from collections import defaultdict
 
 from accounts import permissions
 from . import services
@@ -12,8 +13,23 @@ from core import utils
 logger = logging.getLogger(__name__)
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET"])
 @permission_classes([AllowAny])
+def public_competitions(request):
+    if request.method == "GET":
+        year_param = request.query_params.get("year")
+        year = int(year_param) if year_param and year_param.isdigit() else None
+
+        result = services.list_public_competitions(year=year)
+
+        return utils.success_response(
+            data=serializers.CompetitionSerializer(result, many=True).data,
+            message="Competitions retrieved successfully",
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([permissions.IsAdmin])
 def competitions(request):
     if request.method == "GET":
         year_param = request.query_params.get("year")
@@ -257,15 +273,38 @@ def list_rounds(request):
 
     result = services.list_rounds(competition_id=int(competition_id))
 
+    flat_rounds = serializers.RoundSerializer(result, many=True).data
+
+    phases_map = defaultdict(
+        lambda: {"round_order": None, "round_name": "", "rounds": []}
+    )
+
+    for round_data in flat_rounds:
+        order = round_data.get("round_order")
+        stage_title = round_data.get("round_group_name") or f"Phase {order}"
+
+        if order not in phases_map:
+            phases_map[order]["round_order"] = order
+            phases_map[order]["round_name"] = stage_title
+
+        phases_map[order]["rounds"].append(round_data)
+
+    grouped_phases = [phases_map[key] for key in sorted(phases_map.keys())]
+
+    for phase in grouped_phases:
+        phase["rounds"].sort(
+            key=lambda x: (x.get("category_group_name", ""), x.get("gender", ""))
+        )
+
     return utils.success_response(
-        data=serializers.RoundSerializer(result, many=True).data,
+        data={"phases": grouped_phases},
         message="Rounds retrieved successfully",
     )
 
 
 @api_view(["POST"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def create_round(request, competition_id):
+def create_round(request, competition_id, category_id):
     serializer = serializers.CreateRoundSerializer(data=request.data)
 
     if not serializer.is_valid():
@@ -277,6 +316,7 @@ def create_round(request, competition_id):
 
         result = services.create_round(
             competition_id=competition_id,
+            competition_category=category_id,
             user=request.user,
             **validated_data,
         )
@@ -465,25 +505,9 @@ def round_groups(_request):
 
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])
-def categories(request):
+def categories(request, competition_id):
     if request.method == "GET":
-        competition_id = request.query_params.get("competition_id")
-
-        if not competition_id:
-            return utils.error_response(
-                code="Missing_parameter",
-                message="competition_id is required",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if not competition_id.isdigit():
-            return utils.error_response(
-                code="Invalid_parameter",
-                message="competition_id must be a number",
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        result = services.list_categories(competition_id=int(competition_id))
+        result = services.list_categories(competition_id=competition_id)
 
         return utils.success_response(
             data=serializers.CompetitionCategorySerializer(result, many=True).data,
@@ -508,7 +532,7 @@ def categories(request):
             validated_data = cast(Dict[str, Any], serializer.validated_data)
 
             result = services.create_category(
-                competition_id=validated_data["competition"],
+                competition_id=competition_id,
                 category_group_id=validated_data["category_group"],
                 gender=validated_data["gender"],
                 user=request.user,

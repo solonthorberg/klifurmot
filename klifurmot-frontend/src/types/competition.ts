@@ -1,3 +1,8 @@
+import type {
+    CreateCategoryFormData,
+    CreateRoundFormData,
+} from '@/schemas/competition';
+
 export interface Competition {
     id: number;
     title: string;
@@ -7,30 +12,21 @@ export interface Competition {
     location: string | null;
     image: string | null;
     visible: boolean;
-    status: string;
+    status: 'not_started' | 'in_progress' | 'finished';
     created_at: string;
+    created_by: string;
     last_modified_at: string;
 }
 
-export interface CreateCompetitionRequest {
-    title: string;
-    description?: string;
-    start_date: string;
-    end_date: string;
-    location?: string;
-    image?: File;
-    visible?: boolean;
+export interface DraftCategory extends CreateCategoryFormData {
+    key: string;
+    category_group_name: string;
+    rounds: DraftRound[];
 }
 
-export interface UpdateCompetitionRequest {
-    title?: string;
-    description?: string;
-    start_date?: string;
-    end_date?: string;
-    location?: string;
-    image?: File;
-    visible?: boolean;
-    remove_image?: boolean;
+export interface DraftRound extends CreateRoundFormData {
+    key: string;
+    round_group_name: string;
 }
 
 export interface RoundGroup {
@@ -44,6 +40,7 @@ export interface CategoryGroup {
     name: string;
     min_age: number | null;
     max_age: number | null;
+    is_default: boolean;
 }
 
 export interface CompetitionCategory {
@@ -54,49 +51,31 @@ export interface CompetitionCategory {
     gender: 'KK' | 'KVK';
 }
 
-export interface CreateCategoryRequest {
-    competition: number;
-    category_group: number;
-    gender: 'KK' | 'KVK';
+export interface RoundData {
+    phases: Phase[];
 }
 
-export interface UpdateCategoryRequest {
-    category_group?: number;
-    gender?: 'KK' | 'KVK';
+export interface Phase {
+    round_order: number;
+    round_name: string;
+    rounds: Round[];
 }
 
 export interface Round {
     id: number;
     competition_category: number;
+    category_group_name: string;
+    gender: string;
     round_group: number;
+    round_group_name: string;
     round_order: number;
     climbers_advance: number;
     boulder_count: number;
-    start_date: string | null;
-    end_date: string | null;
+    start_date: null;
+    end_date: null;
     is_self_scoring: boolean;
     completed: boolean;
-}
-
-export interface CreateRoundRequest {
-    competition_category: number;
-    round_group: number;
-    round_order: number;
-    climbers_advance?: number;
-    boulder_count?: number;
-    start_date?: string;
-    end_date?: string;
-    is_self_scoring?: boolean;
-}
-
-export interface UpdateRoundRequest {
-    round_group?: number;
-    round_order?: number;
-    climbers_advance?: number;
-    boulder_count?: number;
-    start_date?: string;
-    end_date?: string;
-    is_self_scoring?: boolean;
+    status: string;
 }
 
 export interface Boulder {

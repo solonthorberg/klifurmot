@@ -11,7 +11,7 @@ from core import utils
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def athletes(request):
+def public_athletes(request):
     search = request.query_params.get("search")
 
     result = services.list_public_athletes(search=search)
@@ -24,7 +24,7 @@ def athletes(request):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def athlete_detail(_, athlete_id):
+def public_athlete_detail(_, athlete_id):
     try:
         result = services.get_athlete_detail(athlete_id=athlete_id)
 
@@ -43,7 +43,7 @@ def athlete_detail(_, athlete_id):
 
 @api_view(["GET", "POST"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def admin_athletes(request):
+def athletes(request):
     if request.method == "GET":
         search = request.query_params.get("search")
 
@@ -92,7 +92,7 @@ def admin_athletes(request):
 
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([permissions.IsCompetitionAdmin])
-def admin_athlete_detail(request, climber_id):
+def athlete_detail(request, climber_id):
     if request.method == "GET":
         try:
             result = services.get_climber(climber_id=climber_id)
@@ -165,6 +165,34 @@ def admin_athlete_detail(request, climber_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@api_view(["POST"])
+def link_simple_athlete(request, climber_id: int):
+    user_account_id = request.data.get("user_account_id")
+    if not user_account_id:
+        return utils.error_response(
+            code="Validation_error",
+            message="user_account_id is required",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        climber = services.link_climber(
+            request.user, climber_id=climber_id, user_account_id=user_account_id
+        )
+        return utils.success_response(data=climber, status_code=status.HTTP_201_CREATED)
+    except ValueError as e:
+        return utils.error_response(
+            code="Link_failed",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    except Exception as e:
+        return utils.error_response(
+            code="Link_failed",
+            message=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET", "POST"])

@@ -3,21 +3,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { competitionsApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
 import { notify } from '@/stores/notificationStore';
+import type { UpdateBoulderRequest } from '@/types';
 import type {
-    CreateCompetitionRequest,
-    UpdateCompetitionRequest,
-    CreateCategoryRequest,
-    UpdateCategoryRequest,
-    CreateRoundRequest,
-    UpdateRoundRequest,
-    UpdateBoulderRequest,
-} from '@/types';
+    CreateCategoryFormData,
+    CreateCompetitionFormData,
+    CreateRoundFormData,
+    UpdateCategoryFormData,
+    UpdateCompetitionFormData,
+    UpdateRoundFormData,
+} from '@/schemas/competition';
 
 // Competitions
 export function useCompetitions() {
     return useQuery({
         queryKey: ['competitions'],
         queryFn: competitionsApi.listCompetitions,
+    });
+}
+
+export function usePublicCompetitions() {
+    return useQuery({
+        queryKey: ['competitions', 'admin'],
+        queryFn: competitionsApi.listPublicCompetitions,
     });
 }
 
@@ -33,7 +40,7 @@ export function useCreateCompetition() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateCompetitionRequest) =>
+        mutationFn: (data: CreateCompetitionFormData) =>
             competitionsApi.createCompetition(data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
@@ -54,7 +61,7 @@ export function useUpdateCompetition() {
             data,
         }: {
             competitionId: number;
-            data: UpdateCompetitionRequest;
+            data: UpdateCompetitionFormData;
         }) => competitionsApi.updateCompetition(competitionId, data),
         onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
@@ -137,15 +144,16 @@ export function useRound(roundId: number) {
 
 export function useCreateRound() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: ({
             competitionId,
+            categoryId,
             data,
         }: {
             competitionId: number;
-            data: CreateRoundRequest;
-        }) => competitionsApi.createRound(competitionId, data),
+            categoryId: number;
+            data: CreateRoundFormData;
+        }) => competitionsApi.createRound(competitionId, categoryId, data),
         onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({
                 queryKey: ['rounds', competitionId],
@@ -167,7 +175,7 @@ export function useUpdateRound() {
             data,
         }: {
             roundId: number;
-            data: UpdateRoundRequest;
+            data: UpdateRoundFormData;
         }) => competitionsApi.updateRound(roundId, data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['rounds'] });
@@ -235,13 +243,17 @@ export function useCategories(competitionId: number) {
 
 export function useCreateCategory() {
     const queryClient = useQueryClient();
-
     return useMutation({
-        mutationFn: (data: CreateCategoryRequest) =>
-            competitionsApi.createCategory(data),
-        onSuccess: ({ message }, { competition }) => {
+        mutationFn: ({
+            competitionId,
+            data,
+        }: {
+            competitionId: number;
+            data: CreateCategoryFormData;
+        }) => competitionsApi.createCategory(competitionId, data),
+        onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({
-                queryKey: ['categories', competition],
+                queryKey: ['categories', competitionId],
             });
             notify.success(message);
         },
@@ -260,7 +272,7 @@ export function useUpdateCategory() {
             data,
         }: {
             categoryId: number;
-            data: UpdateCategoryRequest;
+            data: UpdateCategoryFormData;
         }) => competitionsApi.updateCategory(categoryId, data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });

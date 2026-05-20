@@ -53,37 +53,39 @@ export default function ResultsTab({
 
     const filteredCategories = selectedCategory
         ? categories.filter(
-            (c) => c.category.id.toString() === selectedCategory,
-        )
+              (c) => c.category.id.toString() === selectedCategory,
+          )
         : categories;
 
     return (
-        <Container variant="tab" className="flex-col">
+        <Container variant="tab" className="flex-col gap-4">
             <div className="flex gap-4 w-full justify-center">
                 <Select
                     value={selectedCategory}
                     onChange={setSelectedCategory}
                     options={categoryOptions}
                     placeholder="Allir flokkar"
+                    className="flex-1 sm:flex-none"
                 />
                 <Select
                     value={selectedRound}
                     onChange={setSelectedRound}
                     options={roundOptions}
                     placeholder="Allar umferðir"
+                    className="flex-1 sm:flex-none"
                 />
             </div>
             <div className="flex flex-col gap-4 w-full">
                 {filteredCategories.length === 0 ? (
-                    <p className="text-gray-500">
+                    <p className="text-gray-500 mx-auto">
                         Engar niðurstöður skráðar...
                     </p>
                 ) : (
                     filteredCategories.map((c) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
-                                (r) => r.round_name === selectedRound,
-                            )
+                                  (r) => r.round_name === selectedRound,
+                              )
                             : c.rounds;
                         if (rounds.length === 0) return null;
                         const label = `${c.category.group.name} ${c.category.gender}`;
@@ -123,12 +125,14 @@ export default function ResultsTab({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {round.results.map((r) => (
-                                                        <ResultCard
-                                                            key={r.rank}
-                                                            athlete={r}
-                                                        />
-                                                    ))}
+                                                    {round.results.map(
+                                                        (r, id) => (
+                                                            <ResultCard
+                                                                key={id}
+                                                                athlete={r}
+                                                            />
+                                                        ),
+                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>

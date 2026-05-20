@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import { getErrorMessage } from '@/api';
-import AthletesTab from '@/components/tabs/athletesTab';
+import AthletesRegisterTab from '@/components/tabs/athletesRegisterTab';
 import BouldersTab from '@/components/tabs/bouldersTab';
 import OverviewTab from '@/components/tabs/overviewTab';
 import ResultsTab from '@/components/tabs/resultsTab';
@@ -48,7 +48,7 @@ export default function CompetitionDetailPage() {
                 <div key={tab} className="animate-fade-in">
                     {tab === 0 && <OverviewTab competition={competition} />}
                     {tab === 1 && (
-                        <AthletesTab competitionId={competition.id} />
+                        <AthletesRegisterTab competitionId={competition.id} />
                     )}
                     {tab === 2 && (
                         <BouldersTab competitionId={competition.id} />
@@ -58,7 +58,7 @@ export default function CompetitionDetailPage() {
                     )}
                     {tab === 4 && <ResultsTab competitionId={competition.id} />}
                 </div>
-            </div>{' '}
+            </div>
         </Container>
     );
 }

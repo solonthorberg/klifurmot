@@ -1,19 +1,52 @@
-export interface Athlete {
+export interface PublicAthlete {
     id: number;
     user_account_id: number;
     name: string;
     age: number;
+    gender: 'KK' | 'KVK';
     category: string;
     nationality: string;
 }
 
-export interface Climber {
+export interface PublicAthleteDetail {
+    id: number;
+    user_account_id: number;
+    full_name: string;
+    age: number;
+    height_cm: number;
+    wingspan_cm: number;
+    profile_picture: string;
+    gender: string;
+    nationality: string;
+    category: string;
+    competitions_count: number;
+    wins_count: number;
+    competition_results: CompetitionResult[];
+}
+
+export interface CompetitionResult {
+    id: number;
+    title: string;
+    category: string;
+    start_date: Date;
+    results: Result[];
+}
+
+export interface Result {
+    round_name: string;
+    round_order: number;
+    rank: number;
+}
+
+export interface AthleteAdmin {
     id: number;
     is_simple_athlete: boolean;
-    simple_name: string | null;
-    simple_age: number | null;
-    simple_gender: 'KK' | 'KVK' | null;
-    user_account: ClimberUserAccount | null;
+    user_account_id: number;
+    name: string;
+    age: number;
+    gender: 'KK' | 'KVK';
+    category: string;
+    nationality: string;
 }
 
 export interface ClimberUserAccount {
@@ -34,20 +67,6 @@ export interface Registration {
     competition_id: number;
     competition_title: string;
     category: string;
-}
-
-export interface CreateClimberRequest {
-    is_simple_athlete: boolean;
-    name?: string;
-    age?: number;
-    gender?: 'KK' | 'KVK';
-    user_account_id?: number;
-}
-
-export interface UpdateClimberRequest {
-    name?: string;
-    age?: number;
-    gender?: 'KK' | 'KVK';
 }
 
 export interface CreateRegistrationRequest {

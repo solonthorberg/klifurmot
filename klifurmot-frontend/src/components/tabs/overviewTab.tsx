@@ -5,8 +5,9 @@ import Icon from '../ui/icons';
 import Image from '../ui/image';
 
 import type { Competition } from '@/types';
+import { memo } from 'react';
 
-export default function OverviewTab({
+function OverviewTab({
     competition,
 }: {
     competition: Competition;
@@ -47,3 +48,5 @@ export default function OverviewTab({
         </Container>
     );
 }
+
+export default memo(OverviewTab)

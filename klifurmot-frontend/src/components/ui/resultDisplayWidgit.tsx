@@ -20,7 +20,7 @@ export default function ResultDisplayWidget({
                     <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gray-800" />
                 )}
                 {isFailed && (
-                    <div className="absolute top-0 left-0 w-[1px] h-[110%] bg-gray-800 origin-top-left rotate-[334.5deg]" />
+                    <div className="absolute top-0 left-0 w-px h-[110%] bg-gray-800 origin-top-left rotate-[334.5deg]" />
                 )}
                 <div className="relative flex flex-col items-center h-full">
                     <span

@@ -8,6 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export const api = axios.create({
     baseURL: API_URL,
     timeout: 30000,
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -49,6 +50,13 @@ api.interceptors.response.use(
         };
 
         if (error.response?.status === 401 && !originalRequest._retry) {
+            if (
+                originalRequest.url?.includes('/auth/login/') ||
+                originalRequest.url?.includes('/auth/register/') ||
+                originalRequest.url?.includes('/auth/refresh/')
+            ) {
+                return Promise.reject(error);
+            }
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -63,22 +71,17 @@ api.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
 
-            const { refreshToken, setTokens, clearTokens } =
-                useAuthStore.getState();
-
-            if (!refreshToken) {
-                clearTokens();
-                return Promise.reject(error);
-            }
+            const { setTokens, clearTokens } = useAuthStore.getState();
 
             try {
-                const response = await axios.post(`${API_URL}/auth/refresh/`, {
-                    refresh: refreshToken,
-                });
+                const response = await axios.post(
+                    `${API_URL}/auth/refresh/`,
+                    {},
+                    { withCredentials: true },
+                );
 
-                const { access, refresh } = response.data;
-                setTokens(access, refresh);
-
+                const { access } = response.data.data;
+                setTokens(access);
                 processQueue(null, access);
 
                 originalRequest.headers.Authorization = `Bearer ${access}`;

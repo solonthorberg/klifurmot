@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 router = DefaultRouter()
@@ -13,7 +12,7 @@ urlpatterns = [
     path("auth/google-login/", views.google_login, name="google-login"),
     path("auth/register/", views.register, name="register"),
     path("auth/logout/", views.logout, name="logout"),
-    path("auth/refresh/", TokenRefreshView.as_view()),
+    path("auth/refresh/", views.refresh_token, name="refresh"),
     path(
         "auth/password-reset/",
         views.request_password_reset,

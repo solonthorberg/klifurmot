@@ -1,10 +1,11 @@
 import logging
+from rest_framework.exceptions import ValidationError
 from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.views.decorators.csrf import csrf_exempt
 from typing import Dict, Any, Optional, cast
+from django.conf import settings
 
 from . import permissions
 from core import utils
@@ -25,7 +26,7 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.CountrySerializer
     permission_classes = [AllowAny]
 
-    def list(self):
+    def list(self, request):
         """List all countries"""
         try:
             result = services.get_countries()
@@ -167,9 +168,9 @@ def me(request):
             if "profile_picture" in request.FILES:
                 uploaded_file = request.FILES["profile_picture"]
                 try:
-                    serializer.validate_profile_picture(uploaded_file)
+                    serializers.validate_profile_picture(uploaded_file)
                     profile_picture = uploaded_file
-                except serializers.ValidationError as e:
+                except ValidationError as e:
                     return utils.error_response(
                         code="Invalid_file",
                         message=str(e),
@@ -196,16 +197,9 @@ def me(request):
             )
 
             return utils.success_response(
-                data={
-                    "user": {
-                        "id": result["user"].id,
-                        "username": result["user"].username,
-                        "email": result["user"].email,
-                    },
-                    "profile": serializers.UserProfileResponseSerializer(
-                        result["user_account"]
-                    ).data,
-                },
+                data=serializers.UserProfileResponseSerializer(
+                    result["user_account"]
+                ).data,
                 message="Profile updated successfully",
             )
 
@@ -228,14 +222,10 @@ def me(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login(request):
-    """Login a user account"""
-
     serializer = serializers.LoginSerializer(data=request.data)
-
     if not serializer.is_valid():
         errors_dict = cast(Dict[str, Any], serializer.errors)
         return utils.validation_error_response(serializer_errors=errors_dict)
-
     try:
         if (
             not hasattr(serializer, "validated_data")
@@ -251,27 +241,20 @@ def login(request):
         if "email" in validated_data:
             email_value = validated_data["email"]
             email = str(email_value) if email_value is not None else ""
-
         if "password" in validated_data:
             password_value = validated_data["password"]
             password = str(password_value) if password_value is not None else ""
-
         if not email or not password:
             return utils.error_response(
                 code="Missing_credentials",
                 message="Email and password are required",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+        result = services.login(email=email, password=password)
 
-        result = services.login(
-            email=email,
-            password=password,
-        )
-
-        return utils.success_response(
+        response = utils.success_response(
             data={
                 "access": result["access"],
-                "refresh": result["refresh"],
                 "user": {
                     "id": result["user"].id,
                     "username": result["user"].username,
@@ -282,6 +265,16 @@ def login(request):
             message="Login successful",
             status_code=status.HTTP_200_OK,
         )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=result["refresh"],
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
+        )
+        return response
 
     except ValueError as e:
         return utils.error_response(
@@ -332,10 +325,9 @@ def google_login(request):
 
         result = services.google_login(google_token=token)
 
-        return utils.success_response(
+        response = utils.success_response(
             data={
                 "access": result["access"],
-                "refresh": result["refresh"],
                 "user": {
                     "id": result["user"].id,
                     "username": result["user"].username,
@@ -346,6 +338,15 @@ def google_login(request):
             message="Google login successful",
             status_code=status.HTTP_200_OK,
         )
+        response.set_cookie(
+            key="refresh_token",
+            value=result["refresh"],
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
+        )
+        return response
 
     except ValueError as e:
         return utils.error_response(
@@ -421,10 +422,9 @@ def register(request):
             nationality=nationality,
         )
 
-        return utils.success_response(
+        response = utils.success_response(
             data={
                 "access": result["access"],
-                "refresh": result["refresh"],
                 "user": {
                     "id": result["user"].id,
                     "username": result["user"].username,
@@ -433,8 +433,17 @@ def register(request):
                 },
             },
             message="User registered successfully",
-            status_code=status.HTTP_201_CREATED,
+            status_code=status.HTTP_200_OK,
         )
+        response.set_cookie(
+            key="refresh_token",
+            value=result["refresh"],
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
+        )
+        return response
     except IntegrityError:
         logger.error("IntegrityError during registration")
         return utils.error_response(
@@ -460,42 +469,79 @@ def register(request):
         )
 
 
-@csrf_exempt
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def logout(request):
-    """Logout user by blacklisting their refresh token"""
-
-    refresh_token = request.data.get("refresh")
-
+    refresh_token = request.COOKIES.get("refresh_token")
     if not refresh_token:
         return utils.error_response(
             code="Missing_token",
             message="Refresh token is required",
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-
     try:
-        result = services.logout(refresh_token=refresh_token)
-
-        return utils.success_response(
+        result = services.logout(request=request, refresh_token_str=refresh_token)
+        response = utils.success_response(
             data=None,
             message=result["message"],
             status_code=status.HTTP_200_OK,
         )
-
+        response.delete_cookie("refresh_token")
+        response.delete_cookie("sessionid")
+        return response
     except ValueError as e:
         return utils.error_response(
             code="Invalid_token",
             message=str(e),
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-
     except Exception as e:
         logger.error(f"Unexpected error during logout: {str(e)}")
         return utils.error_response(
             code="Logout_failed",
             message="Logout failed",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def refresh_token(request):
+    refresh = request.COOKIES.get("refresh_token")
+    if not refresh:
+        return utils.error_response(
+            code="Missing_token",
+            message="Refresh token is required",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    try:
+        result = services.refresh_token(refresh)
+        response = utils.success_response(
+            data={"access": result["access"]},
+            message="Token refreshed successfully",
+            status_code=status.HTTP_200_OK,
+        )
+        if "refresh" in result:
+            response.set_cookie(
+                key="refresh_token",
+                value=result["refresh"],
+                httponly=True,
+                secure=not settings.DEBUG,
+                samesite="Lax",
+                max_age=60 * 60 * 24 * 7,
+            )
+        return response
+    except ValueError as e:
+        return utils.error_response(
+            code="Invalid_token",
+            message=str(e),
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error during token refresh: {str(e)}")
+        return utils.error_response(
+            code="Refresh_failed",
+            message="Token refresh failed",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
