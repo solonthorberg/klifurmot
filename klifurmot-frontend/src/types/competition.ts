@@ -29,17 +29,6 @@ export interface DraftRound extends CreateRoundFormData {
     round_group_name: string;
 }
 
-export interface UpdateCompetitionRequest {
-    title?: string;
-    description?: string;
-    start_date?: string;
-    end_date?: string;
-    location?: string;
-    image?: File;
-    visible?: boolean;
-    remove_image?: boolean;
-}
-
 export interface RoundGroup {
     id: number;
     name: string;
@@ -62,32 +51,31 @@ export interface CompetitionCategory {
     gender: 'KK' | 'KVK';
 }
 
-export interface UpdateCategoryRequest {
-    category_group?: number;
-    gender?: 'KK' | 'KVK';
+export interface RoundData {
+    phases: Phase[];
+}
+
+export interface Phase {
+    round_order: number;
+    round_name: string;
+    rounds: Round[];
 }
 
 export interface Round {
     id: number;
     competition_category: number;
+    category_group_name: string;
+    gender: string;
     round_group: number;
+    round_group_name: string;
     round_order: number;
     climbers_advance: number;
     boulder_count: number;
-    start_date: string | null;
-    end_date: string | null;
+    start_date: null;
+    end_date: null;
     is_self_scoring: boolean;
     completed: boolean;
-}
-
-export interface UpdateRoundRequest {
-    round_group?: number;
-    round_order?: number;
-    climbers_advance?: number;
-    boulder_count?: number;
-    start_date?: string;
-    end_date?: string;
-    is_self_scoring?: boolean;
+    status: string;
 }
 
 export interface Boulder {

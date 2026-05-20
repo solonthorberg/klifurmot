@@ -49,6 +49,7 @@ export default function CategoryCard({
                         className="w-full sm:w-auto"
                         type="button"
                         variant="delete"
+                        square={true}
                         onClick={onDelete}
                     >
                         <Icon variant="trash" />

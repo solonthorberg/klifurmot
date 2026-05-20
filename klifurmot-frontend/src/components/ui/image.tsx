@@ -3,6 +3,7 @@ interface ImageProps {
     alt: string | null | undefined;
     variant?: 'card' | 'thumbnail';
     className?: string;
+    onClick?: () => Promise<void> | void;
 }
 
 export default function Image({
@@ -10,6 +11,7 @@ export default function Image({
     alt,
     variant = 'card',
     className = '',
+    onClick,
 }: ImageProps) {
     const baseStyles = 'object-cover shrink-0';
 
@@ -21,8 +23,9 @@ export default function Image({
     return image ? (
         <img
             src={image}
-            alt={alt}
+            alt={alt ?? undefined}
             className={`${baseStyles} ${variants[variant]} ${className}`}
+            onClick={onClick}
         />
     ) : (
         <div

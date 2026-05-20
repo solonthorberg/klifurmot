@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import MainButton from '@/components/ui/mainButton';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CategoryRoundManager from '@/components/tabs/categoryRoundManagerTab';
+import CategoryRoundManagerTab from '@/components/tabs/categoryRoundManagerTab';
 import type { DraftCategory } from '@/types/competition';
 import CompetitionForm from '@/components/forms/competitionForm';
 
@@ -84,7 +84,7 @@ export default function CreateCompetitionPage() {
                     <h3 className="font-semibold text-xl">
                         Flokkar og umferðir
                     </h3>
-                    <CategoryRoundManager
+                    <CategoryRoundManagerTab
                         draftCategories={draftCategories}
                         setDraftCategories={setDraftCategories}
                     />

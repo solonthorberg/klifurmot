@@ -3,19 +3,24 @@ import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import SearchBar from '@/components/ui/searchBar';
 import Select from '@/components/ui/select';
-
-import { useCompetitions } from '@/hooks/api/useCompetitions';
+import {
+    useCompetitions,
+    useDeleteCompetition,
+} from '@/hooks/api/useCompetitions';
 import { useState } from 'react';
 import Container from '../ui/container';
 import CompetitionAdminCard from '../cards/competitionAdminCard';
 import MainButton from '../ui/mainButton';
 import { useNavigate } from 'react-router-dom';
+import Modal from '../modals/modal';
 
 export default function CompetitionAdminTab() {
     const { data, isLoading, error } = useCompetitions();
+    const { mutate } = useDeleteCompetition();
     const [search, setSearch] = useState('');
     const [year, setYear] = useState('');
     const [eventStatus, setEventStatus] = useState('');
+    const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
     const navigate = useNavigate();
 
     if (isLoading) return <LoadingSpinner />;
@@ -48,8 +53,48 @@ export default function CompetitionAdminTab() {
         return matchesSearch && matchesYear && matchesStatus;
     });
 
+    function confirmDelete() {
+        if (deleteTarget !== null) {
+            mutate(deleteTarget);
+            setDeleteTarget(null);
+        }
+    }
+
+    function DeleteCompetition({ onClose }: { onClose: () => void }) {
+        return (
+            <Modal onClose={onClose}>
+                <h2 className="text-lg font-semibold mb-4">Eyða mót?</h2>
+                <p>Ertu viss þú viljir eyða þessu móti?</p>
+                <p>
+                    Allt tengt þessu móti t.d. niðurstöður, skráningar og fl.
+                    verður eytt.
+                </p>
+                <div className="flex justify-between gap-2 mt-4">
+                    <MainButton
+                        variant="delete"
+                        square={true}
+                        className="w-full"
+                        onClick={confirmDelete}
+                    >
+                        Eyða
+                    </MainButton>
+                    <MainButton
+                        variant="outline"
+                        className="w-full"
+                        onClick={onClose}
+                    >
+                        Hætta við
+                    </MainButton>
+                </div>
+            </Modal>
+        );
+    }
+
     return (
         <Container variant="primaryCenter" className="gap-4">
+            {deleteTarget !== null && (
+                <DeleteCompetition onClose={() => setDeleteTarget(null)} />
+            )}
             <div className="flex flex-col gap-4 w-full max-w-lg">
                 <MainButton
                     onClick={() => navigate('/admin-panel/create-competition')}
@@ -87,7 +132,11 @@ export default function CompetitionAdminTab() {
                     </p>
                 ) : (
                     filteredCompetitions.map((c) => (
-                        <CompetitionAdminCard key={c.id} competition={c} />
+                        <CompetitionAdminCard
+                            key={c.id}
+                            competition={c}
+                            onDelete={() => setDeleteTarget(c.id)}
+                        />
                     ))
                 )}
             </div>

@@ -3,16 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { competitionsApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
 import { notify } from '@/stores/notificationStore';
-import type {
-    UpdateCompetitionRequest,
-    UpdateCategoryRequest,
-    UpdateRoundRequest,
-    UpdateBoulderRequest,
-} from '@/types';
+import type { UpdateBoulderRequest } from '@/types';
 import type {
     CreateCategoryFormData,
     CreateCompetitionFormData,
     CreateRoundFormData,
+    UpdateCategoryFormData,
+    UpdateCompetitionFormData,
+    UpdateRoundFormData,
 } from '@/schemas/competition';
 
 // Competitions
@@ -63,7 +61,7 @@ export function useUpdateCompetition() {
             data,
         }: {
             competitionId: number;
-            data: UpdateCompetitionRequest;
+            data: UpdateCompetitionFormData;
         }) => competitionsApi.updateCompetition(competitionId, data),
         onSuccess: ({ message }, { competitionId }) => {
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
@@ -177,7 +175,7 @@ export function useUpdateRound() {
             data,
         }: {
             roundId: number;
-            data: UpdateRoundRequest;
+            data: UpdateRoundFormData;
         }) => competitionsApi.updateRound(roundId, data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['rounds'] });
@@ -274,7 +272,7 @@ export function useUpdateCategory() {
             data,
         }: {
             categoryId: number;
-            data: UpdateCategoryRequest;
+            data: UpdateCategoryFormData;
         }) => competitionsApi.updateCategory(categoryId, data),
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });

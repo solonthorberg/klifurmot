@@ -3,6 +3,7 @@ from typing import Any, cast, Dict
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
+from collections import defaultdict
 
 from accounts import permissions
 from . import services
@@ -272,8 +273,31 @@ def list_rounds(request):
 
     result = services.list_rounds(competition_id=int(competition_id))
 
+    flat_rounds = serializers.RoundSerializer(result, many=True).data
+
+    phases_map = defaultdict(
+        lambda: {"round_order": None, "round_name": "", "rounds": []}
+    )
+
+    for round_data in flat_rounds:
+        order = round_data.get("round_order")
+        stage_title = round_data.get("round_group_name") or f"Phase {order}"
+
+        if order not in phases_map:
+            phases_map[order]["round_order"] = order
+            phases_map[order]["round_name"] = stage_title
+
+        phases_map[order]["rounds"].append(round_data)
+
+    grouped_phases = [phases_map[key] for key in sorted(phases_map.keys())]
+
+    for phase in grouped_phases:
+        phase["rounds"].sort(
+            key=lambda x: (x.get("category_group_name", ""), x.get("gender", ""))
+        )
+
     return utils.success_response(
-        data=serializers.RoundSerializer(result, many=True).data,
+        data={"phases": grouped_phases},
         message="Rounds retrieved successfully",
     )
 

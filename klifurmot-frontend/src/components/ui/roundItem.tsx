@@ -67,6 +67,7 @@ export default function RoundItem({ round, onEdit, onDelete }: RoundItemProps) {
                 </MainButton>
                 <MainButton
                     className="w-full sm:w-auto"
+                    square={true}
                     size="small"
                     variant="delete"
                     type="button"

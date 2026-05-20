@@ -110,12 +110,22 @@ class CompetitionSerializer(serializers.ModelSerializer):
 
 
 class RoundSerializer(serializers.ModelSerializer):
+    category_group_name = serializers.CharField(
+        source="competition_category.category_group.name", read_only=True
+    )
+
+    gender = serializers.CharField(source="competition_category.gender", read_only=True)
+    round_group_name = serializers.CharField(source="round_group.name", read_only=True)
+
     class Meta:
         model = models.CompetitionRound
         fields = [
             "id",
             "competition_category",
+            "category_group_name",
+            "gender",
             "round_group",
+            "round_group_name",
             "round_order",
             "climbers_advance",
             "boulder_count",
@@ -123,6 +133,7 @@ class RoundSerializer(serializers.ModelSerializer):
             "end_date",
             "is_self_scoring",
             "completed",
+            "status",
         ]
 
 
