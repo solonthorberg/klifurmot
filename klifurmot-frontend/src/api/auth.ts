@@ -1,20 +1,23 @@
+import type {
+    LoginFormData,
+    RegisterFormData,
+    RequestPasswordResetFormData,
+    ResetPasswordFormData,
+} from '@/schemas/auth';
 import { api } from './client';
 
 import type {
     ApiSuccessResponse,
     AuthResponse,
     Countries,
-    LoginRequest,
     LoginResponse,
-    PasswordResetRequest,
-    RegisterRequest,
     UpdateUserAccount,
     UserAccount,
 } from '@/types';
 
 export const authApi = {
     login: async (
-        data: LoginRequest,
+        data: LoginFormData,
     ): Promise<ApiSuccessResponse<LoginResponse>> => {
         const response = await api.post<ApiSuccessResponse<LoginResponse>>(
             '/auth/login/',
@@ -24,7 +27,7 @@ export const authApi = {
     },
 
     register: async (
-        data: RegisterRequest,
+        data: RegisterFormData,
     ): Promise<ApiSuccessResponse<AuthResponse>> => {
         const response = await api.post('/auth/register/', data);
         return response.data;
@@ -44,7 +47,7 @@ export const authApi = {
     },
 
     requestPasswordReset: async (
-        data: PasswordResetRequest,
+        data: RequestPasswordResetFormData,
     ): Promise<ApiSuccessResponse<null>> => {
         const response = await api.post<ApiSuccessResponse<null>>(
             '/auth/password-reset/',
@@ -86,6 +89,16 @@ export const authApi = {
         const response = await api.post<ApiSuccessResponse<LoginResponse>>(
             '/auth/google-login/',
             { token },
+        );
+        return response.data;
+    },
+
+    resetPassword: async (
+        data: ResetPasswordFormData & { token: string },
+    ): Promise<ApiSuccessResponse<null>> => {
+        const response = await api.post<ApiSuccessResponse<null>>(
+            '/auth/password-reset/confirm/',
+            data,
         );
         return response.data;
     },

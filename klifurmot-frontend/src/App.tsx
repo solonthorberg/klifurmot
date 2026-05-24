@@ -20,14 +20,14 @@ const queryClient = new QueryClient({
 });
 
 function SilentRefresh() {
-    const { isAuthenticated, setTokens, clearTokens } = useAuthStore();
+    const { setTokens, clearTokens, setInitialized } = useAuthStore();
 
     useEffect(() => {
-        if (isAuthenticated) {
-            authApi.refreshToken()
-                .then(({ data }) => setTokens(data.access))
-                .catch(() => clearTokens());
-        }
+        authApi
+            .refreshToken()
+            .then(({ data }) => setTokens(data.access))
+            .catch(() => clearTokens())
+            .finally(() => setInitialized());
     }, []);
 
     return null;
@@ -46,7 +46,6 @@ export default function App() {
                 </BrowserRouter>
                 <ReactQueryDevtools initialIsOpen={false} />
             </QueryClientProvider>
-
         </GoogleOAuthProvider>
     );
 }

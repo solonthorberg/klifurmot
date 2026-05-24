@@ -4,21 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { authApi, getErrorMessage } from '@/api';
 import { useAuthStore } from '@/stores';
 import { notify } from '@/stores/notificationStore';
-import type { LoginRequest, RegisterRequest, UpdateUserAccount } from '@/types';
+import type { UpdateUserAccount } from '@/types';
 import { useEffect } from 'react';
+import type {
+    LoginFormData,
+    RegisterFormData,
+    RequestPasswordResetFormData,
+} from '@/schemas/auth';
 
 export function useAuth() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const {
-        accessToken,
-        refreshToken,
-        setTokens,
-        clearTokens,
-        userAccount,
-        isAuthenticated,
-        setUserAccount,
-    } = useAuthStore();
+    const { accessToken, setTokens, clearTokens, userAccount, setUserAccount } =
+        useAuthStore();
 
     const meQuery = useQuery({
         queryKey: ['me'],
@@ -52,7 +50,7 @@ export function useAuth() {
     });
 
     const loginMutation = useMutation({
-        mutationFn: (data: LoginRequest) => authApi.login(data),
+        mutationFn: (data: LoginFormData) => authApi.login(data),
         onSuccess: ({ data, message }) => {
             setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -65,7 +63,7 @@ export function useAuth() {
     });
 
     const registerMutation = useMutation({
-        mutationFn: (data: RegisterRequest) => authApi.register(data),
+        mutationFn: (data: RegisterFormData) => authApi.register(data),
         onSuccess: ({ data, message }) => {
             setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -92,18 +90,27 @@ export function useAuth() {
 
     const logout = async () => {
         try {
-            if (refreshToken) {
-                const result = await authApi.logout();
-                console.log('logout result:', result);
-            }
+            await authApi.logout();
         } catch (e) {
             console.log('logout error:', e);
         } finally {
             clearTokens();
             queryClient.clear();
+            navigate('/login');
             notify.success('Logged out');
         }
     };
+
+    const passwordReset = useMutation({
+        mutationFn: (data: RequestPasswordResetFormData) =>
+            authApi.requestPasswordReset(data),
+        onSuccess: (data) => {
+            notify.success(data.message);
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
 
     return {
         userAccount: meQuery.data?.data ?? userAccount,
@@ -119,6 +126,10 @@ export function useAuth() {
 
         register: registerMutation.mutate,
         isRegistering: registerMutation.isPending,
+
+        passwordReset: passwordReset.mutate,
+        passwordResetPending: passwordReset.isPending,
+        passwordResetSuccess: passwordReset.isSuccess,
 
         googleAuth: googleAuthMutation.mutate,
         isGoogleAuthPending: googleAuthMutation.isPending,

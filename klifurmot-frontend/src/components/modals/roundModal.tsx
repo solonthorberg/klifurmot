@@ -97,7 +97,7 @@ export default function RoundModal({
                             type="number"
                             min="1"
                             step="1"
-                            placeholder="Skildu eftir tómt fyrir úrslit"
+                            placeholder="Skildu eftir tómt fyrir fyrstu umferð"
                             error={errors.climbers_advance?.message}
                         />
                         <Input

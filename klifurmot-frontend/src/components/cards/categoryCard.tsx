@@ -36,20 +36,20 @@ export default function CategoryCard({
                         {category.rounds.length} umferðir
                     </span>
                 </div>
-                <div className="flex justify-between gap-2 sm:w-auto w-full">
+                <div className="flex gap-2 w-full sm:w-auto">
                     <MainButton
-                        className="w-full sm:w-auto"
-                        type="button"
+                        className="w-full sm:w-fit"
                         variant="outline"
+                        type="button"
                         onClick={onAddRound}
                     >
                         + Umferð
                     </MainButton>
                     <MainButton
-                        className="w-full sm:w-auto"
-                        type="button"
+                        className="w-full sm:w-10"
                         variant="delete"
-                        square={true}
+                        type="button"
+                        square
                         onClick={onDelete}
                     >
                         <Icon variant="trash" />

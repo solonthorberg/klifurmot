@@ -1,48 +1,30 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 import type { UserAccount } from '@/types';
 
 interface AuthState {
     userAccount: UserAccount | null;
     accessToken: string | null;
-    refreshToken: string | null;
     isAuthenticated: boolean;
+    isInitializing: boolean;
 
     setTokens: (access: string) => void;
     setUserAccount: (userAccount: UserAccount | null) => void;
     clearTokens: () => void;
+    setInitialized: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-    persist(
-        (set) => ({
-            userAccount: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
+export const useAuthStore = create<AuthState>()((set) => ({
+    userAccount: null,
+    accessToken: null,
+    isAuthenticated: false,
+    isInitializing: true,
 
-            setTokens: (access) =>
-                set({
-                    accessToken: access,
-                    isAuthenticated: true,
-                }),
+    setTokens: (access) => set({ accessToken: access, isAuthenticated: true }),
 
-            setUserAccount: (userAccount) => set({ userAccount }),
+    setUserAccount: (userAccount) => set({ userAccount }),
 
-            clearTokens: () =>
-                set({
-                    userAccount: null,
-                    accessToken: null,
-                    refreshToken: null,
-                    isAuthenticated: false,
-                }),
-        }),
-        {
-            name: 'auth-storage',
-            partialize: (state) => ({
-                isAuthenticated: state.accessToken,
-            }),
-        },
-    ),
-);
+    clearTokens: () =>
+        set({ userAccount: null, accessToken: null, isAuthenticated: false }),
+
+    setInitialized: () => set({ isInitializing: false }),
+}));

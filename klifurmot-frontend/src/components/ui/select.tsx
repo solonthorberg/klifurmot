@@ -37,7 +37,7 @@ export default function Select({
     const baseStyles = `appearance-none px-3 py-2 h-10 pr-8 w-full ${variants[variant]}`;
 
     return (
-        <div className={className}>
+        <div className={`flex flex-col gap-1 ${className}`}>
             {label && <label className="text-gray-700">{label}</label>}
             <div className="relative h-10">
                 <select

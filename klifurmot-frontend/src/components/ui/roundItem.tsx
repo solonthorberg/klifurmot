@@ -49,31 +49,34 @@ export default function RoundItem({ round, onEdit, onDelete }: RoundItemProps) {
                     <span className="text-xs text-secondary">
                         {round.boulder_count} leiðir
                         {round.climbers_advance
-                            ? ` - ${round.climbers_advance} fara áfram í næstu umferð fyrir neðan`
+                            ? ` - ${round.climbers_advance} keppendur`
                             : ''}
-                        {round.is_self_scoring ? ' · Self scoring' : ''}
+                        {round.is_self_scoring ? ' - Self scoring' : ''}
                     </span>
                 </div>
             </div>
-            <div className="flex gap-2 sm:w-auto w-full">
+            <div className="flex justify-between gap-2 sm:w-auto w-full">
                 <MainButton
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-9"
                     size="small"
-                    variant="outline"
                     type="button"
+                    variant="outline"
+                    square={true}
+                    title="Breyta umferð"
                     onClick={onEdit}
                 >
-                    Breyta
+                    <Icon variant="edit" />
                 </MainButton>
                 <MainButton
-                    className="w-full sm:w-auto"
-                    square={true}
+                    className="w-full sm:w-9"
+                    type="button"
                     size="small"
                     variant="delete"
-                    type="button"
+                    square={true}
+                    title="Eyða umferð"
                     onClick={onDelete}
                 >
-                    <Icon variant="trash" size={16} />
+                    <Icon variant="trash" />
                 </MainButton>
             </div>
         </div>

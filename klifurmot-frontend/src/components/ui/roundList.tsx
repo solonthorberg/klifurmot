@@ -5,6 +5,7 @@ import {
     useSensor,
     useSensors,
     type DragEndEvent,
+    TouchSensor,
 } from '@dnd-kit/core';
 import {
     SortableContext,
@@ -31,6 +32,12 @@ export default function RoundList({
         useSensor(PointerSensor, {
             activationConstraint: {
                 distance: 8,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
             },
         }),
     );

@@ -24,6 +24,7 @@ export default function Image({
         <img
             src={image}
             alt={alt ?? undefined}
+            loading="lazy"
             className={`${baseStyles} ${variants[variant]} ${className}`}
             onClick={onClick}
         />

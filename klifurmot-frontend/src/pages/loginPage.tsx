@@ -8,18 +8,35 @@ import Icon from '@/components/ui/icons';
 import Input from '@/components/ui/input';
 import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const { login, isLoggingIn, googleAuth } = useAuth();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const {
         register,
         handleSubmit,
+        setValue,
+        watch,
         formState: { errors },
     } = useForm<LoginFormData>({
         resolver: zodResolver(LoginSchema),
     });
+
+    const recaptchaToken = watch('recaptcha_token');
+
+    const handleLogin = (data: LoginFormData) => {
+        login(data, {
+            onSuccess: () => {
+                navigate(searchParams.get('redirect') ?? '/', {
+                    replace: true,
+                });
+            },
+        });
+    };
 
     return (
         <Container variant="primaryCenter" className="animate-fade-in">
@@ -36,7 +53,7 @@ export default function LoginPage() {
                 />
                 <div className="border-t border-outline border-grey-500" />
                 <form
-                    onSubmit={handleSubmit((data) => login(data))}
+                    onSubmit={handleSubmit(handleLogin)}
                     className="w-full grid grid-cols-1 gap-x-4 gap-y-4"
                 >
                     <Input
@@ -67,10 +84,27 @@ export default function LoginPage() {
                                 className="absolute right-1 bottom-13"
                             />
                         </button>
+                        <Link
+                            to="/forgot-password"
+                            className="text-sm text-primary hover:underline self-end mt-1"
+                        >
+                            Gleymt lykilorð?
+                        </Link>
+                    </div>
+                    <div className="flex justify-center">
+                        <ReCAPTCHA
+                            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                            onChange={(token) =>
+                                setValue('recaptcha_token', token ?? '')
+                            }
+                        />
                     </div>
                     <div className="flex flex-col w-full">
-                        <MainButton type="submit" disabled={isLoggingIn}>
-                            {isLoggingIn ? 'Skrái inn...' : 'Innskráning'}
+                        <MainButton
+                            type="submit"
+                            disabled={isLoggingIn || !recaptchaToken}
+                        >
+                            {isLoggingIn ? 'Skrái inn...' : 'Innskrá'}
                         </MainButton>
                         <p className="text-center text-sm mt-3">
                             Ertu ekki með aðgang?{' '}

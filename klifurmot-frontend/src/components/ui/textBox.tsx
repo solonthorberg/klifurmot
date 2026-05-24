@@ -19,7 +19,7 @@ export default function TextBox({
             >
                 <textarea
                     rows={10}
-                    className={`block w-full py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none ${className ?? ''}`}
+                    className={`block w-full py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-500 focus:outline-none resize-none ${className ?? ''}`}
                     {...props}
                 />
             </div>

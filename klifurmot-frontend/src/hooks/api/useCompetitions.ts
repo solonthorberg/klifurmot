@@ -318,6 +318,14 @@ export function useBoulder(boulderId: number) {
     });
 }
 
+export function useBoulders(roundId: number) {
+    return useQuery({
+        queryKey: ['boulders', 'round', roundId],
+        queryFn: () => competitionsApi.listBoulders(roundId),
+        enabled: !!roundId,
+    });
+}
+
 export function useUpdateBoulder() {
     const queryClient = useQueryClient();
 
