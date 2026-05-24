@@ -4,9 +4,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from accounts import permissions
 from core import utils
+import logging
 
 from . import services
 from . import serializers
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["GET", "POST"])
@@ -340,6 +343,7 @@ def advance_climbers(_, round_id):
         )
 
     except ValueError as e:
+        logger.warning(f"Advance climbers failed for round {round_id}: {e}")
         return utils.error_response(
             code="Invalid_round",
             message=str(e),

@@ -40,6 +40,9 @@ def AutoAdvanceClimbers(current_round):
         .first()
     )
 
+    if not current_round.can_advance_climbers:
+        return {"status": "error", "message": "Round is not finished"}
+
     if not next_round:
         logger.warning(f"No next round found for round {current_round.id}")
         return {"status": "error", "message": "No next round found"}

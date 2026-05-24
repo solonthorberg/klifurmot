@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from typing import Dict, Any, Optional, cast
 from django.conf import settings
+import requests as http_requests
 
 from . import permissions
 from core import utils
@@ -17,6 +18,17 @@ from . import models
 logger = logging.getLogger(__name__)
 
 # Create your views here.
+
+
+def verify_recaptcha(token: str) -> bool:
+    response = http_requests.post(
+        "https://www.google.com/recaptcha/api/siteverify",
+        data={
+            "secret": settings.RECAPTCHA_SECRET_KEY,
+            "response": token,
+        },
+    )
+    return response.json().get("success", False)
 
 
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -123,6 +135,24 @@ class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
                 message="Failed to retrieve role",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsCompetitionAdmin])
+def user_accounts(request):
+    try:
+        result = services.list_user_accounts()
+        return utils.success_response(
+            data=result,
+            message="User accounts retrieved successfully",
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error listing user accounts: {str(e)}")
+        return utils.error_response(
+            code="Server_error",
+            message="Failed to retrieve user accounts",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET", "PATCH"])
@@ -250,6 +280,15 @@ def login(request):
                 message="Email and password are required",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+
+        recaptcha_token = request.data.get("recaptcha_token", "")
+        if not verify_recaptcha(recaptcha_token):
+            return utils.error_response(
+                code="Invalid_recaptcha",
+                message="reCAPTCHA verification failed",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
         result = services.login(email=email, password=password)
 
         response = utils.success_response(
@@ -411,6 +450,14 @@ def register(request):
         gender = str(validated_data["gender"])
         date_of_birth = validated_data["date_of_birth"]
         nationality = str(validated_data["nationality"])
+
+        recaptcha_token = request.data.get("recaptcha_token", "")
+        if not verify_recaptcha(recaptcha_token):
+            return utils.error_response(
+                code="Invalid_recaptcha",
+                message="reCAPTCHA verification failed",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         result = services.register(
             username=username,

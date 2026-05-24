@@ -27,6 +27,26 @@ from athletes.models import Climber
 logger = logging.getLogger(__name__)
 
 
+def list_user_accounts() -> list[dict]:
+    users = (
+        User.objects.select_related("profile")
+        .filter(is_active=True)
+        .order_by("profile__full_name", "username")
+    )
+    result = []
+    for u in users:
+        if hasattr(u, "profile"):
+            result.append(
+                {
+                    "id": u.profile.id,
+                    "full_name": u.profile.full_name,
+                    "email": u.email,
+                    "username": u.username,
+                }
+            )
+    return result
+
+
 def get_profile(user: User) -> Dict[str, Any]:
     """Get user profile data"""
     try:
@@ -138,91 +158,68 @@ def register(
     password: str,
     full_name: str,
     gender: str,
-    date_of_birth: date,
+    date_of_birth,
     nationality: str,
     height_cm: Optional[int] = None,
     wingspan_cm: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Register a new user account"""
-
     try:
-        validate_password(password)
-    except DjangoValidationError as e:
-        error_messages = [str(msg) for msg in e.messages]
-        raise ValueError(", ".join(error_messages))
+        existing_user = User.objects.get(email__iexact=email)
 
-    with transaction.atomic():
-        try:
-            existing_user = User.objects.get(email__iexact=email)
-            user_account = UserAccount.objects.get(user=existing_user)
+        if existing_user.is_active:
+            raise IntegrityError("User already exists")
 
-            if user_account.deleted:
-                user_account.deleted = False
-                user_account.full_name = full_name
-                user_account.gender = gender
-                user_account.date_of_birth = date_of_birth
-                user_account.nationality = Country.objects.get(country_code=nationality)
-                user_account.height_cm = height_cm
-                user_account.wingspan_cm = wingspan_cm
-                user_account.save()
+        user_account = UserAccount.objects.get(user=existing_user)
 
-                existing_user.set_password(password)
-                existing_user.username = username
-                existing_user.save()
+        with transaction.atomic():
+            user_account.full_name = full_name
+            user_account.gender = gender
+            user_account.date_of_birth = date_of_birth
+            user_account.nationality = Country.objects.get(country_code=nationality)
+            user_account.height_cm = height_cm
+            user_account.wingspan_cm = wingspan_cm
+            user_account.save()
 
-                climber, created = Climber.objects.get_or_create(
-                    user_account=user_account,
-                    defaults={"created_by": existing_user},
-                )
-                if not created and climber.deleted:
-                    climber.deleted = False
-                    climber.save()
+            existing_user.set_password(password)
+            existing_user.username = username
+            existing_user.save()
 
-                refresh = RefreshToken.for_user(existing_user)
-                logger.info(f"User reactivated: {username} ({email})")
+            refresh = RefreshToken.for_user(existing_user)
+            logger.info(f"User reactivated: {username} ({email})")
 
-                return {
-                    "user": existing_user,
-                    "user_account": user_account,
-                    "access": str(refresh.access_token),
-                    "refresh": str(refresh),
-                }
-            else:
-                raise IntegrityError("User already exists")
+            return {
+                "user": existing_user,
+                "user_account": user_account,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            }
 
-        except User.DoesNotExist:
-            pass
+    except User.DoesNotExist:
+        pass
 
-        user = User.objects.create_user(
-            username=username, email=email, password=password
-        )
+    user = User.objects.create_user(username=username, email=email, password=password)
 
-        nationality_obj = Country.objects.get(country_code=nationality)
+    nationality_obj = Country.objects.get(country_code=nationality)
 
-        user_account = UserAccount.objects.create(
-            user=user,
-            full_name=full_name,
-            gender=gender,
-            date_of_birth=date_of_birth,
-            nationality=nationality_obj,
-            height_cm=height_cm,
-            wingspan_cm=wingspan_cm,
-        )
+    user_account = UserAccount.objects.create(
+        user=user,
+        full_name=full_name,
+        gender=gender,
+        date_of_birth=date_of_birth,
+        nationality=nationality_obj,
+        height_cm=height_cm,
+        wingspan_cm=wingspan_cm,
+    )
 
-        Climber.objects.create(
-            user_account=user_account,
-            created_by=user,
-        )
+    refresh = RefreshToken.for_user(user)
+    logger.info(f"User registered successfully: {username} ({email})")
 
-        refresh = RefreshToken.for_user(user)
-        logger.info(f"User registered successfully: {username} ({email})")
-
-        return {
-            "user": user,
-            "user_account": user_account,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }
+    return {
+        "user": user,
+        "user_account": user_account,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+    }
 
 
 def google_login(google_token: str) -> Dict[str, Any]:
@@ -442,30 +439,24 @@ def request_password_reset(
         user_account.reset_token_created = now
         user_account.save()
 
-        reset_url = f"https://klifurmot.is/reset-password?token={token}"
+        reset_url = f"{settings.FRONTEND_BASE_URL}/reset-password?token={token}"
 
         email_message = EmailMessage(
-            subject="Password Reset Request",
+            subject="Beiðni um breyta lykilorð",
             body=textwrap.dedent(f"""
-                You requested a password reset for your account.
+                Þú baðst um breyta þínu lykilorði.
                 
-                Click here to reset your password (valid for 1 hour):
+                Smelltu hér til að endurstilla lykilorðið þitt (gildir í 1 klukkustund):
                 {reset_url}
                 
-                If you didn't request this, ignore this email.
-                Your password won't change until you click the link above.
-                
-                For security, this link expires in 1 hour.
+                Ef þú baðst ekki um að breyta lykilorðinu þínu, hunsaðu þennan tölvupóst.
+
+                Kveðja,
+                klifurmot.is
             """).strip(),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[email],
         )
-
-        email_message.extra_headers = {
-            "X-SMTPAPI": json.dumps(
-                {"filters": {"clicktrack": {"settings": {"enable": 0}}}}
-            )
-        }
 
         email_message.send(fail_silently=False)
 
@@ -530,26 +521,23 @@ def reset_password(
             )
 
         email_message = EmailMessage(
-            subject="Password Changed Successfully",
+            subject="Lykilorð hefur verið breytt",
             body=textwrap.dedent(f"""
-                Your password was successfully changed.
+                Lykilorðið þitt hefur verið breytt.
                 
-                If you didn't make this change, please contact support immediately.
+                Ef þetta varst ekki þú hafðu samband strax.
                 
-                Time: {timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
-                IP Address: {request_ip or "Unknown"}
+                Tími: {timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
+                IP-tala: {request_ip or "Óþekkt"}
+
+                Kveðja,
+                klifurmot.is
             """).strip(),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[user.email],
         )
 
-        email_message.extra_headers = {
-            "X-SMTPAPI": json.dumps(
-                {"filters": {"clicktrack": {"settings": {"enable": 0}}}}
-            )
-        }
-
-        email_message.send(fail_silently=True)
+        email_message.send(fail_silently=False)
 
         logger.info(
             f"Password reset completed for user {user.username} ({user.email}) from IP {request_ip}"

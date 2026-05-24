@@ -3,11 +3,8 @@ from django.utils import timezone
 
 
 class SendInvitationSerializer(serializers.Serializer):
-    """Serializer for sending judge invitation"""
-
     email = serializers.EmailField()
     name = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    expires_at = serializers.DateTimeField()
 
     def validate_email(self, value):
         return value.strip().lower()
@@ -15,24 +12,12 @@ class SendInvitationSerializer(serializers.Serializer):
     def validate_name(self, value):
         return value.strip() if value else ""
 
-    def validate_expires_at(self, value):
-        if value <= timezone.now():
-            raise serializers.ValidationError("Expiration date must be in the future")
-        if value > timezone.now() + timezone.timedelta(days=30):
-            raise serializers.ValidationError(
-                "Expiration date cannot be more than 30 days in the future"
-            )
-        return value
-
 
 class SendInvitationResponseSerializer(serializers.Serializer):
-    """Response for sending an invitation"""
-
-    type = serializers.CharField(source="judge_link.type")
+    type = serializers.CharField()
     token = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     expires_at = serializers.DateTimeField(source="judge_link.expires_at")
-    type = serializers.CharField()
     invitation_url = serializers.SerializerMethodField()
     user_id = serializers.SerializerMethodField()
     created = serializers.SerializerMethodField()
@@ -67,8 +52,6 @@ class SendInvitationResponseSerializer(serializers.Serializer):
 
 
 class ValidateInvitationResponseSerializer(serializers.Serializer):
-    """Response for validating an invitation"""
-
     valid = serializers.BooleanField(default=True)
     competition_id = serializers.IntegerField(source="competition.id")
     competition_title = serializers.CharField(source="competition.title")
@@ -77,8 +60,6 @@ class ValidateInvitationResponseSerializer(serializers.Serializer):
 
 
 class ClaimInvitationUnauthenticatedResponseSerializer(serializers.Serializer):
-    """Response for unauthenticated claim attempt"""
-
     authenticated = serializers.BooleanField()
     requires_auth = serializers.BooleanField()
     invitation_valid = serializers.BooleanField()
@@ -87,24 +68,10 @@ class ClaimInvitationUnauthenticatedResponseSerializer(serializers.Serializer):
 
 
 class CreateJudgeLinkSerializer(serializers.Serializer):
-    """Serializer for creating judge link"""
-
     user_id = serializers.IntegerField()
-    expires_at = serializers.DateTimeField()
-
-    def validate_expires_at(self, value):
-        if value <= timezone.now():
-            raise serializers.ValidationError("Expiration date must be in the future")
-        if value > timezone.now() + timezone.timedelta(days=30):
-            raise serializers.ValidationError(
-                "Expiration date cannot be more than 30 days in the future"
-            )
-        return value
 
 
 class JudgeLinkResponseSerializer(serializers.Serializer):
-    """Response for creating a judge link"""
-
     id = serializers.IntegerField(source="judge_link.id")
     token = serializers.SerializerMethodField()
     user_id = serializers.IntegerField(source="judge_link.user.id")
@@ -125,8 +92,6 @@ class JudgeLinkResponseSerializer(serializers.Serializer):
 
 
 class ValidateJudgeLinkResponseSerializer(serializers.Serializer):
-    """Response for validating a judge link"""
-
     competition_id = serializers.IntegerField(source="competition.id")
     competition_title = serializers.CharField(source="competition.title")
     user_id = serializers.SerializerMethodField()
@@ -137,18 +102,3 @@ class ValidateJudgeLinkResponseSerializer(serializers.Serializer):
 
     def get_user_email(self, obj):
         return obj["judge_link"].user.email if obj["judge_link"].user else None
-
-
-class UpdateJudgeLinkSerializer(serializers.Serializer):
-    """Serializer for updating judge link"""
-
-    expires_at = serializers.DateTimeField()
-
-    def validate_expires_at(self, value):
-        if value <= timezone.now():
-            raise serializers.ValidationError("Expiration date must be in the future")
-        if value > timezone.now() + timezone.timedelta(days=30):
-            raise serializers.ValidationError(
-                "Expiration date cannot be more than 30 days in the future"
-            )
-        return value
