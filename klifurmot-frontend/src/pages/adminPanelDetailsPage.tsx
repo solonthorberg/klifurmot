@@ -4,9 +4,12 @@ import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import TabButton from '@/components/ui/tabButton';
 import { useCompetition, useRounds } from '@/hooks/api/useCompetitions';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { type Phase } from '@/types';
+import { useAthletes, useRegistrations } from '@/hooks/api/useAthletes';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import type { Phase } from '@/types';
 import MainButton from '@/components/ui/mainButton';
+import RoundStartlistCard from '@/components/cards/roundStartlistCard';
+import JudgeLinkTab from '@/components/tabs/judgeLinkTab';
 
 export default function AdminPanelDetailsPage() {
     const { competitionId } = useParams();
@@ -15,29 +18,41 @@ export default function AdminPanelDetailsPage() {
         isLoading,
         error,
     } = useCompetition(Number(competitionId));
-
     const { data: roundsData } = useRounds(Number(competitionId));
+    const { data: registrationsData } = useRegistrations(Number(competitionId));
+    const { data: athletesData } = useAthletes();
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
 
     const activeRoundOrder = Number(searchParams.get('tab') ?? 1);
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;
 
-    const setTab = (order: number) => {
-        setSearchParams({ tab: String(order) });
-    };
+    const setTab = (order: number) => setSearchParams({ tab: String(order) });
 
     const competition = competitionData?.data ?? null;
     const phases: Phase[] = roundsData?.data.phases ?? [];
     const activePhase =
-        phases.find((p) => p.round_order === activeRoundOrder) || phases[0];
+        phases.find((p) => p.round_order === activeRoundOrder) ?? phases[0];
+    const isLastPhase =
+        activePhase?.round_order === phases[phases.length - 1]?.round_order;
+    const registrations = registrationsData?.data ?? [];
+    const allAthletes = athletesData?.data ?? [];
 
     return (
         <Container className="gap-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">{competition?.title}</h2>
-                <MainButton>Dómaraviðmót</MainButton>
+                <MainButton
+                    onClick={() =>
+                        navigate(
+                            `/competitions/${competitionId}/judge-dashboard`,
+                        )
+                    }
+                >
+                    Dómaraviðmót
+                </MainButton>
             </div>
 
             <div className="flex gap-2 border-b border-outline w-full overflow-x-auto">
@@ -53,34 +68,22 @@ export default function AdminPanelDetailsPage() {
             </div>
 
             {activePhase && (
-                <>
+                <div className="flex flex-col gap-4">
                     {activePhase.rounds.map((round) => (
-                        <div
+                        <RoundStartlistCard
                             key={round.id}
-                            className="flex gap-4 p-4 flex-col border border-outline rounded-md"
-                        >
-                            <div className="font-semibold text-lg">
-                                {round.category_group_name} - {round.gender}
-                            </div>
-                            {/* List of athletes that can be reordered by dragging */}
-                            <div className="flex gap-2 justify-start">
-                                <MainButton>+ Keppandi</MainButton>
-                                <MainButton variant="outline">
-                                    Flytja í næstu umferð
-                                </MainButton>
-                            </div>
-                            <div className="text-sm text-gray-500 mt-1">
-                                Búlder leiðir: {round.boulder_count} | Staða:{' '}
-                                {round.status}
-                            </div>
-                        </div>
+                            round={round}
+                            registrations={registrations}
+                            allAthletes={allAthletes}
+                            isLastRound={isLastPhase}
+                        />
                     ))}
-                </>
+                </div>
             )}
 
             <div className="flex flex-col gap-8 p-8 justify-center w-full border border-outline rounded-lg">
                 <h2 className="text-xl font-semibold">Dómaraslóðir</h2>
-                {/* Dómaraslóðir Component */}
+                <JudgeLinkTab competitionId={Number(competitionId)} />
             </div>
         </Container>
     );

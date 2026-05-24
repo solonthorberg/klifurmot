@@ -17,6 +17,9 @@ import AdminPanelDetailsPage from '@/pages/adminPanelDetailsPage';
 import AdminPanelPage from '@/pages/adminPanelPage';
 import EditCompetitionPage from '@/pages/editCompetitionPage';
 import JudgeDashboardPage from '@/pages/judgeDashboardPage';
+import JudgeTokenPage from '@/pages/judgeTokenPage';
+import RequestPasswordResetPage from '@/pages/requestPasswordResetPage';
+import ResetPasswordPage from '@/pages/resetPasswordPage';
 
 export default function Router() {
     return (
@@ -34,6 +37,12 @@ export default function Router() {
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/judge/:token" element={<JudgeTokenPage />} />
+                <Route
+                    path="/forgot-password"
+                    element={<RequestPasswordResetPage />}
+                />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route element={<ProtectedRoutes />}>
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route

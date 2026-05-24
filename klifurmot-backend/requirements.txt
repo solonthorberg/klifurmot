@@ -46,7 +46,6 @@ requests==2.32.3
 requests-oauthlib==2.0.0
 rsa==4.9.1
 s3transfer==0.13.1
-sendgrid==6.12.5
 service-identity==24.2.0
 setuptools==80.9.0
 six==1.17.0

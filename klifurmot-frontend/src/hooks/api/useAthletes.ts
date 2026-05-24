@@ -4,11 +4,11 @@ import type { PublicAthlete } from '@/types/athlete';
 import { athletesApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
 import { notify } from '@/stores/notificationStore';
+import type { CreateRegistrationRequest } from '@/types';
 import type {
-    CreateClimberRequest,
-    UpdateClimberRequest,
-    CreateRegistrationRequest,
-} from '@/types';
+    CreateAthleteFormData,
+    UpdateAthleteFormData,
+} from '@/schemas/athlete';
 
 // Public athletes
 
@@ -48,16 +48,30 @@ export function useCreateAthlete() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: CreateClimberRequest) =>
+        mutationFn: (data: CreateAthleteFormData) =>
             athletesApi.createAthlete(data),
         onSuccess: ({ message }) => {
-            queryClient.invalidateQueries({ queryKey: ['climbers'] });
-            queryClient.invalidateQueries({ queryKey: ['athletes'] });
+            queryClient.refetchQueries({ queryKey: ['climbers'] });
+            queryClient.refetchQueries({ queryKey: ['athletes'] });
             notify.success(message);
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));
         },
+    });
+}
+
+export function useCreateAthleteForUser() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (userAccountId: number) =>
+            athletesApi.createAthleteForUser(userAccountId),
+        onSuccess: ({ message }) => {
+            queryClient.refetchQueries({ queryKey: ['climbers'] });
+            queryClient.refetchQueries({ queryKey: ['athletes'] });
+            notify.success(message);
+        },
+        onError: (error) => notify.error(getErrorMessage(error)),
     });
 }
 
@@ -70,7 +84,7 @@ export function useUpdateAthlete() {
             data,
         }: {
             climberId: number;
-            data: UpdateClimberRequest;
+            data: UpdateAthleteFormData;
         }) => athletesApi.updateAthlete(climberId, data),
         onSuccess: ({ message }, { climberId }) => {
             queryClient.invalidateQueries({ queryKey: ['climbers'] });
@@ -139,6 +153,27 @@ export function useDeleteRegistration() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['registrations'] });
             notify.success('Registration deleted');
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
+}
+
+export function useLinkAthlete() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            climberId,
+            userAccountId,
+        }: {
+            climberId: number;
+            userAccountId: number;
+        }) => athletesApi.linkAthlete(climberId, userAccountId),
+        onSuccess: ({ message }) => {
+            queryClient.invalidateQueries({ queryKey: ['climbers'] });
+            queryClient.invalidateQueries({ queryKey: ['athletes'] });
+            notify.success(message);
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));

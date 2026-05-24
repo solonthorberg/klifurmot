@@ -1,13 +1,16 @@
+import React from 'react';
+
 interface ButtonProps {
     children?: React.ReactNode;
     onClick?: () => Promise<void> | void;
     variant?: 'primary' | 'outline' | 'delete';
     size?: 'small' | 'medium' | 'large';
-    type?: string;
+    type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     animated?: boolean;
     square?: boolean;
     className?: string;
+    title?: string;
 }
 
 export default function MainButton({
@@ -20,6 +23,7 @@ export default function MainButton({
     animated = false,
     square = false,
     className = '',
+    title,
 }: ButtonProps) {
     const baseStyles =
         'rounded-lg font-medium flex items-center justify-center cursor-pointer gap-2 truncate disabled:opacity-50 disabled:cursor-not-allowed';
@@ -33,17 +37,18 @@ export default function MainButton({
         delete: 'border-2 border-red-500 text-red-500 hover:bg-red-100 transition-colors duration-200',
     };
     const sizes = {
-        small: `${square ? '' : 'px-3'} py-1.5 text-sm h-9`,
-        medium: `${square ? '' : 'px-4'} py-2 h-10`,
-        large: `${square ? '' : 'px-6'} py-3 text-lg h-11`,
+        small: square ? 'w-9 h-9 text-sm' : 'px-3 py-1.5 text-sm h-9',
+        medium: square ? 'w-10 h-10' : 'px-4 py-2 h-10',
+        large: square ? 'w-11 h-11 text-lg' : 'px-6 py-3 text-lg h-11',
     };
-    const squareClass = square ? 'p-2' : '';
+
     return (
         <button
             onClick={onClick}
             disabled={disabled}
-            type={type as 'submit' | 'button' | 'reset'}
-            className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${squareClass} ${animation} ${className}`}
+            type={type}
+            title={title}
+            className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${animation} ${className}`}
         >
             {children}
         </button>

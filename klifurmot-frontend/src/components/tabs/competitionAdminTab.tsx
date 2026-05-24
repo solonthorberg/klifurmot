@@ -64,11 +64,7 @@ export default function CompetitionAdminTab() {
         return (
             <Modal onClose={onClose}>
                 <h2 className="text-lg font-semibold mb-4">Eyða mót?</h2>
-                <p>Ertu viss þú viljir eyða þessu móti?</p>
-                <p>
-                    Allt tengt þessu móti t.d. niðurstöður, skráningar og fl.
-                    verður eytt.
-                </p>
+                <p>Niðurstöður, skráningar og fleira verður eytt.</p>
                 <div className="flex justify-between gap-2 mt-4">
                     <MainButton
                         variant="delete"

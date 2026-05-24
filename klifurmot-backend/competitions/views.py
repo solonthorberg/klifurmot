@@ -2,12 +2,13 @@ import logging
 from typing import Any, cast, Dict
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from collections import defaultdict
 
 from accounts import permissions
 from . import services
 from . import serializers
+from . import models
 from core import utils
 
 logger = logging.getLogger(__name__)
@@ -721,3 +722,13 @@ def boulder_detail(request, boulder_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def round_boulders(request, round_id):
+    boulders = models.Boulder.objects.filter(round_id=round_id, deleted=False).order_by(
+        "boulder_number"
+    )
+    data = [{"id": b.id, "boulder_number": b.boulder_number} for b in boulders]
+    return utils.success_response(data=data, message="Boulders retrieved successfully")

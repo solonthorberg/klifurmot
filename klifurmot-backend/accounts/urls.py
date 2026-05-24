@@ -8,6 +8,7 @@ router.register(r"countries", views.CountryViewSet)
 urlpatterns = [
     path("me/", views.me, name="me"),
     path("", include(router.urls)),
+    path("user-accounts/", views.user_accounts, name="user-accounts"),
     path("auth/login/", views.login, name="login"),
     path("auth/google-login/", views.google_login, name="google-login"),
     path("auth/register/", views.register, name="register"),

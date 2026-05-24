@@ -217,6 +217,21 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
         raise ValueError(f"Climb with id {climb_id} not found")
 
     with transaction.atomic():
+        attempts_zone = update_data.get("attempts_zone", climb.attempts_zone)
+        attempts_top = update_data.get("attempts_top", climb.attempts_top)
+        zone_reached = update_data.get("zone_reached", climb.zone_reached)
+        top_reached = update_data.get("top_reached", climb.top_reached)
+
+        if attempts_zone > attempts_top:
+            attempts_top = attempts_zone
+        if top_reached and attempts_zone < 1:
+            attempts_zone = 1
+        if not zone_reached:
+            attempts_zone = attempts_top
+
+        update_data["attempts_zone"] = attempts_zone
+        update_data["attempts_top"] = attempts_top
+
         for field, value in update_data.items():
             if hasattr(climb, field):
                 setattr(climb, field, value)
@@ -381,31 +396,13 @@ def add_to_startlist(user, **data: Any) -> dict[str, Any]:
     }
 
 
-def update_startlist(result_id: int, user, **update_data: Any) -> dict[str, Any]:
+def update_startlist(result_id: int, user, **update_data: Any):
     try:
-        result = RoundResult.objects.select_related(
-            "climber__user_account",
-            "round",
-        ).get(id=result_id, deleted=False)
+        result = RoundResult.objects.get(id=result_id, deleted=False)
     except RoundResult.DoesNotExist:
         raise ValueError(f"Start list entry with id {result_id} not found")
 
     if "start_order" in update_data:
-        duplicate_order = (
-            RoundResult.objects.filter(
-                round=result.round,
-                start_order=update_data["start_order"],
-                deleted=False,
-            )
-            .exclude(id=result_id)
-            .exists()
-        )
-
-        if duplicate_order:
-            raise ValueError(
-                f"Start order {update_data['start_order']} is already taken in this round"
-            )
-
         result.start_order = update_data["start_order"]
 
     result.last_modified_by = user
@@ -485,14 +482,14 @@ def advance_climbers(round_id: int) -> dict[str, Any]:
         current_round = CompetitionRound.objects.get(id=round_id, deleted=False)
     except CompetitionRound.DoesNotExist:
         raise ValueError(f"Round with id {round_id} not found")
-
+    if not current_round.completed:
+        raise ValueError("Round must be marked as completed before advancing climbers")
     all_rounds = list(
         CompetitionRound.objects.filter(
             competition_category=current_round.competition_category,
             deleted=False,
         ).order_by("round_order")
     )
-
     try:
         current_index = all_rounds.index(current_round)
         next_round = (
@@ -502,31 +499,27 @@ def advance_climbers(round_id: int) -> dict[str, Any]:
         )
     except (ValueError, IndexError):
         next_round = None
-
     if not next_round:
         raise ValueError("No next round found")
-
     all_results = RoundResult.objects.filter(
         round=current_round,
         deleted=False,
+        rank__isnull=False,
     ).order_by("rank")
-
+    if not all_results.exists():
+        raise ValueError("No ranked results found for this round")
     num_to_advance = next_round.climbers_advance
-
     existing_climber_ids = set(
         RoundResult.objects.filter(
             round=next_round,
             deleted=False,
         ).values_list("climber_id", flat=True)
     )
-
     selected = []
     cutoff_rank = None
-
     for result in all_results:
         if result.climber_id in existing_climber_ids:
             continue
-
         if len(selected) < num_to_advance:
             selected.append(result)
             cutoff_rank = result.rank
@@ -534,31 +527,33 @@ def advance_climbers(round_id: int) -> dict[str, Any]:
             selected.append(result)
         else:
             break
-
     selected.reverse()
-
     existing_orders = RoundResult.objects.filter(
         round=next_round,
         deleted=False,
     ).values_list("start_order", flat=True)
-
     max_order = max(existing_orders, default=0) or 0
-
     added = 0
     for index, result in enumerate(selected, start=1):
-        _, created = RoundResult.objects.get_or_create(
+        existing = RoundResult.objects.filter(
             round=next_round,
             climber=result.climber,
-            defaults={
-                "start_order": max_order + index,
-                "created_by": result.created_by,
-            },
-        )
-        if created:
+        ).first()
+        if existing:
+            if existing.deleted:
+                existing.deleted = False
+                existing.start_order = max_order + index
+                existing.save()
+                added += 1
+        else:
+            RoundResult.objects.create(
+                round=next_round,
+                climber=result.climber,
+                start_order=max_order + index,
+                created_by=result.created_by,
+            )
             added += 1
-
     BroadcastScoreUpdate(current_round.competition_category.competition_id)
-
     return {
         "advanced": added,
         "next_round_id": next_round.id,

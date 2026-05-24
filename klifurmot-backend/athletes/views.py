@@ -46,42 +46,61 @@ def public_athlete_detail(_, athlete_id):
 def athletes(request):
     if request.method == "GET":
         search = request.query_params.get("search")
-
         result = services.list_all_climbers(search=search)
-        print(result)
         return utils.success_response(
             data=result,
             message="Climbers retrieved successfully",
         )
 
     if request.method == "POST":
-        serializer = serializers.CreateClimberSerializer(data=request.data)
+        from_account = request.data.get("from_account", False)
 
+        if from_account:
+            try:
+                result = services.create_climber_for_user(
+                    admin_user=request.user,
+                    user_account_id=request.data["user_account_id"],
+                )
+                return utils.success_response(
+                    data=result,
+                    message="Climber created successfully",
+                    status_code=status.HTTP_201_CREATED,
+                )
+            except ValueError as e:
+                return utils.error_response(
+                    code="Invalid_climber",
+                    message=str(e),
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            except Exception as e:
+                return utils.error_response(
+                    code="Creation_failed",
+                    message=str(e),
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        serializer = serializers.CreateClimberSerializer(data=request.data)
         if not serializer.is_valid():
             errors_dict = cast(Dict[str, Any], serializer.errors)
             return utils.validation_error_response(serializer_errors=errors_dict)
 
         try:
             validated_data = cast(Dict[str, Any], serializer.validated_data)
-
             result = services.create_climber(
                 user=request.user,
                 **validated_data,
             )
-
             return utils.success_response(
                 data=result,
                 message="Climber created successfully",
                 status_code=status.HTTP_201_CREATED,
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Invalid_climber",
                 message=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-
         except Exception as e:
             return utils.error_response(
                 code="Creation_failed",

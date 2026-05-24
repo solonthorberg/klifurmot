@@ -40,4 +40,7 @@ urlpatterns = [
     path("round-groups/", views.round_groups, name="round_groups"),
     path("category-groups/", views.category_groups, name="category_groups"),
     path("boulders/<int:boulder_id>/", views.boulder_detail, name="boulder_detail"),
+    path(
+        "rounds/<int:round_id>/boulders/", views.round_boulders, name="round-boulders"
+    ),
 ]

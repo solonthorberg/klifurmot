@@ -128,7 +128,7 @@ def claim_invitation(request, token):
                     result
                 ).data,
                 message="Authentication required",
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_200_OK,
             )
 
         return utils.success_response(
@@ -335,90 +335,36 @@ def get_competition_judge_links(request, competition_id):
         )
 
 
-@api_view(["PATCH", "DELETE"])
+@api_view(["DELETE"])
 @permission_classes([permissions.IsCompetitionAdmin])
 def manage_judge_link(request, link_id):
-    """Update or delete a judge link"""
+    try:
+        services.delete_judge_link(link_id=link_id, user=request.user)
+        return utils.success_response(
+            data=None, message="Judge link deleted successfully"
+        )
 
-    if request.method == "PATCH":
-        serializer = serializers.UpdateJudgeLinkSerializer(data=request.data)
-        if not serializer.is_valid():
-            errors_dict = cast(Dict[str, Any], serializer.errors)
-            return utils.validation_error_response(serializer_errors=errors_dict)
+    except JudgeLink.DoesNotExist:
+        return utils.error_response(
+            code="Link_not_found",
+            message="Judge link not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
 
-        try:
-            result = services.update_judge_link(
-                link_id=link_id,
-                user=request.user,
-                **cast(Dict[str, Any], serializer.validated_data),
-            )
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
 
-            return utils.success_response(
-                data={
-                    "id": result["judge_link"].id,
-                    "expires_at": result["judge_link"].expires_at,
-                },
-                message="Judge link updated successfully",
-            )
-
-        except JudgeLink.DoesNotExist:
-            return utils.error_response(
-                code="Link_not_found",
-                message="Judge link not found",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-
-        except PermissionError as e:
-            return utils.error_response(
-                code="Access_denied",
-                message=str(e),
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
-        except ValueError as e:
-            return utils.error_response(
-                code="Invalid_data",
-                message=str(e),
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        except Exception as e:
-            logger.error(f"Unexpected error updating judge link: {str(e)}")
-            return utils.error_response(
-                code="Server_error",
-                message="Failed to update judge link",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    elif request.method == "DELETE":
-        try:
-            services.delete_judge_link(link_id=link_id, user=request.user)
-
-            return utils.success_response(
-                data=None, message="Judge link deleted successfully"
-            )
-
-        except JudgeLink.DoesNotExist:
-            return utils.error_response(
-                code="Link_not_found",
-                message="Judge link not found",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-
-        except PermissionError as e:
-            return utils.error_response(
-                code="Access_denied",
-                message=str(e),
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
-        except Exception as e:
-            logger.error(f"Unexpected error deleting judge link: {str(e)}")
-            return utils.error_response(
-                code="Server_error",
-                message="Failed to delete judge link",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+    except Exception as e:
+        logger.error(f"Unexpected error deleting judge link: {str(e)}")
+        return utils.error_response(
+            code="Server_error",
+            message="Failed to delete judge link",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET"])

@@ -8,21 +8,39 @@ import { RegisterSchema, type RegisterFormData } from '@/schemas/auth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function RegisterPage() {
     const { data } = useCountries();
     const [showPassword, setShowPassword] = useState(false);
     const { register: registerUser, isRegistering } = useAuth();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
     const {
         register,
         handleSubmit,
+        setValue,
+        watch,
         control,
         formState: { errors },
     } = useForm<RegisterFormData>({
         resolver: zodResolver(RegisterSchema),
     });
 
+    const recaptchaToken = watch('recaptcha_token');
     const countries = data?.data;
+
+    const handleRegister = (data: RegisterFormData) => {
+        registerUser(data, {
+            onSuccess: () => {
+                navigate(searchParams.get('redirect') ?? '/', {
+                    replace: true,
+                });
+            },
+        });
+    };
 
     return (
         <Container variant="primaryCenter" className="animate-fade-in">
@@ -31,7 +49,7 @@ export default function RegisterPage() {
                     Nýskráning
                 </h3>
                 <form
-                    onSubmit={handleSubmit((data) => registerUser(data))}
+                    onSubmit={handleSubmit(handleRegister)}
                     className="w-full grid grid-cols-1 gap-x-4 gap-y-4"
                 >
                     <Input
@@ -136,8 +154,19 @@ export default function RegisterPage() {
                             />
                         )}
                     />
-                    <MainButton type="submit" disabled={isRegistering}>
-                        {isRegistering ? 'Skrái aðgang...' : 'Skrá aðgang'}
+                    <div className="flex justify-center">
+                        <ReCAPTCHA
+                            sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                            onChange={(token) =>
+                                setValue('recaptcha_token', token ?? '')
+                            }
+                        />
+                    </div>
+                    <MainButton
+                        type="submit"
+                        disabled={isRegistering || !recaptchaToken}
+                    >
+                        {isRegistering ? 'Nýskrái...' : 'Nýskrá'}
                     </MainButton>
                 </form>
             </div>

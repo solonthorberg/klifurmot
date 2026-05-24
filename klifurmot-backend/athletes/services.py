@@ -16,8 +16,6 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
             deleted=False,
             is_simple_athlete=False,
             user_account__isnull=False,
-            competitionregistration__isnull=False,
-            competitionregistration__deleted=False,
         )
         .distinct()
     )
@@ -364,13 +362,6 @@ def delete_climber(climber_id: int) -> None:
 
 
 def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
-    """
-    Links a simple climber to a user account.
-    Soft-deletes any existing climber tied to that account.
-    """
-    from accounts.models import UserAccount
-    from django.db import transaction
-
     try:
         climber = Climber.objects.get(
             id=climber_id, is_simple_athlete=True, deleted=False
@@ -383,18 +374,18 @@ def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
     except UserAccount.DoesNotExist:
         raise ValueError(f"User account with id {user_account_id} not found")
 
-    with transaction.atomic():
-        existing = (
-            Climber.objects.select_for_update()
-            .filter(user_account=user_account, deleted=False)
-            .first()
-        )
-        if existing:
-            existing.user_account = None
-            existing.deleted = True
-            existing.last_modified_by = user
-            existing.save()
+    existing = Climber.objects.filter(user_account=user_account, deleted=False).exists()
 
+    if existing:
+        raise ValueError(f"User account already has a climber linked")
+
+    if user_account.gender and climber.simple_gender:
+        if climber.simple_gender != user_account.gender:
+            raise ValueError(
+                f"Gender mismatch: climber is {climber.simple_gender} but user account is {user_account.gender}"
+            )
+
+    with transaction.atomic():
         climber.user_account = user_account
         climber.is_simple_athlete = False
         climber.simple_name = None
@@ -547,3 +538,38 @@ def delete_registration(registration_id: int) -> None:
 
         registration.deleted = True
         registration.save()
+
+
+def create_climber_for_user(admin_user, user_account_id: int) -> dict[str, Any]:
+    from accounts.models import UserAccount
+
+    try:
+        user_account = UserAccount.objects.get(id=user_account_id)
+    except UserAccount.DoesNotExist:
+        raise ValueError(f"User account with id {user_account_id} not found")
+
+    if Climber.objects.filter(user_account=user_account, deleted=False).exists():
+        raise ValueError("User already has a climber")
+
+    climber = Climber.objects.create(
+        user_account=user_account,
+        is_simple_athlete=False,
+        created_by=admin_user,
+        last_modified_by=admin_user,
+    )
+
+    age = (
+        calculate_age(user_account.date_of_birth)
+        if user_account.date_of_birth
+        else None
+    )
+
+    return {
+        "id": climber.id,
+        "is_simple_athlete": False,
+        "user_account_id": user_account.id,
+        "name": user_account.full_name,
+        "age": age,
+        "gender": user_account.gender,
+        "category": get_age_based_category(age) if age else None,
+    }

@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import Image from '@/components/ui/image';
-
 import type { Competition } from '@/types';
 import MainButton from '../ui/mainButton';
 import { useAuthStore } from '@/stores';
@@ -15,15 +14,19 @@ export default function CompetitionAdminCard({
 }) {
     const { userAccount } = useAuthStore();
     const navigate = useNavigate();
+    const isOwner = competition.created_by === userAccount?.user.username;
+
     return (
         <div className="flex sm:flex-row flex-col relative w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline">
             <Image
                 image={competition.image}
                 alt={competition.title}
-                className="w-full sm:w-48 h-40 sm:h-full shrink-0 cursor-pointer"
-                onClick={() => navigate(`${competition.id}`)}
+                className={`w-full sm:w-48 h-40 sm:h-full shrink-0 ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                onClick={() => {
+                    if (isOwner) navigate(`${competition.id}`);
+                }}
             />
-            <div className="p-4 flex flex-col gap-1">
+            <div className="p-4 flex flex-col gap-1 flex-1 min-w-0">
                 <h2 className="font-semibold text-lg">{competition.title}</h2>
                 <p className="text-gray-600 text-sm">{competition.location}</p>
                 <p className="text-gray-500 text-sm">
@@ -36,22 +39,26 @@ export default function CompetitionAdminCard({
                 <p className="text-gray-500 text-sm">
                     {`Stofnandi: ${competition.created_by}`}
                 </p>
-                {competition.created_by === userAccount?.user.username && (
-                    <div className="absolute right-4 z-5 flex gap-1">
+                {isOwner && (
+                    <div className="flex gap-2 mt-2 sm:absolute sm:right-4 sm:top-2">
                         <MainButton
-                            onClick={() => {
+                            className="flex-1 sm:flex-none"
+                            square
+                            title="Breyta móti"
+                            onClick={() =>
                                 navigate(
                                     `/admin-panel/${competition.id}/edit-competition`,
-                                );
-                            }}
+                                )
+                            }
                         >
-                            Breyta
+                            <Icon variant="edit" />
                         </MainButton>
                         <MainButton
-                            className="px-2"
+                            className="flex-1 sm:flex-none"
                             onClick={onDelete}
-                            square={true}
+                            square
                             variant="delete"
+                            title="Eyða móti"
                         >
                             <Icon variant="trash" />
                         </MainButton>

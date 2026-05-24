@@ -9,11 +9,12 @@ from decouple import Config, RepositoryEnv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 config = Config(RepositoryEnv(os.path.join(BASE_DIR.parent, ".env")))
-
+FRONTEND_URL = config("FRONTEND_BASE_URL")
 
 # Core
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-default-key", cast=str)
 DEBUG = config("DEBUG", default=True, cast=bool)
+RECAPTCHA_SECRET_KEY = config("RECAPTCHA_SECRET_KEY", cast=str)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="localhost,127.0.0.1",
@@ -241,12 +242,12 @@ STATICFILES_DIRS = (
 # Email
 FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", cast=str)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_HOST = "smtp.resend.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "apikey"
-EMAIL_HOST_PASSWORD = config("SENDGRID_API_KEY", cast=str)
-DEFAULT_FROM_EMAIL = "noreply@klifurmot.is"
+EMAIL_HOST_USER = "resend"
+EMAIL_HOST_PASSWORD = config("RESEND_API_KEY", cast=str)
+DEFAULT_FROM_EMAIL = "Klifurmót <noreply@klifurmot.is>"
 
 
 # Internationalization

@@ -1,3 +1,7 @@
+import type {
+    CreateAthleteFormData,
+    UpdateAthleteFormData,
+} from '@/schemas/athlete';
 import { api } from './client';
 
 import type {
@@ -5,8 +9,6 @@ import type {
     PublicAthlete,
     AthleteAdmin,
     Registration,
-    CreateAthleteRequestAdmin,
-    UpdateAthleteRequestAdmin,
     CreateRegistrationRequest,
     PublicAthleteDetail,
 } from '@/types';
@@ -55,7 +57,7 @@ export const athletesApi = {
     },
 
     createAthlete: async (
-        data: CreateAthleteRequestAdmin,
+        data: CreateAthleteFormData,
     ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
         const response = await api.post<ApiSuccessResponse<AthleteAdmin>>(
             '/athletes/',
@@ -64,9 +66,19 @@ export const athletesApi = {
         return response.data;
     },
 
+    createAthleteForUser: async (
+        userAccountId: number,
+    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
+        const response = await api.post<ApiSuccessResponse<AthleteAdmin>>(
+            '/athletes/',
+            { from_account: true, user_account_id: userAccountId },
+        );
+        return response.data;
+    },
+
     updateAthlete: async (
         climberId: number,
-        data: UpdateAthleteRequestAdmin,
+        data: UpdateAthleteFormData,
     ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
         const response = await api.patch<ApiSuccessResponse<AthleteAdmin>>(
             `/athletes/${climberId}/`,
@@ -106,6 +118,17 @@ export const athletesApi = {
     deleteRegistration: async (registrationId: number): Promise<void> => {
         const response = await api.delete(
             `/athletes/registrations/${registrationId}/`,
+        );
+        return response.data;
+    },
+
+    linkAthlete: async (
+        climberId: number,
+        userAccountId: number,
+    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
+        const response = await api.post<ApiSuccessResponse<AthleteAdmin>>(
+            `/athletes/${climberId}/link/`,
+            { user_account_id: userAccountId },
         );
         return response.data;
     },

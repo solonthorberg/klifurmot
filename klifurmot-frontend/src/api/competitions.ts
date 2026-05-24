@@ -21,7 +21,6 @@ import type {
     CategoryBoulders,
     CategoryStartlist,
     CategoryResults,
-    Rounds,
     RoundData,
 } from '@/types';
 
@@ -214,9 +213,7 @@ export const competitionsApi = {
     ): Promise<ApiSuccessResponse<CompetitionCategory[]>> => {
         const response = await api.get<
             ApiSuccessResponse<CompetitionCategory[]>
-        >('/competitions/categories/', {
-            params: { competition_id: competitionId },
-        });
+        >(`/competitions/${competitionId}/categories/`);
         return response.data;
     },
 
@@ -291,6 +288,15 @@ export const competitionsApi = {
             `/competitions/boulders/${boulderId}/`,
             formData,
             { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        return response.data;
+    },
+
+    listBoulders: async (
+        roundId: number,
+    ): Promise<ApiSuccessResponse<Boulder[]>> => {
+        const response = await api.get<ApiSuccessResponse<Boulder[]>>(
+            `/competitions/rounds/${roundId}/boulders/`,
         );
         return response.data;
     },

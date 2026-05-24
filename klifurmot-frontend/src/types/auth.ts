@@ -24,26 +24,6 @@ export interface UpdateUserAccount {
     profile_picture?: File | string | null;
 }
 
-export interface LoginRequest {
-    email: string;
-    password: string;
-}
-
-export interface RegisterRequest {
-    username: string;
-    email: string;
-    password: string;
-    password2: string;
-    full_name: string;
-    gender: string;
-    nationality: string;
-    date_of_birth: string;
-}
-
-export interface PasswordResetRequest {
-    email: string;
-}
-
 export interface AuthResponse {
     access: string;
     user: {

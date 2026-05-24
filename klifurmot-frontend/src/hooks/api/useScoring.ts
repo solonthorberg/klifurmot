@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { scoringApi } from '@/api';
+import { getErrorMessage, scoringApi } from '@/api';
 import type {
     CreateClimbRequest,
     UpdateClimbRequest,
     CreateStartlistRequest,
     UpdateStartlistRequest,
 } from '@/types';
+import { notify } from '@/stores';
 
 // Climbs
 export function useClimbs(roundId: number, climberId?: number) {
@@ -40,7 +41,6 @@ export function useCreateClimb() {
 
 export function useUpdateClimb() {
     const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: ({
             climbId,
@@ -51,8 +51,9 @@ export function useUpdateClimb() {
         }) => scoringApi.updateClimb(climbId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['climbs'] });
-            queryClient.invalidateQueries({ queryKey: ['scores'] });
-            queryClient.invalidateQueries({ queryKey: ['competitions'] });
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
         },
     });
 }
@@ -137,9 +138,13 @@ export function useAdvanceClimbers() {
 
     return useMutation({
         mutationFn: (roundId: number) => scoringApi.advanceClimbers(roundId),
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['startlist'] });
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
+            notify.success(data.message);
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
         },
     });
 }
