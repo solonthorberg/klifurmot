@@ -37,6 +37,7 @@ if [ "$START_ONLY" = false ]; then
 
     echo "==> [5/5] Building frontend..."
     cd "$FRONTEND_DIR"
+    doppler secrets download --project klifurmot --config prd_frontend --format env --no-file > /var/www/klifurmot/.env.production
     npm install --silent
     npm run build
 fi
