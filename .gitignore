@@ -33,9 +33,6 @@ ENV/
 *.sln
 *.sw?
 
-# Django migrations
-**/migrations/*.py
-!**/migrations/__init__.py
 
 # OS files
 .DS_Store

@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import dj_database_url
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,12 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_URL = config("FRONTEND_BASE_URL")
 
 # Core
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-default-key", cast=str)
-DEBUG = config("DEBUG", default=True, cast=bool)
+SECRET_KEY = config("SECRET_KEY", cast=str)
+DEBUG = config("DEBUG", default=False, cast=bool)
 RECAPTCHA_SECRET_KEY = config("RECAPTCHA_SECRET_KEY", cast=str)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 
@@ -175,12 +175,20 @@ else:
             "PASSWORD": config("DB_PASSWORD", cast=str),
             "HOST": config("DB_HOST", cast=str),
             "PORT": config("DB_PORT", cast=str),
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
         }
     }
 
 
 # Channels
 REDIS_URL = config("REDIS_URL", default="", cast=str)
+
+if not REDIS_URL and not DEBUG:
+    raise ImproperlyConfigured(
+        "REDIS_URL must be set in production. "
+        "InMemoryChannelLayer does not work across multiple Daphne workers."
+    )
 
 if REDIS_URL:
     CHANNEL_LAYERS = {
