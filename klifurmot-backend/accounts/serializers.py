@@ -61,6 +61,11 @@ class UserResponseSerializer(serializers.Serializer):
 class UpdateProfileSerializer(serializers.Serializer):
     """Serializer for updating a profile"""
 
+    username = serializers.CharField(
+        min_length=3,
+        max_length=150,
+        required=False,
+    )
     full_name = serializers.CharField(min_length=3, max_length=100, required=False)
     gender = serializers.ChoiceField(choices=["KK", "KVK"], required=False)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
@@ -71,6 +76,16 @@ class UpdateProfileSerializer(serializers.Serializer):
     wingspan_cm = serializers.IntegerField(
         min_value=0, max_value=300, required=False, allow_null=True
     )
+
+    def validate_username(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Username cannot be empty")
+        if not re.match(r"^[\w.@+-]+$", value):
+            raise serializers.ValidationError(
+                "Username may only contain letters, digits, and @/./+/-/_"
+            )
+        return value
 
     def validate_full_name(self, value):
         value = value.strip()

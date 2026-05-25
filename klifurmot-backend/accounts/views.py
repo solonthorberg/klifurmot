@@ -21,14 +21,20 @@ logger = logging.getLogger(__name__)
 
 
 def verify_recaptcha(token: str) -> bool:
-    response = http_requests.post(
-        "https://www.google.com/recaptcha/api/siteverify",
-        data={
-            "secret": settings.RECAPTCHA_SECRET_KEY,
-            "response": token,
-        },
-    )
-    return response.json().get("success", False)
+    try:
+        response = http_requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data={
+                "secret": settings.RECAPTCHA_SECRET_KEY,
+                "response": token,
+            },
+            timeout=5.0,
+        )
+        return response.json().get("success", False)
+
+    except Exception as e:
+        logger.error(f"reCAPTCHA verification failed: {str(e)}")
+        return False
 
 
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -238,6 +244,13 @@ def me(request):
                 code="Invalid_nationality",
                 message="Invalid nationality code",
                 status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except ValueError as e:
+            return utils.error_response(
+                code="Username_taken" if "Username" in str(e) else "Invalid_data",
+                message=str(e),
+                status_code=status.HTTP_409_CONFLICT,
             )
 
         except Exception as e:
@@ -597,7 +610,6 @@ def refresh_token(request):
 @permission_classes([AllowAny])
 def request_password_reset(request):
     """Request password reset email"""
-
     email = request.data.get("email", "").strip()
 
     if not email:
@@ -614,22 +626,27 @@ def request_password_reset(request):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
+    SUCCESS_MESSAGE = (
+        "If an account exists with this email, you will receive reset instructions"
+    )
+
     try:
         client_ip = request.META.get("REMOTE_ADDR")
 
-        result = services.request_password_reset(email=email, request_ip=client_ip)
+        services.request_password_reset(email=email, request_ip=client_ip)
 
         return utils.success_response(
-            data=None, message=result["message"], status_code=status.HTTP_200_OK
+            data=None, message=SUCCESS_MESSAGE, status_code=status.HTTP_200_OK
         )
 
     except Exception as e:
         logger.error(f"Error in password reset request view: {str(e)}")
-        return utils.success_response(
-            data=None,
-            message="If an account exists with this email, you will receive reset instructions",
-            status_code=status.HTTP_200_OK,
-        )
+
+    return utils.success_response(
+        data=None,
+        message=SUCCESS_MESSAGE,
+        status_code=status.HTTP_200_OK,
+    )
 
 
 @api_view(["POST"])

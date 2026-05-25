@@ -26,6 +26,7 @@ import {
     useStartlist,
     useAddToStartlist,
     useAdvanceClimbers,
+    useReorderStartlist,
 } from '@/hooks/api/useScoring';
 import { useUpdateRoundStatus } from '@/hooks/api/useCompetitions';
 import { scoringApi } from '@/api';
@@ -153,6 +154,7 @@ export default function RoundStartlistCard({
     const { mutate: addToStartlist } = useAddToStartlist();
     const { mutate: advanceClimbers } = useAdvanceClimbers();
     const { mutate: updateRoundStatus } = useUpdateRoundStatus();
+    const { mutateAsync: reorderStartlist } = useReorderStartlist();
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(TouchSensor, {
@@ -162,14 +164,17 @@ export default function RoundStartlistCard({
             },
         }),
     );
+
     useEffect(() => {
         if (!isDraggingRef.current) {
             setLocalEntries(startlistData?.data ?? []);
         }
     }, [startlistData]);
+
     const handleDragStart = () => {
         isDraggingRef.current = true;
     };
+
     const handleDragEnd = async (event: DragEndEvent) => {
         isDraggingRef.current = false;
         const { active, over } = event;
@@ -180,13 +185,15 @@ export default function RoundStartlistCard({
             (e, i) => ({ ...e, start_order: i + 1 }),
         );
         setLocalEntries(reordered);
-        for (const entry of reordered) {
-            await scoringApi.updateStartlist(entry.id, {
-                start_order: entry.start_order,
-            });
-        }
-        queryClient.invalidateQueries({ queryKey: ['startlist', round.id] });
+        await reorderStartlist({
+            round_id: round.id,
+            entries: reordered.map((e) => ({
+                id: e.id,
+                start_order: e.start_order,
+            })),
+        });
     };
+
     const handleAdd = (climberId: number) => {
         addToStartlist({
             round: round.id,
@@ -195,6 +202,7 @@ export default function RoundStartlistCard({
         });
         setShowAddModal(false);
     };
+
     const handleConfirmRemove = async () => {
         if (!removeTarget) return;
         await scoringApi.removeFromStartlist(removeTarget.id);
@@ -202,25 +210,37 @@ export default function RoundStartlistCard({
             .filter((e) => e.id !== removeTarget.id)
             .map((e, i) => ({ ...e, start_order: i + 1 }));
         setLocalEntries(reordered);
-        for (const entry of reordered) {
-            await scoringApi.updateStartlist(entry.id, {
-                start_order: entry.start_order,
+        if (reordered.length > 0) {
+            await reorderStartlist({
+                round_id: round.id,
+                entries: reordered.map((e) => ({
+                    id: e.id,
+                    start_order: e.start_order,
+                })),
+            });
+        } else {
+            queryClient.invalidateQueries({
+                queryKey: ['startlist', round.id],
             });
         }
-        queryClient.invalidateQueries({ queryKey: ['startlist', round.id] });
         setRemoveTarget(null);
     };
+
     const handleAdvance = () => {
         advanceClimbers(round.id);
     };
+
     const handleToggleCompleted = () => {
         updateRoundStatus({ roundId: round.id, completed: !round.completed });
     };
+
     const categoryLabel = `${round.category_group_name} ${round.gender}`;
     const categoryRegistrations = registrations.filter(
         (r) => r.category === categoryLabel,
     );
+
     const alreadyInStartlist = new Set(localEntries.map((e) => e.climber_id));
+
     return (
         <div className="border border-outline rounded-lg p-4 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">

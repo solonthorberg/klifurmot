@@ -4,7 +4,7 @@ from accounts.authorization import require_competition_admin
 from accounts.models import UserAccount
 from django.db import transaction
 from .models import Climber, CompetitionRegistration
-from .utils import calculate_age, get_age_based_category
+from .utils import build_age_category_resolver, calculate_age, get_age_based_category
 from competitions.models import CompetitionRound
 from scoring.models import RoundResult
 from django.db.models import Q
@@ -26,6 +26,7 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
 
     result = []
 
+    category_for_age = build_age_category_resolver()
     for climber in queryset:
         user_account = climber.user_account
 
@@ -45,7 +46,7 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
                 "name": user_account.full_name or "Name not provided",
                 "age": age,
                 "gender": user_account.gender,
-                "category": get_age_based_category(age) if age else None,
+                "category": category_for_age(age),
                 "nationality": user_account.nationality.country_code
                 if user_account.nationality
                 else None,

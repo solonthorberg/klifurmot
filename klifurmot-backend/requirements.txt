@@ -21,7 +21,9 @@ django-expiring-token==1.0.3
 django-extensions==4.1
 django-ses==4.4.0
 django-storages==1.14.6
+django-types==0.24.0
 djangorestframework==3.16.0
+djangorestframework-types==0.9.0
 djangorestframework_simplejwt==5.5.1
 google-auth==2.40.1
 hyperlink==21.0.0
@@ -52,6 +54,7 @@ six==1.17.0
 sqlparse==0.5.3
 Twisted==25.5.0
 txaio==23.1.1
+types-psycopg2==2.9.21.20260518
 typing_extensions==4.14.0
 tzdata==2025.2
 urllib3==2.5.0

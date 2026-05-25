@@ -61,6 +61,7 @@ def get_profile(user: User) -> Dict[str, Any]:
 
 def update_profile(
     user: User,
+    username: Optional[str] = None,
     full_name: Optional[str] = None,
     gender: Optional[str] = None,
     date_of_birth: Optional[date] = None,
@@ -73,6 +74,17 @@ def update_profile(
 
     with transaction.atomic():
         user_account, _ = UserAccount.objects.get_or_create(user=user)
+
+        if username is not None and username != user.username:
+            taken = (
+                User.objects.filter(username__iexact=username)
+                .exclude(pk=user.pk)
+                .exists()
+            )
+            if taken:
+                raise ValueError("Username is already taken")
+            user.username = username
+            user.save(update_fields=["username"])
 
         if full_name is not None:
             user_account.full_name = full_name
@@ -103,7 +115,7 @@ def update_profile(
                     user_account.profile_picture.delete(save=False)
                 user_account.profile_picture = profile_picture
 
-                user_account.save()
+        user_account.save()
 
         return {
             "user": user,

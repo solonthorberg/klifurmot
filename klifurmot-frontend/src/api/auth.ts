@@ -65,7 +65,7 @@ export const authApi = {
         data: UpdateUserAccount,
     ): Promise<ApiSuccessResponse<UserAccount>> => {
         const formData = new FormData();
-        formData.append('username', data.username);
+        if (data.username) formData.append('username', data.username);
         if (data.height_cm != null)
             formData.append('height_cm', String(data.height_cm));
         if (data.wingspan_cm != null)

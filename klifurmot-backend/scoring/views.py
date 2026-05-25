@@ -168,7 +168,7 @@ def climb_detail(request, climb_id):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def startlist(request):
     if request.method == "GET":
         round_id = request.query_params.get("round_id")
@@ -213,6 +213,13 @@ def startlist(request):
                 data=result,
                 message="Climber added to start list successfully",
                 status_code=status.HTTP_201_CREATED,
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         except ValueError as e:
@@ -292,6 +299,44 @@ def startlist_detail(request, result_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def startlist_reorder(request):
+    serializer = serializers.BulkUpdateStartlistOrderSerializer(data=request.data)
+    if not serializer.is_valid():
+        errors_dict = cast(Dict[str, Any], serializer.errors)
+        return utils.validation_error_response(serializer_errors=errors_dict)
+
+    try:
+        validated_data = cast(Dict[str, Any], serializer.validated_data)
+        result = services.bulk_update_startlist_order(
+            round_id=validated_data["round_id"],
+            entries=validated_data["entries"],
+            user=request.user,
+        )
+        return utils.success_response(
+            data=result, message="Start list reordered successfully"
+        )
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    except ValueError as e:
+        return utils.error_response(
+            code="Reorder_failed",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    except Exception as e:
+        return utils.error_response(
+            code="Reorder_failed",
+            message=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(["GET"])

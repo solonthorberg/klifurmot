@@ -10,6 +10,7 @@ import type {
     UpdateStartlistRequest,
     Score,
     AdvanceClimbersResponse,
+    BulkUpdateStartlistOrderRequest,
 } from '@/types';
 
 export const scoringApi = {
@@ -90,6 +91,16 @@ export const scoringApi = {
     ): Promise<ApiSuccessResponse<StartlistEntry>> => {
         const response = await api.patch<ApiSuccessResponse<StartlistEntry>>(
             `/scoring/startlist/${resultId}/`,
+            data,
+        );
+        return response.data;
+    },
+
+    reorderStartlist: async (
+        data: BulkUpdateStartlistOrderRequest,
+    ): Promise<ApiSuccessResponse<StartlistEntry[]>> => {
+        const response = await api.patch<ApiSuccessResponse<StartlistEntry[]>>(
+            '/scoring/startlist/reorder/',
             data,
         );
         return response.data;

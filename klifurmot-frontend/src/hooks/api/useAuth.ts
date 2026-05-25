@@ -68,7 +68,7 @@ export function useAuth() {
             setTokens(data.access);
             queryClient.invalidateQueries({ queryKey: ['me'] });
             notify.success(message);
-            navigate('/login');
+            navigate('/profile');
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));
