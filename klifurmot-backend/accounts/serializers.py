@@ -107,8 +107,8 @@ class UpdateProfileSerializer(serializers.Serializer):
 
 def validate_profile_picture(uploaded_file):
     """Validate profile picture file - called from view before service"""
-    if uploaded_file.size > 5 * 1024 * 1024:
-        raise serializers.ValidationError("Image size cannot exceed 5MB")
+    if uploaded_file.size > 50 * 1024 * 1024:
+        raise serializers.ValidationError("Image size cannot exceed 50MB")
 
     if not uploaded_file.content_type.startswith("image/"):
         raise serializers.ValidationError("Only image files are allowed")
