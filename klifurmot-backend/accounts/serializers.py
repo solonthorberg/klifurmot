@@ -66,10 +66,10 @@ class UpdateProfileSerializer(serializers.Serializer):
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     nationality = serializers.CharField(min_length=2, max_length=2, required=False)
     height_cm = serializers.IntegerField(
-        min_value=50, max_value=300, required=False, allow_null=True
+        min_value=0, max_value=300, required=False, allow_null=True
     )
     wingspan_cm = serializers.IntegerField(
-        min_value=50, max_value=400, required=False, allow_null=True
+        min_value=0, max_value=300, required=False, allow_null=True
     )
 
     def validate_full_name(self, value):
@@ -133,8 +133,8 @@ class RegisterSerializer(serializers.Serializer):
     """Serializer for registering new account"""
 
     # Required
-    full_name = serializers.CharField(min_length=3, max_length=100, required=True)
-    username = serializers.CharField(min_length=3, max_length=150, required=True)
+    full_name = serializers.CharField(min_length=3, max_length=50, required=True)
+    username = serializers.CharField(min_length=3, max_length=15, required=True)
     email = serializers.EmailField(max_length=254, required=True)
     password = serializers.CharField(
         min_length=8, max_length=128, write_only=True, required=True
@@ -148,10 +148,10 @@ class RegisterSerializer(serializers.Serializer):
 
     # Optional
     height_cm = serializers.IntegerField(
-        min_value=50, max_value=300, required=False, allow_null=True
+        min_value=0, max_value=300, required=False, allow_null=True
     )
     wingspan_cm = serializers.IntegerField(
-        min_value=50, max_value=400, required=False, allow_null=True
+        min_value=0, max_value=300, required=False, allow_null=True
     )
 
     def validate_full_name(self, value):

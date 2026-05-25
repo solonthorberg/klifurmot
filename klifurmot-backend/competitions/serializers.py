@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 
 from . import models
 
@@ -24,11 +25,9 @@ def validate_image(uploaded_file):
 class CreateCompetitionSerializer(serializers.ModelSerializer):
     """Serializer for creating competitions"""
 
-    title = serializers.CharField(max_length=200, min_length=3)
-    description = serializers.CharField(
-        max_length=5000, required=False, allow_blank=True
-    )
-    location = serializers.CharField(max_length=250, required=False, allow_blank=True)
+    title = serializers.CharField(max_length=30, min_length=2)
+    description = serializers.CharField(max_length=300, min_length=2)
+    location = serializers.CharField(max_length=30, min_length=2)
     image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -49,6 +48,11 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
         validate_image(value)
         return value
 
+    def validate_start_date(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Start date cannot be in the past")
+        return value
+
     def validate(self, data):
         if data.get("end_date") and data.get("start_date"):
             if data["end_date"] <= data["start_date"]:
@@ -57,13 +61,11 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
 
 
 class UpdateCompetitionSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=200, min_length=3, required=False)
-    description = serializers.CharField(
-        max_length=5000, required=False, allow_blank=True
-    )
+    title = serializers.CharField(max_length=30, min_length=2, required=False)
+    description = serializers.CharField(max_length=300, min_length=2, required=False)
     start_date = serializers.DateTimeField(required=False)
     end_date = serializers.DateTimeField(required=False)
-    location = serializers.CharField(max_length=250, required=False, allow_blank=True)
+    location = serializers.CharField(max_length=30, min_length=2, required=False)
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)
@@ -140,8 +142,10 @@ class RoundSerializer(serializers.ModelSerializer):
 class CreateRoundSerializer(serializers.Serializer):
     round_group = serializers.IntegerField()
     round_order = serializers.IntegerField(min_value=1)
-    climbers_advance = serializers.IntegerField(min_value=0, default=0)
-    boulder_count = serializers.IntegerField(min_value=0, default=0)
+    climbers_advance = serializers.IntegerField(
+        min_value=0, max_value=200, default=0, allow_null=True
+    )
+    boulder_count = serializers.IntegerField(min_value=1, max_value=100, default=1)
     start_date = serializers.DateTimeField(required=False, allow_null=True)
     end_date = serializers.DateTimeField(required=False, allow_null=True)
     is_self_scoring = serializers.BooleanField(default=False)
@@ -156,8 +160,10 @@ class CreateRoundSerializer(serializers.Serializer):
 class UpdateRoundSerializer(serializers.Serializer):
     round_group = serializers.IntegerField(required=False)
     round_order = serializers.IntegerField(min_value=1, required=False)
-    climbers_advance = serializers.IntegerField(min_value=0, required=False)
-    boulder_count = serializers.IntegerField(min_value=0, required=False)
+    climbers_advance = serializers.IntegerField(
+        min_value=0, max_value=200, required=False, allow_null=True
+    )
+    boulder_count = serializers.IntegerField(min_value=1, max_value=100, required=False)
     start_date = serializers.DateTimeField(required=False, allow_null=True)
     end_date = serializers.DateTimeField(required=False, allow_null=True)
     is_self_scoring = serializers.BooleanField(required=False)

@@ -1,5 +1,6 @@
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
+from accounts.authorization import require_competition_admin
 from accounts.models import UserAccount
 from django.db import transaction
 from .models import Climber, CompetitionRegistration
@@ -39,7 +40,7 @@ def list_public_athletes(search: Optional[str] = None) -> list[dict[str, Any]]:
 
         result.append(
             {
-                "id": climber.id,
+                "id": climber.pk,
                 "user_account_id": user_account.id,
                 "name": user_account.full_name or "Name not provided",
                 "age": age,
@@ -95,7 +96,7 @@ def get_athlete_detail(athlete_id: int) -> dict[str, Any]:
     wins = sum(_calculate_wins(reg.competition, climber) for reg in registrations)
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "user_account_id": user_account.id,
         "full_name": user_account.full_name or "Name not provided",
         "age": age,
@@ -190,7 +191,7 @@ def list_all_climbers(search: Optional[str] = None) -> list[dict[str, Any]]:
         if climber.is_simple_athlete:
             result.append(
                 {
-                    "id": climber.id,
+                    "id": climber.pk,
                     "is_simple_athlete": True,
                     "name": climber.simple_name,
                     "age": climber.simple_age,
@@ -213,7 +214,7 @@ def list_all_climbers(search: Optional[str] = None) -> list[dict[str, Any]]:
 
             result.append(
                 {
-                    "id": climber.id,
+                    "id": climber.pk,
                     "is_simple_athlete": False,
                     "user_account_id": user_account.id,
                     "name": user_account.full_name or "Name not provided",
@@ -240,7 +241,7 @@ def create_climber(user, **data: Any) -> dict[str, Any]:
     )
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "is_simple_athlete": True,
         "name": climber.simple_name,
         "age": climber.simple_age,
@@ -258,7 +259,7 @@ def get_climber(climber_id: int) -> dict[str, Any]:
 
     if climber.is_simple_athlete:
         return {
-            "id": climber.id,
+            "id": climber.pk,
             "is_simple_athlete": True,
             "name": climber.simple_name,
             "age": climber.simple_age,
@@ -280,7 +281,7 @@ def get_climber(climber_id: int) -> dict[str, Any]:
     )
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "is_simple_athlete": False,
         "user_account_id": user_account.id,
         "name": user_account.full_name or "Name not provided",
@@ -317,7 +318,7 @@ def update_climber(climber_id: int, user, **update_data: Any) -> dict[str, Any]:
     climber.save()
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "is_simple_athlete": True,
         "name": climber.simple_name,
         "age": climber.simple_age,
@@ -377,7 +378,7 @@ def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
     existing = Climber.objects.filter(user_account=user_account, deleted=False).exists()
 
     if existing:
-        raise ValueError(f"User account already has a climber linked")
+        raise ValueError("User account already has a climber linked")
 
     if user_account.gender and climber.simple_gender:
         if climber.simple_gender != user_account.gender:
@@ -386,7 +387,7 @@ def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
             )
 
     with transaction.atomic():
-        climber.user_account = user_account
+        cast(Any, climber).user_account = user_account
         climber.is_simple_athlete = False
         climber.simple_name = None
         climber.simple_age = None
@@ -395,9 +396,9 @@ def link_climber(user, climber_id: int, user_account_id: int) -> dict[str, Any]:
         climber.save()
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "is_simple_athlete": False,
-        "user_account_id": user_account.id,
+        "user_account_id": user_account.pk,
         "name": user_account.full_name,
         "age": calculate_age(user_account.date_of_birth)
         if user_account.date_of_birth
@@ -430,8 +431,8 @@ def list_registrations(competition_id: Optional[int] = None) -> list[dict[str, A
 
         result.append(
             {
-                "id": reg.id,
-                "climber_id": climber.id,
+                "id": reg.pk,
+                "climber_id": climber.pk,
                 "climber_name": climber_name,
                 "competition_id": reg.competition.id,
                 "competition_title": reg.competition.title,
@@ -465,7 +466,7 @@ def create_registration(user, **data: Any) -> dict[str, Any]:
             f"Competition category with id {data['competition_category']} not found"
         )
 
-    if category.competition_id != competition.id:
+    if category.competition.pk != competition.pk:
         raise ValueError("Category does not belong to this competition")
 
     existing = CompetitionRegistration.objects.filter(
@@ -497,25 +498,26 @@ def create_registration(user, **data: Any) -> dict[str, Any]:
         climber_name = climber.user_account.full_name if climber.user_account else None
 
     return {
-        "id": registration.id,
-        "climber_id": climber.id,
+        "id": registration.pk,
+        "climber_id": climber.pk,
         "climber_name": climber_name,
-        "competition_id": competition.id,
+        "competition_id": competition.pk,
         "competition_title": competition.title,
         "category": f"{category.category_group.name} {category.gender}",
     }
 
 
-def delete_registration(registration_id: int) -> None:
+def delete_registration(registration_id: int, user) -> None:
     from scoring.models import Climb, ClimberRoundScore, RoundResult
 
     try:
-        registration = CompetitionRegistration.objects.get(
-            id=registration_id,
-            deleted=False,
-        )
+        registration = CompetitionRegistration.objects.select_related(
+            "competition"
+        ).get(id=registration_id, deleted=False)
     except CompetitionRegistration.DoesNotExist:
         raise ValueError(f"Registration with id {registration_id} not found")
+
+    require_competition_admin(user, registration.competition.pk)
 
     with transaction.atomic():
         Climb.objects.filter(
@@ -565,9 +567,9 @@ def create_climber_for_user(admin_user, user_account_id: int) -> dict[str, Any]:
     )
 
     return {
-        "id": climber.id,
+        "id": climber.pk,
         "is_simple_athlete": False,
-        "user_account_id": user_account.id,
+        "user_account_id": user_account.pk,
         "name": user_account.full_name,
         "age": age,
         "gender": user_account.gender,

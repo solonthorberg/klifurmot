@@ -141,7 +141,7 @@ export default function JudgeDashboardPage() {
             {!selectedRound && (
                 <>
                     <p className="text-center">
-                        {`Velkomin/n ${userAccount?.user.username}, vinsamlegast veldu umferð`}
+                        {`Velkomin/n ${userAccount?.user.username}, vinsamlega veldu umferð`}
                     </p>
                     <RoundSelectionView
                         phases={phases}

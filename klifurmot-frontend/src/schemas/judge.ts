@@ -7,7 +7,7 @@ export const CreateJudgeLinkSchema = z.object({
 export type CreateJudgeLinkFormData = z.infer<typeof CreateJudgeLinkSchema>;
 
 export const SendInvitationSchema = z.object({
-    email: z.email('Vinsamlegast sláðu inn gilt netfang'),
+    email: z.email('Vinsamlega sláðu inn gilt netfang'),
     name: z.string().optional(),
 });
 

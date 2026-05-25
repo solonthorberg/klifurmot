@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import JudgeLink
 from accounts.models import UserAccount, CompetitionRole
 from competitions.models import Competition
+from accounts.authorization import require_competition_admin
 
 logger = logging.getLogger(__name__)
 
@@ -19,21 +20,14 @@ def send_judge_invitation(
 ) -> Dict[str, Any]:
     email = email.lower().strip()
     name = (name or "").strip()
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
+
     try:
         competition = Competition.objects.get(id=competition_id)
     except Competition.DoesNotExist:
         raise ValueError("Competition not found")
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to manage judges for this competition"
-            )
+
+    require_competition_admin(user, competition.pk)
+
     expires_at = competition.end_date
     with transaction.atomic():
         try:
@@ -157,23 +151,12 @@ def claim_invitation(token: str, user: Optional[User] = None) -> Dict[str, Any]:
 
 
 def get_competition_invitations(competition_id: int, user: User) -> Dict[str, Any]:
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
-
     try:
         competition = Competition.objects.get(id=competition_id)
     except Competition.DoesNotExist:
         raise ValueError("Competition not found")
 
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to view invitations for this competition"
-            )
+    require_competition_admin(user, competition.pk)
 
     invitation_links = (
         JudgeLink.objects.filter(competition=competition, type="invitation")
@@ -187,7 +170,7 @@ def get_competition_invitations(competition_id: int, user: User) -> Dict[str, An
         is_claimed = bool(link.claimed_at)
         invitations.append(
             {
-                "id": link.id,
+                "id": link.pk,
                 "type": "invitation",
                 "invited_email": link.invited_email,
                 "invited_name": link.invited_name,
@@ -205,25 +188,18 @@ def get_competition_invitations(competition_id: int, user: User) -> Dict[str, An
 
 
 def create_judge_link(competition_id: int, user: User, user_id: int) -> Dict[str, Any]:
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
     try:
         competition = Competition.objects.get(id=competition_id)
     except Competition.DoesNotExist:
         raise ValueError("Competition not found")
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to manage judges for this competition"
-            )
+
+    require_competition_admin(user, competition.pk)
+
     try:
         target_user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         raise ValueError("User not found")
+
     expires_at = competition.end_date
     with transaction.atomic():
         judge_link, created = JudgeLink.objects.get_or_create(
@@ -267,23 +243,12 @@ def validate_judge_link(token: str, user: User) -> Dict[str, Any]:
 
 
 def get_competition_judge_links(competition_id: int, user: User) -> Dict[str, Any]:
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
-
     try:
         competition = Competition.objects.get(id=competition_id)
     except Competition.DoesNotExist:
         raise ValueError("Competition not found")
 
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to view judges for this competition"
-            )
+    require_competition_admin(user, competition.pk)
 
     judge_links = (
         JudgeLink.objects.filter(competition=competition, type="link")
@@ -293,10 +258,11 @@ def get_competition_judge_links(competition_id: int, user: User) -> Dict[str, An
 
     links = []
     for link in judge_links:
+        assert link.user is not None
         is_expired = link.expires_at < timezone.now()
         links.append(
             {
-                "id": link.id,
+                "id": link.pk,
                 "type": "link",
                 "user_id": link.user.id,
                 "user_email": link.user.email,
@@ -314,40 +280,7 @@ def get_competition_judge_links(competition_id: int, user: User) -> Dict[str, An
     return {"links": links}
 
 
-def update_judge_link(
-    link_id: int, user: User, expires_at: timezone.datetime
-) -> Dict[str, Any]:
-    """Update a judge link expiration date"""
-
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
-
-    try:
-        judge_link = JudgeLink.objects.select_related("competition").get(id=link_id)
-    except JudgeLink.DoesNotExist:
-        raise JudgeLink.DoesNotExist("Judge link not found")
-
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=judge_link.competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to manage this judge link"
-            )
-
-    judge_link.expires_at = expires_at
-    judge_link.save()
-
-    return {"judge_link": judge_link}
-
-
 def delete_judge_link(link_id: int, user: User) -> None:
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
-
     try:
         judge_link = JudgeLink.objects.select_related(
             "competition", "user__profile"
@@ -355,14 +288,7 @@ def delete_judge_link(link_id: int, user: User) -> None:
     except JudgeLink.DoesNotExist:
         raise ValueError("Judge link not found")
 
-    if not user_account.is_admin:
-        is_competition_admin = CompetitionRole.objects.filter(
-            user=user_account, competition=judge_link.competition, role="admin"
-        ).exists()
-        if not is_competition_admin:
-            raise PermissionError(
-                "You do not have permission to manage this judge link"
-            )
+    require_competition_admin(user, judge_link.competition.pk)
 
     with transaction.atomic():
         if judge_link.user:
@@ -377,15 +303,8 @@ def delete_judge_link(link_id: int, user: User) -> None:
         judge_link.delete()
 
 
-def get_potential_judges(user: User) -> Dict[str, Any]:
+def get_potential_judges() -> Dict[str, Any]:
     """Get list of users who can be assigned as judges for a competition"""
-
-    user_account = getattr(user, "profile", None)
-    if not user_account:
-        raise PermissionError("No user profile found")
-
-    if not user_account.is_admin:
-        raise PermissionError("Only admins can view potential judges")
 
     users = (
         User.objects.select_related("profile")
@@ -395,11 +314,13 @@ def get_potential_judges(user: User) -> Dict[str, Any]:
 
     judges_list = []
     for u in users:
-        if hasattr(u, "profile"):
+        profile = getattr(u, "profile", None)
+
+        if profile:
             judges_list.append(
                 {
-                    "id": u.id,
-                    "full_name": u.profile.full_name,
+                    "id": u.pk,
+                    "full_name": profile.full_name,
                     "email": u.email,
                     "username": u.username,
                 }

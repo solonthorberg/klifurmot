@@ -12,7 +12,7 @@ export interface Competition {
     location: string | null;
     image: string | null;
     visible: boolean;
-    status: 'not_started' | 'in_progress' | 'finished';
+    status: 'not_started' | 'ongoing' | 'finished';
     created_at: string;
     created_by: string;
     last_modified_at: string;
@@ -163,13 +163,6 @@ export interface RoundResults {
 }
 
 export interface CategoryResults {
-    category: {
-        id: number;
-        gender: 'KK' | 'KVK';
-        group: {
-            id: number;
-            name: string;
-        };
-    };
+    category: string;
     rounds: RoundResults[];
 }

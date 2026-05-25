@@ -96,7 +96,7 @@ class CompetitionCategory(models.Model):
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.competition.title} - {self.category_group.name} {self.get_gender_display()}"
+        return f"{self.competition.title} - {self.category_group.name} ({self.gender})"
 
 
 class RoundGroup(models.Model):
@@ -115,7 +115,6 @@ class CompetitionRound(models.Model):
     round_order = models.IntegerField()
     climbers_advance = models.IntegerField(default=0)
     boulder_count = models.IntegerField(default=0)
-    completed = models.BooleanField(default=False)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
     completed = models.BooleanField(default=False)

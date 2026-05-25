@@ -74,14 +74,14 @@ function AddAthleteModal({ onClose }: { onClose: () => void }) {
                     onClick={() => setTab('simple')}
                     className="flex-1"
                 >
-                    Án aðgang
+                    Án aðgangs
                 </TabButton>
                 <TabButton
                     active={tab === 'account'}
                     onClick={() => setTab('account')}
                     className="flex-1"
                 >
-                    Með aðgang
+                    Með aðgangi
                 </TabButton>
             </div>
 
@@ -297,8 +297,8 @@ export default function AthletesAdminTab() {
     ];
 
     const simpleOptions = [
-        { value: 'true', label: 'Án aðgang' },
-        { value: 'false', label: 'Með aðgang' },
+        { value: 'true', label: 'Án aðgangs' },
+        { value: 'false', label: 'Með aðgangi' },
     ];
 
     return (

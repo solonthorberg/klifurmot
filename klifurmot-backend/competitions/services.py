@@ -1,24 +1,24 @@
-from datetime import datetime
 import logging
-from typing import Any, Dict, Optional
-from django.contrib.auth.models import User
-from django.db import transaction
-from django.core.files.uploadedfile import UploadedFile
-from django.db.models import Count, Q
+from datetime import datetime
+from typing import Any, Dict, Optional, cast
 
+from accounts.authorization import require_competition_admin
+from athletes.models import CompetitionRegistration
 from athletes.utils import calculate_age
+from django.contrib.auth.models import User
+from django.core.files.uploadedfile import UploadedFile
+from django.db import transaction
+from django.db.models import Count, Q
+from scoring.models import Climb, ClimberRoundScore, RoundResult
+
 from competitions.models import (
+    Boulder,
+    CategoryGroup,
     Competition,
     CompetitionCategory,
     CompetitionRound,
     RoundGroup,
-    CategoryGroup,
-    Boulder,
 )
-
-from athletes.models import CompetitionRegistration
-from scoring.models import Climb, RoundResult, ClimberRoundScore
-
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def update_competition(
             if remove_image:
                 if competition.image:
                     competition.image.delete(save=False)
-                competition.image = None
+                setattr(competition, "image", None)
             elif image is not None:
                 competition.image = image
 
@@ -170,13 +170,15 @@ def create_round(
     round_group: int,
     **round_data: Any,
 ) -> CompetitionRound:
+    require_competition_admin(user, competition_id)
+
     try:
         with transaction.atomic():
             category = CompetitionCategory.objects.select_related("competition").get(
                 id=competition_category, deleted=False
             )
 
-            if category.competition_id != competition_id:
+            if category.competition.pk != competition_id:
                 raise ValueError("Category does not belong to this competition")
 
             if category.competition.status != "not_started":
@@ -242,9 +244,11 @@ def update_round(
 
             new_boulder_count = update_data.pop("boulder_count", None)
             if new_boulder_count is not None:
-                current_boulder_count = competition_round.boulder_set.filter(
-                    deleted=False
-                ).count()
+                current_boulder_count = (
+                    cast(Any, competition_round)
+                    .boulder_set.filter(deleted=False)
+                    .count()
+                )
 
                 if new_boulder_count > current_boulder_count:
                     boulders = [
@@ -291,44 +295,49 @@ def update_round(
         raise ValueError(f"Round group with id {round_group_id} not found")
 
 
-def delete_round(round_id: int) -> None:
+def delete_round(round_id: int, user) -> None:
     try:
         competition_round = CompetitionRound.objects.select_related(
             "competition_category__competition"
         ).get(id=round_id, deleted=False)
-
-        competition = competition_round.competition_category.competition
-
-        if competition.status != "not_started":
-            raise PermissionError("Cannot delete round after competition has started")
-
-        with transaction.atomic():
-            Climb.objects.filter(
-                boulder__round=competition_round,
-                deleted=False,
-            ).update(deleted=True)
-
-            ClimberRoundScore.objects.filter(
-                round=competition_round,
-                deleted=False,
-            ).update(deleted=True)
-
-            RoundResult.objects.filter(
-                round=competition_round,
-                deleted=False,
-                climber__deleted=False,
-            ).update(deleted=True)
-
-            Boulder.objects.filter(
-                round=competition_round,
-                deleted=False,
-            ).update(deleted=True)
-
-            competition_round.deleted = True
-            competition_round.save()
-
     except CompetitionRound.DoesNotExist:
         raise ValueError(f"Round with id {round_id} not found")
+
+    competition = competition_round.competition_category.competition
+
+    require_competition_admin(
+        user,
+        competition.id,
+        message="You do not have permission to delete rounds in this competition",
+    )
+
+    if competition.status != "not_started":
+        raise PermissionError("Cannot delete round after competition has started")
+
+    with transaction.atomic():
+        Climb.objects.filter(
+            boulder__round=competition_round,
+            deleted=False,
+        ).update(deleted=True)
+
+        ClimberRoundScore.objects.filter(
+            round=competition_round,
+            deleted=False,
+        ).update(deleted=True)
+
+        RoundResult.objects.filter(
+            round=competition_round,
+            deleted=False,
+            climber__deleted=False,
+        ).update(deleted=True)
+
+        Boulder.objects.filter(
+            round=competition_round,
+            deleted=False,
+        ).update(deleted=True)
+
+        competition_round.deleted = True
+        competition_round.save()
 
 
 def update_round_status(
@@ -337,17 +346,42 @@ def update_round_status(
     completed: bool,
 ) -> CompetitionRound:
     try:
-        with transaction.atomic():
-            competition_round = CompetitionRound.objects.get(id=round_id, deleted=False)
-
-            competition_round.completed = completed
-            competition_round.last_modified_by = user
-            competition_round.save()
-
-            return competition_round
-
+        competition_round = CompetitionRound.objects.select_related(
+            "competition_category"
+        ).get(id=round_id, deleted=False)
     except CompetitionRound.DoesNotExist:
         raise ValueError(f"Round with id {round_id} not found")
+
+    require_competition_admin(
+        user, competition_round.competition_category.competition_id
+    )
+
+    is_reopening = competition_round.completed and not completed
+    if is_reopening:
+        next_round = (
+            CompetitionRound.objects.filter(
+                competition_category=competition_round.competition_category,
+                round_order__gt=competition_round.round_order,
+                deleted=False,
+            )
+            .order_by("round_order")
+            .first()
+        )
+
+        if (
+            next_round
+            and RoundResult.objects.filter(round=next_round, deleted=False).exists()
+        ):
+            raise ValueError(
+                "Cannot re-open this round: climbers have already been advanced to the next round. Remove them from the next round's start list first."
+            )
+
+    with transaction.atomic():
+        competition_round.completed = completed
+        competition_round.last_modified_by = user
+        competition_round.save()
+
+        return competition_round
 
 
 def list_rounds(competition_id: int) -> list[CompetitionRound]:
@@ -427,6 +461,8 @@ def update_category(
     except CompetitionCategory.DoesNotExist:
         raise ValueError(f"Competition category with id {category_id} not found")
 
+    require_competition_admin(user, category.competition.pk)
+
     if category.competition.status != "not_started":
         raise PermissionError("Cannot update category after competition has started")
 
@@ -465,53 +501,59 @@ def update_category(
     return category
 
 
-def delete_category(category_id: int) -> None:
+def delete_category(category_id: int, user) -> None:
     try:
         category = CompetitionCategory.objects.select_related("competition").get(
             id=category_id, deleted=False
         )
-
-        if category.competition.status != "not_started":
-            raise PermissionError(
-                "Cannot delete category after competition has started"
-            )
-
-        with transaction.atomic():
-            Climb.objects.filter(
-                boulder__round__competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            ClimberRoundScore.objects.filter(
-                round__competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            RoundResult.objects.filter(
-                round__competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            Boulder.objects.filter(
-                round__competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            CompetitionRound.objects.filter(
-                competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            CompetitionRegistration.objects.filter(
-                competition_category=category,
-                deleted=False,
-            ).update(deleted=True)
-
-            category.deleted = True
-            category.save()
-
     except CompetitionCategory.DoesNotExist:
         raise ValueError(f"Competition category with id {category_id} not found")
+
+    require_competition_admin(
+        user,
+        category.competition.pk,
+        message="You do not have permission to delete categories in this competition",
+    )
+
+    if category.competition.status != "not_started":
+        raise PermissionError("Cannot delete category after competition has started")
+
+    with transaction.atomic():
+        Climb.objects.filter(
+            boulder__round__competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        ClimberRoundScore.objects.filter(
+            round__competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        RoundResult.objects.filter(
+            round__competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        Boulder.objects.filter(
+            round__competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        CompetitionRound.objects.filter(
+            competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        CompetitionRegistration.objects.filter(
+            competition_category=category,
+            deleted=False,
+        ).update(deleted=True)
+
+        category.deleted = True
+        category.save()
+
+    category.deleted = True
+    category.save()
 
 
 def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
@@ -549,7 +591,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
 
         if climber.is_simple_athlete:
             athlete_data = {
-                "id": climber.id,
+                "id": climber.pk,
                 "full_name": climber.simple_name,
                 "age": climber.simple_age,
                 "category_name": category.category_group.name,
@@ -557,7 +599,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
         else:
             user_account = climber.user_account
             athlete_data = {
-                "id": climber.id,
+                "id": climber.pk,
                 "full_name": user_account.full_name if user_account else None,
                 "age": calculate_age(user_account.date_of_birth)
                 if user_account and user_account.date_of_birth
@@ -615,9 +657,13 @@ def get_competition_boulders(competition_id: int) -> list[Dict[str, Any]]:
         category_label = f"{category.category_group.name} {category.gender}"
         rounds_data = []
 
-        for competition_round in category.competitionround_set.filter(
-            deleted=False
-        ).order_by("round_order"):
+        category_rounds = (
+            cast(Any, category)
+            .competitionround_set.filter(deleted=False)
+            .order_by("round_order")
+        )
+
+        for competition_round in category_rounds:
             boulders_data = []
 
             for boulder in competition_round.boulder_set.filter(deleted=False).order_by(
@@ -669,9 +715,11 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
         category_label = f"{category.category_group.name} {category.gender}"
         rounds_data = []
 
-        for competition_round in category.competitionround_set.filter(
-            deleted=False
-        ).order_by("round_order"):
+        for competition_round in (
+            cast(Any, category)
+            .competitionround_set.filter(deleted=False)
+            .order_by("round_order")
+        ):
             round_results = (
                 RoundResult.objects.filter(
                     round=competition_round,
@@ -719,6 +767,8 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
 
 
 def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
+    from scoring.services import _rank_climbers_in_round
+
     if not Competition.objects.filter(id=competition_id, deleted=False).exists():
         raise ValueError(f"Competition with id {competition_id} not found")
 
@@ -734,31 +784,32 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
     result = []
 
     for category in categories:
+        category_label = f"{category.category_group.name} {category.gender}"
         rounds_data = []
 
-        for round_obj in category.competitionround_set.filter(deleted=False).order_by(
-            "round_order"
+        for round_obj in (
+            cast(Any, category)
+            .competitionround_set.filter(deleted=False)
+            .order_by("round_order")
         ):
-            boulders = Boulder.objects.filter(
-                round=round_obj,
-                deleted=False,
-            ).order_by("boulder_number")
-
-            round_results = RoundResult.objects.filter(
-                round=round_obj,
-                deleted=False,
-            ).select_related("climber__user_account")
-
-            climber_ids = [r.climber.id for r in round_results]
-
-            scores_map = {
-                s.climber.id: s
-                for s in ClimberRoundScore.objects.filter(
-                    round=round_obj,
-                    climber_id__in=climber_ids,
-                    deleted=False,
+            boulders = list(
+                Boulder.objects.filter(round=round_obj, deleted=False).order_by(
+                    "boulder_number"
                 )
-            }
+            )
+
+            ranked = _rank_climbers_in_round(round_obj)
+
+            if not ranked:
+                rounds_data.append(
+                    {
+                        "round_name": round_obj.round_group.name,
+                        "results": [],
+                    }
+                )
+                continue
+
+            climber_ids = [cid for cid, _, _ in ranked]
 
             climbs = (
                 Climb.objects.filter(
@@ -772,51 +823,20 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
             climbs_by_climber: Dict[int, Dict[int, Climb]] = {}
             for climb in climbs:
-                climbs_by_climber.setdefault(climb.climber_id, {})[climb.boulder_id] = (
+                climbs_by_climber.setdefault(climb.climber.pk, {})[climb.boulder.pk] = (
                     climb
                 )
 
-            # Build and sort climber entries
-            climber_entries = []
-            for rr in round_results:
-                score = scores_map.get(rr.climber.id)
-                if not score:
-                    continue
-                climber_entries.append(
-                    {
-                        "climber_id": rr.climber.id,
-                        "rr": rr,
-                        "score": score,
-                    }
-                )
-
-            def sort_key(entry):
-                score = entry["score"]
-                return (
-                    -float(round(score.total_score, 1)),  # descending score
-                    score.attempts_tops,  # tiebreaker B: fewer attempts on tops
-                    score.attempts_zones,  # tiebreaker C: fewer attempts on zones
-                )
-
-            climber_entries.sort(key=sort_key)
-
-            # Assign ranks, shared rank if all tiebreakers are equal
             formatted_results = []
-            rank = 1
-            for i, entry in enumerate(climber_entries):
-                if i > 0 and sort_key(entry) != sort_key(climber_entries[i - 1]):
-                    rank = i + 1
+            for climber_id, score, rank in ranked:
+                climber = score.climber
 
-                rr = entry["rr"]
-                score = entry["score"]
-                climber_id = entry["climber_id"]
-
-                if rr.climber.is_simple_athlete:
-                    full_name = rr.climber.simple_name or "Name unknown"
+                if climber.is_simple_athlete:
+                    full_name = climber.simple_name or "Name unknown"
                 else:
                     full_name = (
-                        rr.climber.user_account.full_name
-                        if rr.climber.user_account
+                        climber.user_account.full_name
+                        if climber.user_account
                         else "Name unknown"
                     )
 
@@ -824,7 +844,7 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                 boulder_scores = []
 
                 for boulder in boulders:
-                    climb = climber_climbs.get(boulder.id)
+                    climb = climber_climbs.get(boulder.pk)
                     if climb:
                         boulder_scores.append(
                             {
@@ -870,14 +890,7 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
         result.append(
             {
-                "category": {
-                    "id": category.id,
-                    "gender": category.gender,
-                    "group": {
-                        "id": category.category_group.id,
-                        "name": category.category_group.name,
-                    },
-                },
+                "category": category_label,
                 "rounds": rounds_data,
             }
         )
@@ -906,11 +919,11 @@ def get_boulder(boulder_id: int) -> dict[str, Any]:
         raise ValueError(f"Boulder with id {boulder_id} not found")
 
     return {
-        "id": boulder.id,
+        "id": boulder.pk,
         "boulder_number": boulder.boulder_number,
         "section_style": boulder.section_style,
         "image": boulder.image.url if boulder.image else None,
-        "round_id": boulder.round_id,
+        "round_id": boulder.round.pk,
     }
 
 
@@ -936,7 +949,7 @@ def update_boulder(
         if image == "":
             if boulder.image:
                 boulder.image.delete(save=False)
-            boulder.image = None
+            setattr(boulder, "image", None)
         else:
             if boulder.image:
                 boulder.image.delete(save=False)
@@ -950,9 +963,9 @@ def update_boulder(
     boulder.save()
 
     return {
-        "id": boulder.id,
+        "id": boulder.pk,
         "boulder_number": boulder.boulder_number,
         "section_style": boulder.section_style,
         "image": boulder.image.url if boulder.image else None,
-        "round_id": boulder.round_id,
+        "round_id": boulder.round.pk,
     }

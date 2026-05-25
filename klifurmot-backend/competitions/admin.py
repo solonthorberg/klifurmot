@@ -10,7 +10,7 @@ from .models import (
     Boulder,
     JudgeBoulderAssignment,
 )
-from scoring.utils import AutoAdvanceClimbers
+from scoring import services as scoring_services
 
 
 admin.site.register(Competition)
@@ -23,20 +23,28 @@ admin.site.register(JudgeBoulderAssignment)
 
 def advance_top_climbers(_modeladmin, request, queryset):
     for round_obj in queryset:
-        result = AutoAdvanceClimbers(round_obj)
-        if result.get("status") == "ok":
+        try:
+            result = scoring_services.advance_climbers(
+                round_id=round_obj.id,
+                user=request.user,
+            )
             messages.success(
                 request,
-                f"{result['advanced']} climbers advanced from round {round_obj}",
+                f"{result['advanced']} climbers advanced from round {round_obj} "
+                f"to {result['next_round_name']}",
             )
-        else:
+        except (PermissionError, ValueError) as e:
             messages.error(
                 request,
-                f"Failed to advance climbers from round {round_obj}: {result.get('message', 'Unknown error')}",
+                f"Failed to advance climbers from round {round_obj}: {str(e)}",
+            )
+        except Exception as e:
+            messages.error(
+                request,
+                f"Unexpected error advancing climbers from round {round_obj}: {str(e)}",
             )
 
 
 @admin.register(CompetitionRound)
 class CompetitionRoundAdmin(admin.ModelAdmin):
     actions = [advance_top_climbers]
-

@@ -28,8 +28,8 @@ export default function ResetPasswordPage() {
     const { mutate, isPending } = useMutation({
         mutationFn: (data: ResetPasswordFormData) =>
             authApi.resetPassword({ token, ...data }),
-        onSuccess: () => {
-            notify.success('Lykilorð hefur verið endurstillt');
+        onSuccess: (data) => {
+            notify.success(data.message);
             navigate('/login');
         },
         onError: (error) => {

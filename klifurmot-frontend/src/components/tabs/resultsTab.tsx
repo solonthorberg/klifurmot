@@ -41,8 +41,8 @@ export default function ResultsTab({
     const categories = data?.data ?? [];
 
     const categoryOptions = categories.map((c) => ({
-        value: c.category.id.toString(),
-        label: `${c.category.group.name} ${c.category.gender}`,
+        value: c.category,
+        label: c.category,
     }));
 
     const roundOptions = [
@@ -52,9 +52,7 @@ export default function ResultsTab({
     ].map((name) => ({ value: name, label: name }));
 
     const filteredCategories = selectedCategory
-        ? categories.filter(
-              (c) => c.category.id.toString() === selectedCategory,
-          )
+        ? categories.filter((c) => c.category === selectedCategory)
         : categories;
 
     return (
@@ -81,17 +79,17 @@ export default function ResultsTab({
                         Engar niðurstöður skráðar...
                     </p>
                 ) : (
-                    filteredCategories.map((c) => {
+                    filteredCategories.map((c, index) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
                                   (r) => r.round_name === selectedRound,
                               )
                             : c.rounds;
                         if (rounds.length === 0) return null;
-                        const label = `${c.category.group.name} ${c.category.gender}`;
+                        const label = `${c.category}`;
                         return (
                             <div
-                                key={c.category.id}
+                                key={index}
                                 className="flex flex-col overflow-hidden"
                             >
                                 {rounds.map((round) => (

@@ -1,6 +1,6 @@
 from typing import Dict, cast, Any
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 
 from accounts import permissions
@@ -42,7 +42,7 @@ def public_athlete_detail(_, athlete_id):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([permissions.IsAdmin])
 def athletes(request):
     if request.method == "GET":
         search = request.query_params.get("search")
@@ -110,7 +110,7 @@ def athletes(request):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([permissions.IsAdmin])
 def athlete_detail(request, climber_id):
     if request.method == "GET":
         try:
@@ -237,13 +237,6 @@ def registrations(request):
         )
 
     if request.method == "POST":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.CreateRegistrationSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -280,13 +273,22 @@ def registrations(request):
 
 
 @api_view(["DELETE"])
-@permission_classes([permissions.IsCompetitionAdmin])
-def registration_detail(_, registration_id):
+@permission_classes([IsAuthenticated])
+def registration_detail(request, registration_id):
     try:
-        services.delete_registration(registration_id=registration_id)
-
+        services.delete_registration(
+            registration_id=registration_id,
+            user=request.user,
+        )
         return utils.success_response(
             message="Registration deleted successfully",
+        )
+
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
         )
 
     except ValueError as e:

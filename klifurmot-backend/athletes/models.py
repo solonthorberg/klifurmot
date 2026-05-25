@@ -33,7 +33,7 @@ class Climber(models.Model):
             return self.simple_name
         elif self.user_account and self.user_account.full_name:
             return self.user_account.full_name
-        return f"Climber {self.id}"
+        return f"Climber {self.pk}"
 
     def get_full_name(self):
         if self.is_simple_athlete:
