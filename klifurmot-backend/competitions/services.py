@@ -4,7 +4,11 @@ from typing import Any, Dict, Optional, cast
 
 from accounts.authorization import require_competition_admin
 from athletes.models import CompetitionRegistration
-from athletes.utils import calculate_age
+from athletes.utils import (
+    build_age_category_resolver,
+    calculate_age,
+    get_age_based_category,
+)
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
@@ -106,7 +110,6 @@ def delete_competition(competition_id: int) -> None:
             RoundResult.objects.filter(
                 round__competition_category__competition=competition,
                 deleted=False,
-                climber__deleted=False,
             ).update(deleted=True)
 
             Boulder.objects.filter(
@@ -328,7 +331,6 @@ def delete_round(round_id: int, user) -> None:
         RoundResult.objects.filter(
             round=competition_round,
             deleted=False,
-            climber__deleted=False,
         ).update(deleted=True)
 
         Boulder.objects.filter(
@@ -552,9 +554,6 @@ def delete_category(category_id: int, user) -> None:
         category.deleted = True
         category.save()
 
-    category.deleted = True
-    category.save()
-
 
 def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
     try:
@@ -700,6 +699,8 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
     if not Competition.objects.filter(id=competition_id, deleted=False).exists():
         raise ValueError(f"Competition with id {competition_id} not found")
 
+    category_for_age = build_age_category_resolver()
+
     categories = (
         CompetitionCategory.objects.filter(
             competition_id=competition_id,
@@ -710,11 +711,9 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
     )
 
     result = []
-
     for category in categories:
         category_label = f"{category.category_group.name} {category.gender}"
         rounds_data = []
-
         for competition_round in (
             cast(Any, category)
             .competitionround_set.filter(deleted=False)
@@ -728,41 +727,34 @@ def get_competition_startlist(competition_id: int) -> list[Dict[str, Any]]:
                 .select_related("climber__user_account")
                 .order_by("start_order")
             )
-
             athletes_data = []
-
             for round_result in round_results:
                 climber = round_result.climber
-
                 if climber.is_simple_athlete:
                     full_name = climber.simple_name
                 else:
                     full_name = (
                         climber.user_account.full_name if climber.user_account else None
                     )
-
                 athletes_data.append(
                     {
                         "start_order": round_result.start_order,
                         "full_name": full_name,
-                        "category_name": category.category_group.name,
+                        "category_name": category_for_age(climber.get_age()),
                     }
                 )
-
             rounds_data.append(
                 {
                     "round_name": competition_round.round_group.name,
                     "athletes": athletes_data,
                 }
             )
-
         result.append(
             {
                 "category": category_label,
                 "rounds": rounds_data,
             }
         )
-
     return result
 
 

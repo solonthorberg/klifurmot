@@ -6,6 +6,7 @@ import type {
     UpdateClimbRequest,
     CreateStartlistRequest,
     UpdateStartlistRequest,
+    BulkUpdateStartlistOrderRequest,
 } from '@/types';
 import { notify } from '@/stores';
 
@@ -110,6 +111,23 @@ export function useUpdateStartlist() {
     });
 }
 
+export function useReorderStartlist() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: BulkUpdateStartlistOrderRequest) =>
+            scoringApi.reorderStartlist(data),
+        onSuccess: (_data, { round_id }) => {
+            queryClient.invalidateQueries({
+                queryKey: ['startlist', round_id],
+            });
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
+}
+
 export function useRemoveFromStartlist() {
     const queryClient = useQueryClient();
 
@@ -141,7 +159,11 @@ export function useAdvanceClimbers() {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['startlist'] });
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
-            notify.success(data.message);
+            const { advanced, next_round_name } = data.data;
+
+            notify.success(
+                `Advanced ${advanced} climbers to ${next_round_name}`,
+            );
         },
         onError: (error) => {
             notify.error(getErrorMessage(error));

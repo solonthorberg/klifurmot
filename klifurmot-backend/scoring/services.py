@@ -54,9 +54,13 @@ def list_climbs(
 
 def add_to_startlist(user, **data: Any) -> dict[str, Any]:
     try:
-        round_obj = CompetitionRound.objects.get(id=data["round"], deleted=False)
+        round_obj = CompetitionRound.objects.select_related("competition_category").get(
+            id=data["round"], deleted=False
+        )
     except CompetitionRound.DoesNotExist:
         raise ValueError(f"Round with id {data['round']} not found")
+
+    require_competition_admin(user, round_obj.competition_category.competition_id)
 
     try:
         climber = Climber.objects.get(id=data["climber"], deleted=False)
@@ -146,6 +150,9 @@ def _normalize_climb_data(
 
     if top_reached and attempts_top < 1:
         raise ValueError("A top requires at least one attempt")
+
+    if zone_reached and attempts_zone < 1:
+        raise ValueError("Reaching a zone requires at least one zone attempt")
 
     if top_reached and not zone_reached:
         zone_reached = True
@@ -455,6 +462,85 @@ def update_startlist(result_id: int, user, **update_data: Any):
         "gender": gender,
         "rank": result.rank,
     }
+
+
+def bulk_update_startlist_order(
+    round_id: int,
+    entries: list[dict[str, Any]],
+    user,
+) -> list[dict[str, Any]]:
+    """Atomically renumber start_order across every entry in a round.
+
+    The whole new ordering is accepted as one transaction, avoiding the
+    intermediate-state collisions that occur when reorders are applied
+    one PATCH at a time.
+    """
+    try:
+        round_obj = CompetitionRound.objects.get(id=round_id, deleted=False)
+    except CompetitionRound.DoesNotExist:
+        raise ValueError(f"Round with id {round_id} not found")
+
+    require_competition_admin(user, round_obj.competition_category.competition_id)
+
+    ids = [e["id"] for e in entries]
+    orders = [e["start_order"] for e in entries]
+
+    if len(set(ids)) != len(ids):
+        raise ValueError("Duplicate result ids in reorder request")
+    if len(set(orders)) != len(orders):
+        raise ValueError("Duplicate start orders in reorder request")
+
+    existing = list(
+        RoundResult.objects.select_related(
+            "climber__user_account",
+        ).filter(round=round_obj, deleted=False)
+    )
+    existing_by_id = {r.pk: r for r in existing}
+
+    missing = [rid for rid in ids if rid not in existing_by_id]
+    if missing:
+        raise ValueError(f"Start list entries {missing} not found in round {round_id}")
+
+    if len(existing) != len(entries):
+        raise ValueError(
+            "Reorder must include every start list entry in the round "
+            f"(expected {len(existing)}, got {len(entries)})"
+        )
+
+    with transaction.atomic():
+        for entry in entries:
+            row = existing_by_id[entry["id"]]
+            row.start_order = entry["start_order"]
+            row.last_modified_by = user
+
+        RoundResult.objects.bulk_update(existing, ["start_order", "last_modified_by"])
+
+    existing.sort(key=lambda r: r.start_order or 0)
+
+    data = []
+    for result in existing:
+        climber = result.climber
+        if climber.is_simple_athlete:
+            climber_name = climber.simple_name
+            gender = climber.simple_gender
+        else:
+            climber_name = (
+                climber.user_account.full_name if climber.user_account else None
+            )
+            gender = climber.user_account.gender if climber.user_account else None
+
+        data.append(
+            {
+                "id": result.pk,
+                "climber_id": climber.pk,
+                "climber_name": climber_name,
+                "start_order": result.start_order,
+                "gender": gender,
+                "rank": result.rank,
+            }
+        )
+
+    return data
 
 
 def remove_from_startlist(result_id: int, user) -> None:

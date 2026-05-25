@@ -78,7 +78,7 @@ def send_invitation(request, competition_id):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def validate_invitation(token):
+def validate_invitation(request, token):
     """Validate a judge invitation token"""
 
     try:

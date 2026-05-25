@@ -56,6 +56,18 @@ export interface Score {
     total_score: number;
 }
 
-export type AdvanceClimbersResponse =
-    | { status: 'ok'; advanced: number; next_round_id: number }
-    | { status: 'error'; message: string };
+export type AdvanceClimbersResponse = {
+    advanced: number;
+    next_round_id: number;
+    next_round_name: string;
+};
+
+export interface BulkUpdateStartlistOrderEntry {
+    id: number;
+    start_order: number;
+}
+
+export interface BulkUpdateStartlistOrderRequest {
+    round_id: number;
+    entries: BulkUpdateStartlistOrderEntry[];
+}

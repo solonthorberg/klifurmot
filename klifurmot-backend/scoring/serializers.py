@@ -25,3 +25,13 @@ class CreateStartlistSerializer(serializers.Serializer):
 
 class UpdateStartlistSerializer(serializers.Serializer):
     start_order = serializers.IntegerField(min_value=1, required=False)
+
+
+class BulkUpdateStartlistOrderEntrySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    start_order = serializers.IntegerField(min_value=1)
+
+
+class BulkUpdateStartlistOrderSerializer(serializers.Serializer):
+    round_id = serializers.IntegerField()
+    entries = BulkUpdateStartlistOrderEntrySerializer(many=True, allow_empty=False)
