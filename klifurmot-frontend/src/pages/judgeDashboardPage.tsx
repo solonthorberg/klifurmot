@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import Container from '@/components/ui/container';
 import MainButton from '@/components/ui/mainButton';
