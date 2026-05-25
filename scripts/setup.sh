@@ -13,7 +13,7 @@ REPO="https://github.com/solonthorberg/klifurmot.git"
 
 echo "==> [1/8] Cloning repo..."
 mkdir -p /var/www
-git clone "$REPO" "$APP_DIR"
+git -C "$APP_DIR" pull origin main || git clone "$REPO" "$APP_DIR"
 
 echo "==> [2/8] Installing system dependencies..."
 apt update -q
