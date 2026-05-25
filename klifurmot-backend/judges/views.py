@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def send_invitation(request, competition_id):
     """Send a judge invitation via link"""
 
@@ -200,7 +200,7 @@ def get_competition_invitations(request, competition_id):
 
 
 @api_view(["POST"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def create_judge_link(request, competition_id):
     """Create a judge link for an existing user"""
 
@@ -336,7 +336,7 @@ def get_competition_judge_links(request, competition_id):
 
 
 @api_view(["DELETE"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def manage_judge_link(request, link_id):
     try:
         services.delete_judge_link(link_id=link_id, user=request.user)
@@ -368,7 +368,7 @@ def manage_judge_link(request, link_id):
 
 
 @api_view(["GET"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def get_all_judges(request, competition_id):
     """Get all judges (both invitations and links) for a competition"""
 
@@ -405,22 +405,15 @@ def get_all_judges(request, competition_id):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([permissions.IsAdmin])
 def get_potential_judges(request):
     """Get list of users who can be assigned as judges"""
-
     try:
-        result = services.get_potential_judges(user=request.user)
-
+        result = services.get_potential_judges()
         return utils.success_response(
-            data=result["judges"], message="Potential judges retrieved successfully"
+            data=result["judges"],
+            message="Potential judges retrieved successfully",
         )
-
-    except PermissionError as e:
-        return utils.error_response(
-            code="Access_denied", message=str(e), status_code=status.HTTP_403_FORBIDDEN
-        )
-
     except Exception as e:
         logger.error(f"Unexpected error getting potential judges: {str(e)}")
         return utils.error_response(

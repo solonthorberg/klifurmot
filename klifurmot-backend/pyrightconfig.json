@@ -1,14 +1,6 @@
 {
-  "reportUnreachableCode": false,
-  "enableReachabilityAnalysis": false,
-  "typeCheckingMode": "basic",
-  "reportAttributeAccessIssue": false,
-  "reportOptionalMemberAccess": false,
-  "reportGeneralTypeIssues": false,
-  "reportAssignmentType": false,
-  "reportOptionalSubscript": false,
-  "reportPrivateUsage": false,
-  "ignore": ["**/models.py"],
+  "venvPath": ".",
+  "venv": "venv",
   "include": [
     "accounts",
     "athletes",
@@ -17,9 +9,7 @@
     "scoring",
     "klifurmot"
   ],
-  "exclude": [
-    "**/node_modules",
-    "**/__pycache__",
-    "**/migrations"
-  ]
+  "exclude": ["**/node_modules", "**/__pycache__", "**/migrations"],
+  "typeCheckingMode": "basic",
+  "enableReachabilityAnalysis": true
 }

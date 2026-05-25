@@ -2,7 +2,11 @@ import logging
 from typing import Any, cast, Dict
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
 from collections import defaultdict
 
 from accounts import permissions
@@ -44,13 +48,6 @@ def competitions(request):
         )
 
     if request.method == "POST":
-        if not permissions.IsAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.CreateCompetitionSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -106,13 +103,6 @@ def competition_detail(request, competition_id):
             )
 
     if request.method == "PATCH":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.UpdateCompetitionSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -304,7 +294,7 @@ def list_rounds(request):
 
 
 @api_view(["POST"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def create_round(request, competition_id, category_id):
     serializer = serializers.CreateRoundSerializer(data=request.data)
 
@@ -351,17 +341,15 @@ def create_round(request, competition_id, category_id):
 
 
 @api_view(["GET", "PATCH", "DELETE"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def round_detail(request, round_id):
     if request.method == "GET":
         try:
             result = services.get_round(round_id=round_id)
-
             return utils.success_response(
                 data=serializers.RoundSerializer(result).data,
                 message="Round retrieved successfully",
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Not_found",
@@ -370,47 +358,34 @@ def round_detail(request, round_id):
             )
 
     if request.method == "PATCH":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.UpdateRoundSerializer(data=request.data)
-
         if not serializer.is_valid():
             errors_dict = cast(Dict[str, Any], serializer.errors)
             return utils.validation_error_response(serializer_errors=errors_dict)
 
         try:
             validated_data = cast(Dict[str, Any], serializer.validated_data)
-
             result = services.update_round(
                 round_id=round_id,
                 user=request.user,
                 **validated_data,
             )
-
             return utils.success_response(
                 data=serializers.RoundSerializer(result).data,
                 message="Round updated successfully",
             )
-
         except PermissionError as e:
             return utils.error_response(
-                code="Not_allowed",
+                code="Access_denied",
                 message=str(e),
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Update_failed",
                 message=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-
         except Exception as e:
             return utils.error_response(
                 code="Update_failed",
@@ -419,34 +394,21 @@ def round_detail(request, round_id):
             )
 
     if request.method == "DELETE":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         try:
-            services.delete_round(round_id=round_id)
-
-            return utils.success_response(
-                message="Round deleted successfully",
-            )
-
+            services.delete_round(round_id=round_id, user=request.user)
+            return utils.success_response(message="Round deleted successfully")
         except PermissionError as e:
             return utils.error_response(
-                code="Not_allowed",
+                code="Access_denied",
                 message=str(e),
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Not_found",
                 message=str(e),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-
         except Exception as e:
             return utils.error_response(
                 code="Delete_failed",
@@ -456,7 +418,7 @@ def round_detail(request, round_id):
 
 
 @api_view(["PATCH"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def round_status(request, round_id):
     serializer = serializers.UpdateRoundStatusSerializer(data=request.data)
 
@@ -476,6 +438,13 @@ def round_status(request, round_id):
         return utils.success_response(
             data=serializers.RoundSerializer(result).data,
             message="Round status updated successfully",
+        )
+
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
         )
 
     except ValueError as e:
@@ -516,13 +485,6 @@ def categories(request, competition_id):
         )
 
     if request.method == "POST":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.CreateCompetitionCategorySerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -568,7 +530,7 @@ def categories(request, competition_id):
 
 
 @api_view(["PATCH", "DELETE"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([IsAuthenticated])
 def category_detail(request, category_id):
     if request.method == "PATCH":
         serializer = serializers.UpdateCompetitionCategorySerializer(data=request.data)
@@ -579,32 +541,27 @@ def category_detail(request, category_id):
 
         try:
             validated_data = cast(Dict[str, Any], serializer.validated_data)
-
             result = services.update_category(
                 category_id=category_id,
                 user=request.user,
                 **validated_data,
             )
-
             return utils.success_response(
                 data=serializers.CompetitionCategorySerializer(result).data,
                 message="Category updated successfully",
             )
-
         except PermissionError as e:
             return utils.error_response(
                 code="Not_allowed",
                 message=str(e),
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Update_failed",
                 message=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-
         except Exception as e:
             return utils.error_response(
                 code="Update_failed",
@@ -614,26 +571,20 @@ def category_detail(request, category_id):
 
     if request.method == "DELETE":
         try:
-            services.delete_category(category_id=category_id)
-
-            return utils.success_response(
-                message="Category deleted successfully",
-            )
-
+            services.delete_category(category_id=category_id, user=request.user)
+            return utils.success_response(message="Category deleted successfully")
         except PermissionError as e:
             return utils.error_response(
                 code="Not_allowed",
                 message=str(e),
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-
         except ValueError as e:
             return utils.error_response(
                 code="Not_found",
                 message=str(e),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-
         except Exception as e:
             return utils.error_response(
                 code="Delete_failed",
@@ -673,13 +624,6 @@ def boulder_detail(request, boulder_id):
             )
 
     if request.method == "PATCH":
-        if not permissions.IsCompetitionAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Competition admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         serializer = serializers.UpdateBoulderSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -730,5 +674,5 @@ def round_boulders(request, round_id):
     boulders = models.Boulder.objects.filter(round_id=round_id, deleted=False).order_by(
         "boulder_number"
     )
-    data = [{"id": b.id, "boulder_number": b.boulder_number} for b in boulders]
+    data = [{"id": b.pk, "boulder_number": b.boulder_number} for b in boulders]
     return utils.success_response(data=data, message="Boulders retrieved successfully")

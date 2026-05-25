@@ -42,10 +42,12 @@ export default function AthleteAdminCard({
                                 </MainButton>
                             </div>
                         )}
-                        <span className="text-gray-400 text-sm">Án aðgang</span>
+                        <span className="text-gray-400 text-sm">
+                            Án aðgangs
+                        </span>
                     </>
                 ) : (
-                    <span className="text-secondary text-sm">Með aðgang</span>
+                    <span className="text-secondary text-sm">Með aðgangi</span>
                 )}
             </div>
         </div>

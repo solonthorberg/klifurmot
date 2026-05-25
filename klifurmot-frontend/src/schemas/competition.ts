@@ -16,7 +16,7 @@ export const CreateCompetitionSchema = z
         description: z
             .string()
             .min(2, 'Upplýsingar verða að vera að minnsta kosti 2 stafir')
-            .max(300, 'Upplýsingar má ekki fara yfir 300 stafi'),
+            .max(300, 'Upplýsingar mega ekki fara yfir 300 stafi'),
         start_date: dateString,
         end_date: dateString,
         location: z
@@ -45,8 +45,7 @@ export const CreateCompetitionSchema = z
         ) {
             ctx.addIssue({
                 code: 'custom',
-                message:
-                    'Endingardagsetning þarf að vera eftir byrjunardagsetningu',
+                message: 'Endingartími þarf að vera á eftir byrjunartíma',
                 path: ['end_date'],
             });
         }
@@ -59,7 +58,7 @@ export const CreateCategorySchema = z.object({
         .number('Flokkur getur ekki verið tómur')
         .int()
         .positive('Flokkur getur ekki verið tómur'),
-    gender: z.enum(['KK', 'KVK'], 'Vinsamlegast veldu kyn'),
+    gender: z.enum(['KK', 'KVK'], 'Vinsamlega veldu kyn'),
 });
 
 export type CreateCategoryFormData = z.infer<typeof CreateCategorySchema>;
@@ -75,7 +74,7 @@ export const CreateRoundSchema = z.object({
         .nullable(),
     boulder_count: z
         .number('Sláðu inn fjölda leiða')
-        .int('Tala þarf að vera heiltala')
+        .int('Tala þarf að vera heil tala')
         .positive('Tala þarf að vera jákvæð')
         .max(100, 'Hámark 100 leiðir'),
     is_self_scoring: z.boolean(),
@@ -91,7 +90,7 @@ export const UpdateCompetitionSchema = z
             .max(30, 'Titill má ekki fara yfir 30 stafi'),
         description: z
             .string()
-            .max(300, 'Upplýsingar má ekki fara yfir 300 stafi'),
+            .max(300, 'Upplýsingar mega ekki fara yfir 300 stafi'),
         start_date: dateString,
         end_date: dateString,
         location: z
@@ -108,7 +107,7 @@ export const UpdateCompetitionSchema = z
         if (data.start_date && new Date(data.start_date) < now) {
             ctx.addIssue({
                 code: 'custom',
-                message: 'Byrjunardagsetning má ekki vera í fortíðinni',
+                message: 'Byrjunartími má ekki vera í fortíðinni',
                 path: ['start_date'],
             });
         }
@@ -120,8 +119,7 @@ export const UpdateCompetitionSchema = z
         ) {
             ctx.addIssue({
                 code: 'custom',
-                message:
-                    'Endingardagsetning þarf að vera eftir byrjunardagsetningu',
+                message: 'Endingartími þarf að vera á eftir byrjunartíma',
                 path: ['end_date'],
             });
         }
@@ -134,7 +132,7 @@ export const UpdateCategorySchema = z.object({
         .number('Flokkur getur ekki verið tómur')
         .int()
         .positive('Flokkur getur ekki verið tómur'),
-    gender: z.enum(['KK', 'KVK'], 'Vinsamlegast veldu kyn'),
+    gender: z.enum(['KK', 'KVK'], 'Vinsamlega veldu kyn'),
 });
 
 export type UpdateCategoryFormData = z.infer<typeof CreateCategorySchema>;
@@ -144,13 +142,13 @@ export const UpdateRoundSchema = z.object({
     round_order: z.number(),
     climbers_advance: z
         .number()
-        .int('Tala þarf að vera heiltala')
+        .int('Tala þarf að vera heil tala')
         .nonnegative('Tala þarf að vera jákvæð')
         .max(200, 'Hámark 200 keppendur')
         .nullable(),
     boulder_count: z
         .number('Sláðu inn fjölda leiða')
-        .int('Tala þarf að vera heiltala')
+        .int('Tala þarf að vera heil tala')
         .positive('Tala þarf að vera jákvæð')
         .max(100, 'Hámark 100 leiðir'),
     is_self_scoring: z.boolean(),

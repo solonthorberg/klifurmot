@@ -1,28 +1,26 @@
-from typing import Dict, Any, Optional
-import logging
-import time
-import re
-from datetime import date, timedelta
-import secrets
 import hashlib
-import json
+import logging
+import re
+import secrets
 import textwrap
-from django.core.mail import EmailMessage
-from django.utils import timezone
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth.models import User
-from django.db import transaction, IntegrityError
-from django.contrib.auth import authenticate
-from google.oauth2 import id_token
-from google.auth.transport import requests
+import time
+from datetime import date, timedelta
+from typing import Any, Dict, Optional, cast
+
 from django.conf import settings
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.mail import EmailMessage
+from django.db import IntegrityError, transaction
+from django.utils import timezone
+from google.auth.transport import requests
+from google.oauth2 import id_token
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import UserAccount, Country, CompetitionRole
-from athletes.models import Climber
-
+from .models import CompetitionRole, Country, UserAccount
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +33,12 @@ def list_user_accounts() -> list[dict]:
     )
     result = []
     for u in users:
-        if hasattr(u, "profile"):
+        profile = getattr(u, "profile", None)
+        if profile:
             result.append(
                 {
-                    "id": u.profile.id,
-                    "full_name": u.profile.full_name,
+                    "id": profile.id,
+                    "full_name": profile.full_name,
                     "email": u.email,
                     "username": u.username,
                 }
@@ -98,13 +97,13 @@ def update_profile(
             if profile_picture == "":
                 if user_account.profile_picture:
                     user_account.profile_picture.delete(save=False)
-                    user_account.profile_picture = None
+                setattr(user_account, "profile_picture", None)
             else:
                 if user_account.profile_picture:
                     user_account.profile_picture.delete(save=False)
                 user_account.profile_picture = profile_picture
 
-        user_account.save()
+                user_account.save()
 
         return {
             "user": user,
@@ -112,7 +111,7 @@ def update_profile(
         }
 
 
-def login(email: str, password: str) -> Dict[str, any]:
+def login(email: str, password: str) -> Dict[str, Any]:
     """Login for a user"""
     start_time = time.time()
     user = None
@@ -131,7 +130,7 @@ def login(email: str, password: str) -> Dict[str, any]:
         authenticate(username="nonexistent_user", password=password)
 
     except UserAccount.DoesNotExist:
-        logger.error(f"UserAccount not found for user: {user.username}")
+        logger.error(f"UserAccount not found for user: {user_obj.username}")
         user = None
 
     elapsed = time.time() - start_time
@@ -345,6 +344,12 @@ def refresh_token(refresh_token_str) -> Dict[str, Any]:
         token = RefreshToken(refresh_token_str)
         user_id = token["user_id"]
         user = User.objects.get(id=user_id)
+
+        profile = getattr(user, "profile", None)
+        if not profile or profile.deleted:
+            token.blacklist()
+            raise ValueError("Account is inactive")
+
         token.blacklist()
         new_token = RefreshToken.for_user(user)
         return {
@@ -367,11 +372,13 @@ def get_competition_roles(
     if role:
         qs = qs.filter(role=role)
 
-    if user.is_staff or (hasattr(user, "profile") and user.profile.is_admin):
+    user_profile = getattr(user, "profile", None)
+
+    if user.is_staff or (user_profile and user_profile.is_admin):
         return {"roles": list(qs)}
 
-    if hasattr(user, "profile"):
-        return {"roles": list(qs.filter(user=user.profile))}
+    if user_profile:
+        return {"roles": list(qs.filter(user=user_profile))}
 
     return {"roles": []}
 
@@ -385,10 +392,12 @@ def get_competition_role_by_id(user: User, role_id: int) -> Dict[str, Any]:
     except CompetitionRole.DoesNotExist:
         raise CompetitionRole.DoesNotExist("Role not found")
 
-    if user.is_staff or (hasattr(user, "profile") and user.profile.is_admin):
+    user_profile = getattr(user, "profile", None)
+
+    if user.is_staff or (user_profile and user_profile.is_admin):
         return {"role": role}
 
-    if hasattr(user, "profile") and role.user == user.profile:
+    if user_profile and role.user == user_profile:
         return {"role": role}
 
     raise PermissionError("You do not have permission to view this role")
@@ -442,11 +451,11 @@ def request_password_reset(
         reset_url = f"{settings.FRONTEND_BASE_URL}/reset-password?token={token}"
 
         email_message = EmailMessage(
-            subject="Beiðni um breyta lykilorð",
+            subject="Beiðni um að breyta lykilorði",
             body=textwrap.dedent(f"""
-                Þú baðst um breyta þínu lykilorði.
+                Þú baðst um að breyta lykilorði.
                 
-                Smelltu hér til að endurstilla lykilorðið þitt (gildir í 1 klukkustund):
+                Smelltu hér til að breyta lykilorði (gildir í 1 klukkustund):
                 {reset_url}
                 
                 Ef þú baðst ekki um að breyta lykilorðinu þínu, hunsaðu þennan tölvupóst.
@@ -521,9 +530,9 @@ def reset_password(
             )
 
         email_message = EmailMessage(
-            subject="Lykilorð hefur verið breytt",
+            subject="Lykilorði hefur verið breytt",
             body=textwrap.dedent(f"""
-                Lykilorðið þitt hefur verið breytt.
+                Lykilorði hefur verið breytt.
                 
                 Ef þetta varst ekki þú hafðu samband strax.
                 
@@ -561,18 +570,18 @@ def logout_all_sessions(user: User) -> None:
     """Invalidate all active sessions for a user by blacklisting all refresh tokens"""
 
     from rest_framework_simplejwt.token_blacklist.models import (
-        OutstandingToken,
         BlacklistedToken,
+        OutstandingToken,
     )
 
-    tokens = OutstandingToken.objects.filter(user_id=user.id)
+    tokens = OutstandingToken.objects.filter(user_id=user.pk)
     already_blacklisted = set(
         BlacklistedToken.objects.filter(token__in=tokens).values_list(
             "token_id", flat=True
         )
     )
     for token in tokens:
-        if token.id not in already_blacklisted:
-            RefreshToken(token.token).blacklist()
+        if token.pk not in already_blacklisted:
+            RefreshToken(cast(Any, token.token)).blacklist()
 
     logger.info(f"All sessions terminated for user: {user.username}")

@@ -51,13 +51,13 @@ export default function CompetitionForm({
             <Input
                 {...register('start_date')}
                 type="datetime-local"
-                label="Byrjunardagsetning"
+                label="Mót byrjar"
                 error={errors.start_date?.message}
             />
             <Input
                 {...register('end_date')}
                 type="datetime-local"
-                label="Endingardagsetning"
+                label="Mót endar"
                 error={errors.end_date?.message}
             />
             <Input

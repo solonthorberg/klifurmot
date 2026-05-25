@@ -25,7 +25,7 @@ export default function RequestPasswordResetPage() {
         <Container variant="primaryCenter" className="animate-fade-in">
             <div className="flex flex-col gap-8 p-8 justify-center w-full max-w-lg border border-outline rounded-lg">
                 <h3 className="font-semibold text-2xl text-center">
-                    Endurstilla lykilorð
+                    Breyta lykilorði
                 </h3>
                 {passwordResetSuccess ? (
                     <p className="text-center text-gray-500">

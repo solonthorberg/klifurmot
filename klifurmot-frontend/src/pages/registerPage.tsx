@@ -64,7 +64,7 @@ export default function RegisterPage() {
                         {...register('full_name')}
                         id="full_name"
                         type="text"
-                        label="Fullt Nafn"
+                        label="Fullt nafn"
                         placeholder="Birgir Óli"
                         error={errors.full_name?.message}
                     />

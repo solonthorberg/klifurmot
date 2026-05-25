@@ -130,7 +130,7 @@ function EditScoreModal({
                     {
                         attemptsField: 'zone_attempts' as const,
                         reachedField: 'zone_reached' as const,
-                        label: 'Zone',
+                        label: 'Miðju',
                         disabledWhen: false,
                     },
                     {
@@ -145,7 +145,7 @@ function EditScoreModal({
                         className="flex flex-col items-center gap-2"
                     >
                         <span className="text-sm font-medium">
-                            Tilraunir {label}
+                            Tilraunir í {label}
                         </span>
                         <MainButton
                             type="button"
@@ -331,13 +331,13 @@ export default function JudgeScoringView({
                     <div className="grid grid-cols-2 gap-4">
                         {[
                             {
-                                label: 'Tilraunir Zone',
+                                label: 'Tilraunir í Miðju',
                                 attempts: currentScore.zone_attempts,
                                 reached: currentScore.zone_reached,
-                                reachedLabel: 'Zone',
+                                reachedLabel: 'Miðja',
                             },
                             {
-                                label: 'Tilraunir Topp',
+                                label: 'Tilraunir í Topp',
                                 attempts: currentScore.top_attempts,
                                 reached: currentScore.top_reached,
                                 reachedLabel: 'Toppur',
@@ -382,7 +382,7 @@ export default function JudgeScoringView({
                             disabled={currentScore.top_reached}
                             onClick={() => handleScore('zone')}
                         >
-                            Zone
+                            Miðja
                         </MainButton>
                         <MainButton
                             variant="outline"

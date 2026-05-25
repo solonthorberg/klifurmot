@@ -138,7 +138,7 @@ class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @api_view(["GET"])
-@permission_classes([permissions.IsCompetitionAdmin])
+@permission_classes([permissions.IsAdmin])
 def user_accounts(request):
     try:
         result = services.list_user_accounts()
@@ -156,7 +156,7 @@ def user_accounts(request):
 
 
 @api_view(["GET", "PATCH"])
-@permission_classes([IsAuthenticated, permissions.IsActiveAccount])
+@permission_classes([IsAuthenticated])
 def me(request):
     """Get or update current user profile"""
 
@@ -217,7 +217,7 @@ def me(request):
                 validated_data = {}
             else:
                 validated_data = {
-                    str(k): v for k, v in serializer.validated_data.items()
+                    str(k): v for k, v in cast(Any, serializer.validated_data).items()
                 }
 
             result = services.update_profile(
