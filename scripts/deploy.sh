@@ -43,8 +43,8 @@ if [ "$START_ONLY" = false ]; then
 fi
 
 echo "==> Starting / restarting services..."
-systemctl start redis
-systemctl enable redis
+systemctl start redis || true
+systemctl enable redis || true
 
 systemctl restart daphne
 
