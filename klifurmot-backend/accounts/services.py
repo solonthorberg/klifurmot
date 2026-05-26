@@ -16,7 +16,6 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import EmailMessage
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from google.auth.transport import requests
@@ -27,6 +26,30 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CompetitionRole, Country, UserAccount
 
 logger = logging.getLogger(__name__)
+
+
+def send_email_via_resend(to: str, subject: str, body: str) -> None:
+    """Send email via Resend HTTP API"""
+    import requests as http_requests
+
+    response = http_requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": settings.DEFAULT_FROM_EMAIL,
+            "to": [to],
+            "subject": subject,
+            "text": body,
+        },
+        timeout=10,
+    )
+
+    if response.status_code not in (200, 201):
+        logger.error(f"Resend API error: {response.status_code} {response.text}")
+        raise Exception(f"Failed to send email: {response.status_code}")
 
 
 def compress_profile_picture(uploaded_file):
@@ -488,7 +511,8 @@ def request_password_reset(
 
         reset_url = f"{settings.FRONTEND_BASE_URL}/reset-password?token={token}"
 
-        email_message = EmailMessage(
+        send_email_via_resend(
+            to=email,
             subject="Beiðni um að breyta lykilorði",
             body=textwrap.dedent(f"""
                 Þú baðst um að breyta lykilorði.
@@ -501,11 +525,7 @@ def request_password_reset(
                 Kveðja,
                 klifurmot.is
             """).strip(),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[email],
         )
-
-        email_message.send(fail_silently=False)
 
         logger.info(f"Password reset requested for {email} from IP {request_ip}")
 
@@ -567,7 +587,8 @@ def reset_password(
                 f"Failed to logout all sessions during password reset: {str(e)}"
             )
 
-        email_message = EmailMessage(
+        send_email_via_resend(
+            to=user.email,
             subject="Lykilorði hefur verið breytt",
             body=textwrap.dedent(f"""
                 Lykilorði hefur verið breytt.
@@ -580,11 +601,7 @@ def reset_password(
                 Kveðja,
                 klifurmot.is
             """).strip(),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[user.email],
         )
-
-        email_message.send(fail_silently=False)
 
         logger.info(
             f"Password reset completed for user {user.username} ({user.email}) from IP {request_ip}"
