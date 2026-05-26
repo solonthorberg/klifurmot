@@ -291,51 +291,29 @@ def google_login(google_token: str) -> Dict[str, Any]:
             settings.GOOGLE_CLIENT_ID,
             clock_skew_in_seconds=30,
         )
-
         email = idinfo["email"].lower()
-        full_name = idinfo.get("name", "")
         google_id = idinfo.get("sub")
 
         with transaction.atomic():
             try:
                 user = User.objects.get(email__iexact=email)
-                created = False
-
             except User.DoesNotExist:
-                username = generate_unique_username(email)
-
-                user = User.objects.create(
-                    email=email,
-                    username=username,
+                raise ValueError(
+                    "No account found with this Google email. Please register first."
                 )
-                created = True
 
-            user_account, profile_created = UserAccount.objects.get_or_create(
-                user=user,
-                defaults={
-                    "full_name": full_name,
-                    "google_id": google_id,
-                },
-            )
+            user_account = UserAccount.objects.get(user=user)
 
             if user_account.deleted:
-                user_account.deleted = False
-                user_account.full_name = full_name
-                user_account.google_id = google_id
-                user_account.save()
+                raise ValueError("This account has been deleted.")
 
-            if not profile_created and not user_account.deleted:
-                if not user_account.full_name and full_name:
-                    user_account.full_name = full_name
-                if not user_account.google_id and google_id:
-                    user_account.google_id = google_id
+            if not user_account.google_id and google_id:
+                user_account.google_id = google_id
                 user_account.save()
 
             refresh = RefreshToken.for_user(user)
 
-            logger.info(
-                f"Google login successful: {user.username} ({email}) - Created: {created}"
-            )
+            logger.info(f"Google login successful: {user.username} ({email})")
 
             return {
                 "user": user,
@@ -345,8 +323,8 @@ def google_login(google_token: str) -> Dict[str, Any]:
             }
 
     except ValueError as e:
-        logger.error(f"Invalid Google token: {str(e)}")
-        raise ValueError("Invalid Google token")
+        logger.error(f"Google login failed: {str(e)}")
+        raise
 
     except Exception as e:
         logger.error(f"Google login failed: {str(e)}")
