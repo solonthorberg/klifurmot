@@ -16,6 +16,13 @@ def calculate_age(date_of_birth) -> Optional[int]:
     return age
 
 
+def calculate_age_for_category(date_of_birth) -> Optional[int]:
+    """Year-based age for category assignment — ignores birthday"""
+    if not date_of_birth:
+        return None
+    return timezone.now().year - date_of_birth.year
+
+
 def build_age_category_resolver() -> Callable[[Optional[int]], Optional[str]]:
     """One DB hit, returns a closure that resolves age → category name.
 
