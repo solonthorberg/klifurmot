@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MainButton from '@/components/ui/mainButton';
 import Modal from '@/components/modals/modal';
 import Icon from '@/components/ui/icons';
@@ -221,6 +221,7 @@ export default function JudgeScoringView({
     const [athleteIndex, setAthleteIndex] = useState(initialIndex);
     const [boulderIndex, setBoulderIndex] = useState(0);
     const [editingScore, setEditingScore] = useState<BoulderScore | null>(null);
+    const [localScore, setLocalScore] = useState<BoulderScore | null>(null);
 
     const athlete = athletes[athleteIndex];
 
@@ -258,9 +259,13 @@ export default function JudgeScoringView({
         };
     };
 
-    const currentScore = currentBoulder
-        ? getScoreForBoulder(currentBoulder.id)
-        : null;
+    useEffect(() => {
+        setLocalScore(null);
+    }, [boulderIndex, athleteIndex]);
+
+    const currentScore =
+        localScore ??
+        (currentBoulder ? getScoreForBoulder(currentBoulder.id) : null);
 
     const submitScore = async (score: BoulderScore) => {
         if (!currentBoulder || !athlete) return;
@@ -272,20 +277,29 @@ export default function JudgeScoringView({
             zone_reached: score.zone_reached,
             top_reached: score.top_reached,
         };
-        if (score.climbId) {
-            await updateClimb({ climbId: score.climbId, data: payload });
+
+        let climbId = score.climbId;
+
+        if (climbId) {
+            await updateClimb({ climbId, data: payload });
         } else {
-            await createClimb(payload);
+            const result = await createClimb(payload);
+            climbId = result.data.id;
         }
-        await refetchClimbs();
+
+        setLocalScore({ ...score, climbId });
+        refetchClimbs();
     };
 
     const handleScore = async (action: 'attempt' | 'zone' | 'top') => {
         if (!currentScore) return;
-        await submitScore(applyScore(currentScore, action));
+        const newScore = applyScore(currentScore, action);
+        setLocalScore(newScore);
+        await submitScore(newScore);
     };
 
     const handleEditConfirm = async (score: BoulderScore) => {
+        setLocalScore(score);
         await submitScore(score);
         setEditingScore(null);
     };
