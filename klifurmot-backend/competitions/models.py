@@ -113,7 +113,7 @@ class CompetitionRound(models.Model):
     )
     round_group = models.ForeignKey("RoundGroup", on_delete=models.CASCADE)
     round_order = models.IntegerField()
-    climbers_advance = models.IntegerField(default=0)
+    climbers_advance = models.IntegerField(null=True, blank=True, default=0)
     boulder_count = models.IntegerField(default=0)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
