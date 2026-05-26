@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import logging
 import re
@@ -29,27 +30,31 @@ logger = logging.getLogger(__name__)
 
 
 def send_email_via_resend(to: str, subject: str, body: str) -> None:
-    """Send email via Resend HTTP API"""
+    """Send email via Resend HTTP API in a thread to avoid blocking async event loop"""
     import requests as http_requests
 
-    response = http_requests.post(
-        "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "from": settings.DEFAULT_FROM_EMAIL,
-            "to": [to],
-            "subject": subject,
-            "text": body,
-        },
-        timeout=10,
-    )
+    def _send():
+        response = http_requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": settings.DEFAULT_FROM_EMAIL,
+                "to": [to],
+                "subject": subject,
+                "text": body,
+            },
+            timeout=10,
+        )
+        if response.status_code not in (200, 201):
+            logger.error(f"Resend API error: {response.status_code} {response.text}")
+            raise Exception(f"Failed to send email: {response.status_code}")
 
-    if response.status_code not in (200, 201):
-        logger.error(f"Resend API error: {response.status_code} {response.text}")
-        raise Exception(f"Failed to send email: {response.status_code}")
+    with ThreadPoolExecutor() as executor:
+        future = executor.submit(_send)
+        future.result()
 
 
 def compress_profile_picture(uploaded_file):
