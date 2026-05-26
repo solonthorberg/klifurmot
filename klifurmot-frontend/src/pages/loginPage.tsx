@@ -50,7 +50,6 @@ export default function LoginPage() {
                             googleAuth(credentialResponse.credential!)
                         }
                         size="large"
-                        width={400}
                     />
                 </div>
                 <div className="border-t border-outline border-grey-500" />
