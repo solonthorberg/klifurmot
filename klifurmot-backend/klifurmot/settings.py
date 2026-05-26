@@ -255,6 +255,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "resend"
 EMAIL_HOST_PASSWORD = config("RESEND_API_KEY", cast=str)
 DEFAULT_FROM_EMAIL = "Klifurmót <noreply@klifurmot.is>"
+RESEND_API_KEY = config("RESEND_API_KEY", cast=str)
 
 
 # Internationalization
