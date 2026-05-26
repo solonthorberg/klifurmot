@@ -46,6 +46,10 @@ echo "==> Starting / restarting services..."
 systemctl start redis || true
 systemctl enable redis || true
 
+echo "==> Regenerating backend env file..."
+doppler secrets download --project klifurmot --config prd_backend --format env --no-file > /etc/klifurmot.env
+chmod 600 /etc/klifurmot.env
+
 systemctl restart daphne
 
 systemctl restart nginx
