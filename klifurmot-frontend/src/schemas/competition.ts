@@ -12,7 +12,7 @@ export const CreateCompetitionSchema = z
         title: z
             .string()
             .min(2, 'Titill verður að vera að minnsta kosti 2 stafir')
-            .max(30, 'Titill má ekki fara yfir 30 stafi'),
+            .max(50, 'Titill má ekki fara yfir 50 stafi'),
         description: z
             .string()
             .min(2, 'Upplýsingar verða að vera að minnsta kosti 2 stafir')
@@ -22,7 +22,7 @@ export const CreateCompetitionSchema = z
         location: z
             .string()
             .min(2, 'Staðsetning verður að vera að minnsta kosti 2 stafir')
-            .max(30, 'Staðsetning má ekki fara yfir 30 stafi'),
+            .max(50, 'Staðsetning má ekki fara yfir 50 stafi'),
         image: z.any().optional(),
         visible: z.boolean(),
     })
@@ -87,7 +87,7 @@ export const UpdateCompetitionSchema = z
         title: z
             .string()
             .min(2, 'Titill verður að vera að minnsta kosti 2 stafir')
-            .max(30, 'Titill má ekki fara yfir 30 stafi'),
+            .max(50, 'Titill má ekki fara yfir 50 stafi'),
         description: z
             .string()
             .max(300, 'Upplýsingar mega ekki fara yfir 300 stafi'),
@@ -96,7 +96,7 @@ export const UpdateCompetitionSchema = z
         location: z
             .string()
             .min(2, 'Staðsetning verður að vera að minnsta kosti 2 stafir')
-            .max(30, 'Staðsetning má ekki fara yfir 30 stafi'),
+            .max(50, 'Staðsetning má ekki fara yfir 50 stafi'),
         image: z.any().optional(),
         visible: z.boolean(),
     })

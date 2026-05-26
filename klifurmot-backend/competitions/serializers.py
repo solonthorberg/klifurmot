@@ -25,9 +25,9 @@ def validate_image(uploaded_file):
 class CreateCompetitionSerializer(serializers.ModelSerializer):
     """Serializer for creating competitions"""
 
-    title = serializers.CharField(max_length=30, min_length=2)
+    title = serializers.CharField(max_length=50, min_length=2)
     description = serializers.CharField(max_length=300, min_length=2)
-    location = serializers.CharField(max_length=30, min_length=2)
+    location = serializers.CharField(max_length=50, min_length=2)
     image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -61,11 +61,11 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
 
 
 class UpdateCompetitionSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=30, min_length=2, required=False)
+    title = serializers.CharField(max_length=50, min_length=2, required=False)
     description = serializers.CharField(max_length=300, min_length=2, required=False)
     start_date = serializers.DateTimeField(required=False)
     end_date = serializers.DateTimeField(required=False)
-    location = serializers.CharField(max_length=30, min_length=2, required=False)
+    location = serializers.CharField(max_length=50, min_length=2, required=False)
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)
