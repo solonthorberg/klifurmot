@@ -21,6 +21,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("accounts.urls")),
@@ -28,6 +33,7 @@ urlpatterns = [
     path("api/judges/", include("judges.urls")),
     path("api/scoring/", include("scoring.urls")),
     path("api/competitions/", include("competitions.urls")),
+    path("sentry-debug/", trigger_error),
 ]
 
 if settings.DEBUG:

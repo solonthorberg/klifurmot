@@ -5,6 +5,7 @@ from datetime import timedelta
 import dj_database_url
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
+import sentry_sdk
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,6 +19,12 @@ RECAPTCHA_SECRET_KEY = config("RECAPTCHA_SECRET_KEY", cast=str)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     cast=lambda v: [s.strip() for s in v.split(",")],
+)
+
+sentry_sdk.init(
+    dsn=config("SENTRY_DSN", cast=str),  # pyright: ignore[reportArgumentType]
+    environment=config("ENVIRONMENT", default="production", cast=str),  # pyright: ignore[reportArgumentType]
+    send_default_pii=True,
 )
 
 
