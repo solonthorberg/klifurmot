@@ -53,15 +53,9 @@ class Climber(models.Model):
         if self.is_simple_athlete:
             return self.simple_age
         elif self.user_account and self.user_account.date_of_birth:
-            from datetime import date
+            from django.utils import timezone
 
-            birth_date = self.user_account.date_of_birth
-            today = date.today()
-            return (
-                today.year
-                - birth_date.year
-                - ((today.month, today.day) < (birth_date.month, birth_date.day))
-            )
+            return timezone.now().year - self.user_account.date_of_birth.year
         return None
 
 
