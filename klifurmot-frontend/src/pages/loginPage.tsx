@@ -44,13 +44,15 @@ export default function LoginPage() {
                 <h3 className="font-semibold text-2xl text-center">
                     Innskráning
                 </h3>
-                <GoogleLogin
-                    onSuccess={(credentialResponse) =>
-                        googleAuth(credentialResponse.credential!)
-                    }
-                    size="large"
-                    width="100%"
-                />
+                <div className="flex justify-center w-full">
+                    <GoogleLogin
+                        onSuccess={(credentialResponse) =>
+                            googleAuth(credentialResponse.credential!)
+                        }
+                        size="large"
+                        width={400}
+                    />
+                </div>
                 <div className="border-t border-outline border-grey-500" />
                 <form
                     onSubmit={handleSubmit(handleLogin)}

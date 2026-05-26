@@ -28,7 +28,7 @@ export default function HomePage() {
                 variant="centered"
                 className="relative z-5 gap-4 text-white h-full"
             >
-                <h1 className="text-2xl font-semibold">Klifurmót.is</h1>
+                <h1 className="text-3xl font-semibold">Klifurmót.is</h1>
                 <p className="text-center">
                     Rauntímastjórnun móta fyrir klifrara, dómara og stjórnendur.
                 </p>
