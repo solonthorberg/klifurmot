@@ -93,7 +93,7 @@ export interface UpdateBoulderRequest {
 // Response types for nested endpoints
 export interface CompetitionAthlete {
     id: number;
-    full_name: string | null;
+    full_name: string;
     age: number | null;
     category_name: string;
     gender: string;
@@ -123,7 +123,7 @@ export interface CategoryBoulders {
 
 export interface StartlistAthlete {
     start_order: number;
-    full_name: string | null;
+    full_name: string;
     category_name: string;
 }
 
