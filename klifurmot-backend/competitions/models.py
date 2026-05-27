@@ -1,11 +1,11 @@
-from django.utils import timezone
-from django.db import models
 from django.conf import settings
+from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+from core.models import AuditedSoftDeleteModel, CompetitionGender
 
 
-class Competition(models.Model):
+class Competition(AuditedSoftDeleteModel):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     start_date = models.DateTimeField()
@@ -13,21 +13,19 @@ class Competition(models.Model):
     location = models.TextField()
     image = models.ImageField(upload_to="competitions/", blank=True, null=True)
     visible = models.BooleanField(default=True)
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name="competitions_created",
     )
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
     last_modified_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name="competitions_modified",
     )
-    deleted = models.BooleanField(default=False)
 
     @property
     def status(self):
@@ -69,31 +67,17 @@ class CategoryGroup(models.Model):
 
     def contains_birth_year(self, birth_year, competition_year):
         athlete_age = competition_year - birth_year
-
         if self.min_age is not None and athlete_age < self.min_age:
             return False
-
         if self.max_age is not None and athlete_age > self.max_age:
             return False
-
         return True
 
 
-class CompetitionCategory(models.Model):
-    GENDER_CHOICES = [("KK", "KK"), ("KVK", "KVK")]
-
+class CompetitionCategory(AuditedSoftDeleteModel):
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     category_group = models.ForeignKey(CategoryGroup, on_delete=models.CASCADE)
-    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
+    gender = models.CharField(max_length=6, choices=CompetitionGender.choices)
 
     def __str__(self):
         return f"{self.competition.title} - {self.category_group.name} ({self.gender})"
@@ -107,7 +91,7 @@ class RoundGroup(models.Model):
         return self.name
 
 
-class CompetitionRound(models.Model):
+class CompetitionRound(AuditedSoftDeleteModel):
     competition_category = models.ForeignKey(
         "CompetitionCategory", on_delete=models.CASCADE
     )
@@ -115,19 +99,11 @@ class CompetitionRound(models.Model):
     round_order = models.IntegerField()
     climbers_advance = models.IntegerField(null=True, blank=True, default=0)
     boulder_count = models.IntegerField(default=0)
+    completed = models.BooleanField(default=False)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
-    completed = models.BooleanField(default=False)
     is_self_scoring = models.BooleanField(default=False)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=False)
 
     @property
     def status(self):
@@ -178,29 +154,26 @@ class CompetitionRound(models.Model):
         ordering = ["round_order"]
 
 
-class Boulder(models.Model):
+class Boulder(AuditedSoftDeleteModel):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
     boulder_number = models.IntegerField()
     section_style = models.CharField(
         max_length=50, default="general", null=True, blank=True
     )
     image = models.ImageField(upload_to="boulders/", blank=True, null=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"{self.round} - Boulder {self.boulder_number}"
 
     class Meta:
         ordering = ["boulder_number"]
-        unique_together = ["round", "boulder_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["round", "boulder_number"],
+                condition=models.Q(deleted=False),
+                name="unique_active_boulder",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.round} - Boulder {self.boulder_number}"
 
 
 class JudgeBoulderAssignment(models.Model):

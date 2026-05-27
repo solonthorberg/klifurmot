@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "athletes",
     "scoring",
     "judges",
+    "core",
 ]
 
 

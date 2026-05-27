@@ -1,12 +1,10 @@
-from django.utils import timezone
 from django.db import models
-from django.conf import settings
+from django.utils import timezone
 
-# Create your models here.
+from core.models import AuditedSoftDeleteModel, UserGender
 
 
-class Climber(models.Model):
-    GENDER_CHOICES = [("KK", "KK"), ("KVK", "KVK")]
+class Climber(AuditedSoftDeleteModel):
     user_account = models.OneToOneField(
         "accounts.UserAccount", on_delete=models.CASCADE, null=True, blank=True
     )
@@ -14,19 +12,12 @@ class Climber(models.Model):
     simple_name = models.CharField(max_length=100, blank=True, null=True)
     simple_age = models.IntegerField(blank=True, null=True)
     simple_gender = models.CharField(
-        max_length=10, choices=GENDER_CHOICES, blank=True, null=True
+        max_length=6,
+        choices=UserGender.choices,
+        blank=True,
+        null=True,
     )
     is_simple_athlete = models.BooleanField(default=False)
-
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
 
     def __str__(self):
         if self.is_simple_athlete and self.simple_name:
@@ -53,13 +44,11 @@ class Climber(models.Model):
         if self.is_simple_athlete:
             return self.simple_age
         elif self.user_account and self.user_account.date_of_birth:
-            from django.utils import timezone
-
             return timezone.now().year - self.user_account.date_of_birth.year
         return None
 
 
-class CompetitionRegistration(models.Model):
+class CompetitionRegistration(AuditedSoftDeleteModel):
     competition = models.ForeignKey(
         "competitions.Competition", on_delete=models.CASCADE
     )
@@ -67,18 +56,15 @@ class CompetitionRegistration(models.Model):
         "competitions.CompetitionCategory", on_delete=models.CASCADE
     )
     climber = models.ForeignKey(Climber, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("competition", "climber", "competition_category")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["competition", "climber", "competition_category"],
+                condition=models.Q(deleted=False),
+                name="unique_active_registration",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.climber} in {self.competition_category}"

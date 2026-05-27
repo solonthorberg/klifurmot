@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
-# Create your models here.
+from core.models import UserGender
 
 
 class Country(models.Model):
@@ -15,15 +15,16 @@ class Country(models.Model):
 
 
 class UserAccount(models.Model):
-    GENDER_CHOICES = [("KK", "KK"), ("KVK", "KVK")]
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     full_name = models.CharField(max_length=100)
     is_admin = models.BooleanField(default=False)
     google_id = models.CharField(max_length=32, blank=True, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(
-        max_length=10, choices=GENDER_CHOICES, null=True, blank=True
+        max_length=6,
+        choices=UserGender.choices,
+        null=True,
+        blank=True,
     )
     nationality = models.ForeignKey(
         Country, on_delete=models.SET_NULL, null=True, blank=True
@@ -40,7 +41,7 @@ class UserAccount(models.Model):
     reset_token_created = models.DateTimeField(null=True, blank=True)
     reset_attempts = models.IntegerField(default=0)
     last_reset_attempt = models.DateTimeField(null=True, blank=True)
-    deleted = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -62,10 +63,16 @@ class CompetitionRole(models.Model):
     last_modified_by = models.ForeignKey(
         UserAccount, on_delete=models.SET_NULL, null=True, related_name="+"
     )
-    deleted = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False, db_index=True)
 
     class Meta:
-        unique_together = ("user", "competition", "role")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "competition", "role"],
+                condition=models.Q(deleted=False),
+                name="unique_active_competition_role",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.user} - {self.role} at {self.competition}"
