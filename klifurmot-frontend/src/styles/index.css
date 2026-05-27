@@ -13,16 +13,10 @@ body {
     background-color: var(--color-background);
 }
 
-.h-screen-safe {
-    height: calc(
-        100vh - env(safe-area-inset-bottom, 0) - env(safe-area-inset-top, 0)
-    );
-}
-
-@supports (-webkit-touch-callout: none) {
-    .h-screen-safe {
-        height: -webkit-fill-available;
-    }
+html,
+body,
+#root {
+    height: 100%;
 }
 
 @keyframes fade-in {
