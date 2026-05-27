@@ -42,8 +42,10 @@ export default function AdminPanelDetailsPage() {
 
     return (
         <Container className="gap-4">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-semibold">{competition?.title}</h2>
+            <div className="flex justify-between items-center gap-2">
+                <h2 className="text-2xl font-semibold wrap-break-word">
+                    {competition?.title}
+                </h2>
                 <MainButton
                     onClick={() =>
                         navigate(

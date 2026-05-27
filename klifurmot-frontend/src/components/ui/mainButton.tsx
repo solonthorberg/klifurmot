@@ -38,7 +38,7 @@ export default function MainButton({
     };
 
     const baseStyles =
-        'rounded-lg font-medium flex items-center justify-center cursor-pointer gap-2 truncate disabled:opacity-50 disabled:cursor-not-allowed transition-transform duration-75';
+        'rounded-lg font-medium flex items-center justify-center cursor-pointer gap-2 wrap-break-word disabled:opacity-50 disabled:cursor-not-allowed transition-transform duration-75';
 
     const animation = animated
         ? 'transition-all duration-200 ease-in-out hover:scale-105 active:scale-95'

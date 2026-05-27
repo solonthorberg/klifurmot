@@ -26,7 +26,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     """Serializer for creating competitions"""
 
     title = serializers.CharField(max_length=50, min_length=2)
-    description = serializers.CharField(max_length=300, min_length=2)
+    description = serializers.CharField(max_length=3000, min_length=2)
     location = serializers.CharField(max_length=50, min_length=2)
     image = serializers.ImageField(required=False, allow_null=True)
 
@@ -62,7 +62,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
 
 class UpdateCompetitionSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=50, min_length=2, required=False)
-    description = serializers.CharField(max_length=300, min_length=2, required=False)
+    description = serializers.CharField(max_length=3000, min_length=2, required=False)
     start_date = serializers.DateTimeField(required=False)
     end_date = serializers.DateTimeField(required=False)
     location = serializers.CharField(max_length=50, min_length=2, required=False)

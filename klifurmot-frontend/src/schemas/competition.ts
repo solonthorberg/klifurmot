@@ -16,7 +16,7 @@ export const CreateCompetitionSchema = z
         description: z
             .string()
             .min(2, 'Upplýsingar verða að vera að minnsta kosti 2 stafir')
-            .max(300, 'Upplýsingar mega ekki fara yfir 300 stafi'),
+            .max(3000, 'Upplýsingar mega ekki fara yfir 3000 stafi'),
         start_date: dateString,
         end_date: dateString,
         location: z
@@ -90,7 +90,7 @@ export const UpdateCompetitionSchema = z
             .max(50, 'Titill má ekki fara yfir 50 stafi'),
         description: z
             .string()
-            .max(300, 'Upplýsingar mega ekki fara yfir 300 stafi'),
+            .max(3000, 'Upplýsingar mega ekki fara yfir 3000 stafi'),
         start_date: dateString,
         end_date: dateString,
         location: z
