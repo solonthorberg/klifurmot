@@ -4,9 +4,9 @@ import Navbar from '@/components/layouts/navbar';
 
 export default function MainLayout() {
     return (
-        <div>
+        <div className="flex flex-col h-dvh">
             <Navbar />
-            <main>
+            <main className="flex-1 overflow-hidden">
                 <Outlet />
             </main>
         </div>

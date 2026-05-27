@@ -6,7 +6,7 @@ import MainButton from '@/components/ui/mainButton';
 export default function HomePage() {
     const navigate = useNavigate();
     return (
-        <div className="relative h-[calc(100dvh-4rem)] overflow-hidden">
+        <div className="relative h-full overflow-hidden">
             <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
