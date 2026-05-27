@@ -193,6 +193,7 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
                                 value={field.value}
                                 onChange={field.onChange}
                                 options={judgeOptions}
+                                inputClassName="bg-white"
                                 placeholder="Veldu dómara..."
                                 error={
                                     linkForm.formState.errors.user_id?.message

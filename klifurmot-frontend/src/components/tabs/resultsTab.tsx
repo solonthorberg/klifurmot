@@ -93,7 +93,10 @@ export default function ResultsTab({
                                 className="flex flex-col overflow-hidden"
                             >
                                 {rounds.map((round) => (
-                                    <div key={round.round_name}>
+                                    <div
+                                        className="mb-8"
+                                        key={round.round_name}
+                                    >
                                         <div className="p-4">
                                             <div className="flex flex-row gap-4">
                                                 <h2 className="text-lg font-semibold">
