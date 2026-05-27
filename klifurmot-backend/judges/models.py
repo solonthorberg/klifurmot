@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 import uuid
+
+from core.models import AuditedSoftDeleteModel
 
 # Create your models here.
 
 
-class JudgeLink(models.Model):
+class JudgeLink(AuditedSoftDeleteModel):
     TYPE_CHOICES = [("link", "Link"), ("invitation", "Invitation")]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="link")
     user = models.ForeignKey(
@@ -33,14 +34,6 @@ class JudgeLink(models.Model):
         null=True,
         blank=True,
         related_name="claimed_judge_links",
-    )
-
-    created_at = models.DateTimeField(default=timezone.now)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="judge_links_created",
     )
 
     class Meta:

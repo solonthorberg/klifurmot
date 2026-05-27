@@ -7,7 +7,6 @@ from athletes.models import CompetitionRegistration
 from athletes.utils import (
     build_age_category_resolver,
     calculate_age,
-    get_age_based_category,
 )
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile

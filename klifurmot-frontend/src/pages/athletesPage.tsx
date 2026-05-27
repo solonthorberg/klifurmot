@@ -52,6 +52,7 @@ export default function AthletesPage() {
     const genderOptions = [
         { value: 'KK', label: 'KK' },
         { value: 'KVK', label: 'KVK' },
+        { value: 'OTHER', label: 'Annað' },
     ];
 
     return (
