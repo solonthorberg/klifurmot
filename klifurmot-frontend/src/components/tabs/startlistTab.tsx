@@ -58,13 +58,15 @@ export default function StartlistTab({
             </div>
             <div className="flex flex-col gap-4 w-full">
                 {filteredCategories.length === 0 ? (
-                    <p className="text-gray-500 mx-auto">Engar leiðir skráðar...</p>
+                    <p className="text-gray-500 mx-auto">
+                        Engar leiðir skráðar...
+                    </p>
                 ) : (
                     filteredCategories.map((c) => {
                         const rounds = selectedRound
                             ? c.rounds.filter(
-                                (r) => r.round_name === selectedRound,
-                            )
+                                  (r) => r.round_name === selectedRound,
+                              )
                             : c.rounds;
                         if (rounds.length === 0) return null;
                         return (
@@ -73,7 +75,10 @@ export default function StartlistTab({
                                 className="flex flex-col overflow-hidden"
                             >
                                 {rounds.map((round) => (
-                                    <div key={round.round_name}>
+                                    <div
+                                        className="mb-8"
+                                        key={round.round_name}
+                                    >
                                         <div className="flex justify-between items-end p-4">
                                             <div className="flex flex-wrap gap-4">
                                                 <h2 className="text-lg font-semibold">
