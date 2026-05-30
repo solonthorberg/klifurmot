@@ -11,9 +11,9 @@ urlpatterns = [
         name="competition_athletes",
     ),
     path(
-        "<int:competition_id>/boulders/",
-        views.competition_boulders,
-        name="competition_boulders",
+        "<int:competition_id>/routes/",
+        views.competition_routes,
+        name="competition_routes",
     ),
     path(
         "<int:competition_id>/startlist/",
@@ -39,8 +39,6 @@ urlpatterns = [
     path("rounds/<int:round_id>/status/", views.round_status, name="round_status"),
     path("round-groups/", views.round_groups, name="round_groups"),
     path("category-groups/", views.category_groups, name="category_groups"),
-    path("boulders/<int:boulder_id>/", views.boulder_detail, name="boulder_detail"),
-    path(
-        "rounds/<int:round_id>/boulders/", views.round_boulders, name="round-boulders"
-    ),
+    path("routes/<int:route_id>/", views.route_detail, name="route_detail"),
+    path("rounds/<int:round_id>/routes/", views.round_routes, name="round_routes"),
 ]

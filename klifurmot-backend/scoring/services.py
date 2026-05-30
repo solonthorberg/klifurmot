@@ -3,8 +3,8 @@ from typing import Any, Optional
 from django.db import transaction
 from django.utils import timezone
 from .models import Climb, ClimberRoundScore, RoundResult
-from .utils import UpdateRoundScoreForBoulder, BroadcastScoreUpdate
-from competitions.models import Boulder, CompetitionRound
+from .utils import UpdateRoundScoreForRoute, BroadcastScoreUpdate
+from competitions.models import Route, CompetitionRound
 from athletes.models import Climber
 from accounts.authorization import require_competition_judge, require_competition_admin
 
@@ -14,9 +14,9 @@ def list_climbs(
 ) -> list[dict[str, Any]]:
     queryset = Climb.objects.select_related(
         "climber__user_account",
-        "boulder",
+        "route",
     ).filter(
-        boulder__round_id=round_id,
+        route__round_id=round_id,
         deleted=False,
     )
 
@@ -40,8 +40,8 @@ def list_climbs(
                 "id": climb.pk,
                 "climber_id": climber.pk,
                 "climber_name": climber_name,
-                "boulder_id": climb.boulder.pk,
-                "boulder_number": climb.boulder.boulder_number,
+                "route_id": climb.route.pk,
+                "route_number": climb.route.route_number,
                 "attempts_top": climb.attempts_top,
                 "attempts_zone": climb.attempts_zone,
                 "top_reached": climb.top_reached,
@@ -181,16 +181,16 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
         raise ValueError(f"Climber with id {data['climber']} not found")
 
     try:
-        boulder = Boulder.objects.select_related(
+        route = Route.objects.select_related(
             "round__competition_category__competition"
-        ).get(id=data["boulder"], deleted=False)
-    except Boulder.DoesNotExist:
-        raise ValueError(f"Boulder with id {data['boulder']} not found")
+        ).get(id=data["route"], deleted=False)
+    except Route.DoesNotExist:
+        raise ValueError(f"Route with id {data['route']} not found")
 
-    require_competition_judge(user, boulder.round.competition_category.competition_id)
+    require_competition_judge(user, route.round.competition_category.competition_id)
 
     in_startlist = RoundResult.objects.filter(
-        round=boulder.round,
+        round=route.round,
         climber=climber,
         deleted=False,
     ).exists()
@@ -208,11 +208,11 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
     with transaction.atomic():
         existing = Climb.objects.filter(
             climber=climber,
-            boulder=boulder,
+            route=route,
         ).first()
 
         if existing and not existing.deleted:
-            raise ValueError("A climb already exists for this climber and boulder.")
+            raise ValueError("A climb already exists for this climber and route.")
 
         if existing:
             existing.deleted = False
@@ -227,16 +227,16 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
         else:
             climb = Climb.objects.create(
                 climber=climber,
-                boulder=boulder,
+                route=route,
                 **normalized,
                 judge=user,
                 created_by=user,
                 last_modified_by=user,
             )
 
-        UpdateRoundScoreForBoulder(climb)
-        _update_round_results(boulder.round)
-        BroadcastScoreUpdate(boulder.round.competition_category.competition_id)
+        UpdateRoundScoreForRoute(climb)
+        _update_round_results(route.round)
+        BroadcastScoreUpdate(route.round.competition_category.competition_id)
 
     if climber.is_simple_athlete:
         climber_name = climber.simple_name
@@ -247,8 +247,8 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
         "id": climb.pk,
         "climber_id": climber.pk,
         "climber_name": climber_name,
-        "boulder_id": boulder.pk,
-        "boulder_number": boulder.boulder_number,
+        "route_id": route.pk,
+        "route_number": route.route_number,
         "attempts_top": climb.attempts_top,
         "attempts_zone": climb.attempts_zone,
         "top_reached": climb.top_reached,
@@ -269,7 +269,7 @@ def get_climb(climb_id: int) -> dict[str, Any]:
     try:
         climb = Climb.objects.select_related(
             "climber__user_account",
-            "boulder",
+            "route",
         ).get(id=climb_id, deleted=False)
     except Climb.DoesNotExist:
         raise ValueError(f"Climb with id {climb_id} not found")
@@ -285,8 +285,8 @@ def get_climb(climb_id: int) -> dict[str, Any]:
         "id": climb.pk,
         "climber_id": climber.pk,
         "climber_name": climber_name,
-        "boulder_id": climb.boulder.pk,
-        "boulder_number": climb.boulder.boulder_number,
+        "route_id": climb.route.pk,
+        "route_number": climb.route.route_number,
         "attempts_top": climb.attempts_top,
         "attempts_zone": climb.attempts_zone,
         "top_reached": climb.top_reached,
@@ -298,13 +298,13 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
     try:
         climb = Climb.objects.select_related(
             "climber__user_account",
-            "boulder__round__competition_category__competition",
+            "route__round__competition_category__competition",
         ).get(id=climb_id, deleted=False)
     except Climb.DoesNotExist:
         raise ValueError(f"Climb with id {climb_id} not found")
 
     require_competition_judge(
-        user, climb.boulder.round.competition_category.competition_id
+        user, climb.route.round.competition_category.competition_id
     )
 
     with transaction.atomic():
@@ -321,9 +321,9 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
         climb.last_modified_by = user
         climb.save()
 
-        UpdateRoundScoreForBoulder(climb)
-        _update_round_results(climb.boulder.round)
-        BroadcastScoreUpdate(climb.boulder.round.competition_category.competition_id)
+        UpdateRoundScoreForRoute(climb)
+        _update_round_results(climb.route.round)
+        BroadcastScoreUpdate(climb.route.round.competition_category.competition_id)
 
     climber = climb.climber
 
@@ -336,8 +336,8 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
         "id": climb.pk,
         "climber_id": climber.pk,
         "climber_name": climber_name,
-        "boulder_id": climb.boulder.pk,
-        "boulder_number": climb.boulder.boulder_number,
+        "route_id": climb.route.pk,
+        "route_number": climb.route.route_number,
         "attempts_top": climb.attempts_top,
         "attempts_zone": climb.attempts_zone,
         "top_reached": climb.top_reached,
@@ -348,25 +348,25 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
 def delete_climb(climb_id: int, user) -> None:
     try:
         climb = Climb.objects.select_related(
-            "boulder__round__competition_category__competition"
+            "route__round__competition_category__competition"
         ).get(id=climb_id, deleted=False)
     except Climb.DoesNotExist:
         raise ValueError(f"Climb with id {climb_id} not found")
 
     require_competition_judge(
         user,
-        climb.boulder.round.competition_category.competition_id,
+        climb.route.round.competition_category.competition_id,
         message="You do not have permission to delete climbs for this competition",
     )
 
-    round_obj = climb.boulder.round
+    round_obj = climb.route.round
     competition_id = round_obj.competition_category.competition_id
 
     with transaction.atomic():
         climb.deleted = True
         climb.save()
 
-        UpdateRoundScoreForBoulder(climb)
+        UpdateRoundScoreForRoute(climb)
         _update_round_results(round_obj)
         BroadcastScoreUpdate(competition_id)
 

@@ -72,7 +72,7 @@ export const CreateRoundSchema = z.object({
         .nonnegative('Tala þarf að vera jákvæð')
         .max(200, 'Hámark 200 keppendur')
         .nullable(),
-    boulder_count: z
+    route_count: z
         .number('Sláðu inn fjölda leiða')
         .int('Tala þarf að vera heil tala')
         .positive('Tala þarf að vera jákvæð')
@@ -146,7 +146,7 @@ export const UpdateRoundSchema = z.object({
         .nonnegative('Tala þarf að vera jákvæð')
         .max(200, 'Hámark 200 keppendur')
         .nullable(),
-    boulder_count: z
+    route_count: z
         .number('Sláðu inn fjölda leiða')
         .int('Tala þarf að vera heil tala')
         .positive('Tala þarf að vera jákvæð')

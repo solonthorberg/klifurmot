@@ -56,7 +56,7 @@ export default function CreateCompetitionPage() {
                         round_group: round.round_group,
                         round_order: round.round_order,
                         climbers_advance: round.climbers_advance,
-                        boulder_count: round.boulder_count,
+                        route_count: round.route_count,
                         is_self_scoring: round.is_self_scoring,
                     },
                 });

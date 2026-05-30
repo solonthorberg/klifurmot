@@ -38,7 +38,7 @@ export default function RoundModal({
             ? {
                   round_group: existingRound.round_group,
                   climbers_advance: existingRound.climbers_advance,
-                  boulder_count: existingRound.boulder_count,
+                  route_count: existingRound.route_count,
                   is_self_scoring: existingRound.is_self_scoring,
               }
             : {
@@ -101,14 +101,14 @@ export default function RoundModal({
                             error={errors.climbers_advance?.message}
                         />
                         <Input
-                            {...register('boulder_count', {
+                            {...register('route_count', {
                                 valueAsNumber: true,
                             })}
                             label="Fjöldi leiða"
                             type="number"
                             min="1"
                             step="1"
-                            error={errors.boulder_count?.message}
+                            error={errors.route_count?.message}
                         />
                         {error && (
                             <p className="text-red-500 text-sm">{error}</p>

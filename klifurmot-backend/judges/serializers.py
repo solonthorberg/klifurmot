@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.utils import timezone
 
 
 class SendInvitationSerializer(serializers.Serializer):

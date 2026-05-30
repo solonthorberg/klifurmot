@@ -7,8 +7,7 @@ from .models import (
     CompetitionCategory,
     RoundGroup,
     CompetitionRound,
-    Boulder,
-    JudgeBoulderAssignment,
+    Route,
 )
 from scoring import services as scoring_services
 
@@ -17,8 +16,7 @@ admin.site.register(Competition)
 admin.site.register(CategoryGroup)
 admin.site.register(CompetitionCategory)
 admin.site.register(RoundGroup)
-admin.site.register(Boulder)
-admin.site.register(JudgeBoulderAssignment)
+admin.site.register(Route)
 
 
 def advance_top_climbers(_modeladmin, request, queryset):

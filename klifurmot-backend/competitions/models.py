@@ -6,6 +6,8 @@ from core.models import AuditedSoftDeleteModel, CompetitionGender
 
 
 class Competition(AuditedSoftDeleteModel):
+    DISCIPLINE_CHOICES = [("boulder", "Boulder"), ("lead", "Lead")]
+
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     start_date = models.DateTimeField()
@@ -98,7 +100,7 @@ class CompetitionRound(AuditedSoftDeleteModel):
     round_group = models.ForeignKey("RoundGroup", on_delete=models.CASCADE)
     round_order = models.IntegerField()
     climbers_advance = models.IntegerField(null=True, blank=True, default=0)
-    boulder_count = models.IntegerField(default=0)
+    route_count = models.IntegerField(default=0)
     completed = models.BooleanField(default=False)
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
@@ -154,34 +156,23 @@ class CompetitionRound(AuditedSoftDeleteModel):
         ordering = ["round_order"]
 
 
-class Boulder(AuditedSoftDeleteModel):
+class Route(AuditedSoftDeleteModel):
     round = models.ForeignKey(CompetitionRound, on_delete=models.CASCADE)
-    boulder_number = models.IntegerField()
+    route_number = models.IntegerField()
     section_style = models.CharField(
         max_length=50, default="general", null=True, blank=True
     )
-    image = models.ImageField(upload_to="boulders/", blank=True, null=True)
+    image = models.ImageField(upload_to="routes/", blank=True, null=True)
 
     class Meta:
-        ordering = ["boulder_number"]
+        ordering = ["route_number"]
         constraints = [
             models.UniqueConstraint(
-                fields=["round", "boulder_number"],
+                fields=["round", "route_number"],
                 condition=models.Q(deleted=False),
-                name="unique_active_boulder",
+                name="unique_active_route",
             ),
         ]
 
     def __str__(self):
-        return f"{self.round} - Boulder {self.boulder_number}"
-
-
-class JudgeBoulderAssignment(models.Model):
-    judge = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    boulder = models.ForeignKey(Boulder, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ("judge", "boulder")
-
-    def __str__(self):
-        return f"{self.judge} - {self.boulder}"
+        return f"{self.round} - Route {self.route_number}"

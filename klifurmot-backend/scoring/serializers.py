@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 class CreateClimbSerializer(serializers.Serializer):
     climber = serializers.IntegerField()
-    boulder = serializers.IntegerField()
+    route = serializers.IntegerField()
     attempts_top = serializers.IntegerField(min_value=0, default=0)
     attempts_zone = serializers.IntegerField(min_value=0, default=0)
     top_reached = serializers.BooleanField(default=False)

@@ -130,7 +130,7 @@ class RoundSerializer(serializers.ModelSerializer):
             "round_group_name",
             "round_order",
             "climbers_advance",
-            "boulder_count",
+            "route_count",
             "start_date",
             "end_date",
             "is_self_scoring",
@@ -145,7 +145,7 @@ class CreateRoundSerializer(serializers.Serializer):
     climbers_advance = serializers.IntegerField(
         min_value=0, max_value=200, default=0, allow_null=True
     )
-    boulder_count = serializers.IntegerField(min_value=1, max_value=100, default=1)
+    route_count = serializers.IntegerField(min_value=1, max_value=100, default=1)
     start_date = serializers.DateTimeField(required=False, allow_null=True)
     end_date = serializers.DateTimeField(required=False, allow_null=True)
     is_self_scoring = serializers.BooleanField(default=False)
@@ -163,7 +163,7 @@ class UpdateRoundSerializer(serializers.Serializer):
     climbers_advance = serializers.IntegerField(
         min_value=0, max_value=200, required=False, allow_null=True
     )
-    boulder_count = serializers.IntegerField(min_value=1, max_value=100, required=False)
+    route_count = serializers.IntegerField(min_value=1, max_value=100, required=False)
     start_date = serializers.DateTimeField(required=False, allow_null=True)
     end_date = serializers.DateTimeField(required=False, allow_null=True)
     is_self_scoring = serializers.BooleanField(required=False)
@@ -217,18 +217,18 @@ class UpdateCompetitionCategorySerializer(serializers.Serializer):
     gender = serializers.ChoiceField(choices=["KK", "KVK"], required=False)
 
 
-class BoulderSerializer(serializers.ModelSerializer):
+class RouteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.Boulder
+        model = models.Route
         fields = [
             "id",
             "round",
-            "boulder_number",
+            "route_number",
             "section_style",
         ]
 
 
-class UpdateBoulderSerializer(serializers.Serializer):
+class UpdateRouteSerializer(serializers.Serializer):
     image = serializers.ImageField(required=False, allow_null=True)
     section_style = serializers.CharField(max_length=50, required=False)
 

@@ -8,8 +8,8 @@ import {
     useUpdateClimb,
 } from '@/hooks/api/useScoring';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
-import type { Round, StartlistEntry, Boulder } from '@/types';
-import { useBoulders } from '@/hooks/api/useCompetitions';
+import type { Round, StartlistEntry, Route } from '@/types';
+import { useRoutes } from '@/hooks/api/useCompetitions';
 import Select from '../ui/select';
 
 interface BoulderScore {
@@ -225,7 +225,7 @@ export default function JudgeScoringView({
 
     const athlete = athletes[athleteIndex];
 
-    const { data: bouldersData, isLoading: bouldersLoading } = useBoulders(
+    const { data: bouldersData, isLoading: bouldersLoading } = useRoutes(
         round.id,
     );
     const { data: climbsData, refetch: refetchClimbs } = useClimbs(
@@ -235,12 +235,12 @@ export default function JudgeScoringView({
     const { mutateAsync: createClimb } = useCreateClimb();
     const { mutateAsync: updateClimb } = useUpdateClimb();
 
-    const boulders: Boulder[] = bouldersData?.data ?? [];
+    const boulders: Route[] = bouldersData?.data ?? [];
     const climbs = climbsData?.data ?? [];
     const currentBoulder = boulders[boulderIndex];
 
     const getScoreForBoulder = (boulderId: number): BoulderScore => {
-        const climb = climbs.find((c) => c.boulder_id === boulderId);
+        const climb = climbs.find((c) => c.route_id === boulderId);
         if (climb) {
             return {
                 climbId: climb.id,
@@ -271,7 +271,7 @@ export default function JudgeScoringView({
         if (!currentBoulder || !athlete) return;
         const payload = {
             climber: athlete.climber_id,
-            boulder: currentBoulder.id,
+            route: currentBoulder.id,
             attempts_zone: score.zone_attempts,
             attempts_top: score.top_attempts,
             zone_reached: score.zone_reached,
@@ -312,7 +312,7 @@ export default function JudgeScoringView({
 
     const boulderOptions = boulders.map((boulder, i) => ({
         value: String(i),
-        label: `Leið ${boulder.boulder_number}`,
+        label: `Leið ${boulder.route_number}`,
     }));
 
     return (
@@ -330,7 +330,7 @@ export default function JudgeScoringView({
                 <div className="border border-outline rounded-lg p-4 flex flex-col gap-4">
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-lg">
-                            Leið {currentBoulder.boulder_number}
+                            Leið {currentBoulder.route_number}
                         </h3>
                         <MainButton
                             size="small"
@@ -430,7 +430,7 @@ export default function JudgeScoringView({
 
             {editingScore && currentBoulder && (
                 <EditScoreModal
-                    boulderNumber={currentBoulder.boulder_number}
+                    boulderNumber={currentBoulder.route_number}
                     initialScore={editingScore}
                     onConfirm={handleEditConfirm}
                     onClose={() => setEditingScore(null)}
