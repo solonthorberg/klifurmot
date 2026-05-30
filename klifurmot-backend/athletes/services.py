@@ -97,6 +97,18 @@ def get_athlete_detail(athlete_id: int) -> dict[str, Any]:
         competition__end_date__lt=dj_timezone.now(),
     ).select_related("competition", "competition_category__category_group")
 
+    participation_count = (
+        RoundResult.objects.filter(
+            climber=climber,
+            deleted=False,
+            round__competition_category__competition__end_date__lt=dj_timezone.now(),
+            round__deleted=False,
+        )
+        .values("round__competition_category__competition")
+        .distinct()
+        .count()
+    )
+
     competitions_result = []
     for reg in registrations:
         results = _get_climber_results(reg.competition, climber)
@@ -127,7 +139,7 @@ def get_athlete_detail(athlete_id: int) -> dict[str, Any]:
         if user_account.nationality
         else None,
         "category": get_age_based_category(category_age) if category_age else None,
-        "competitions_count": registrations.count(),
+        "competitions_count": participation_count,
         "wins_count": wins,
         "competition_results": competitions_result,
     }
