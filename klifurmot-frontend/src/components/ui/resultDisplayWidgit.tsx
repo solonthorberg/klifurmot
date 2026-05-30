@@ -1,9 +1,9 @@
-import type { BoulderScore } from '@/types';
+import type { RouteScore } from '@/types';
 
 export default function ResultDisplayWidget({
     boulderScore,
 }: {
-    boulderScore: BoulderScore;
+    boulderScore: RouteScore;
 }) {
     const isTop = boulderScore.top_reached;
     const isZone = boulderScore.zone_reached;
@@ -36,7 +36,7 @@ export default function ResultDisplayWidget({
                 </div>
             </div>
             <span className="text-xs text-gray-500">
-                {boulderScore.boulder_number}
+                {boulderScore.route_number}
             </span>
         </div>
     );
