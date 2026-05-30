@@ -12,9 +12,9 @@ export default function ResultCard({ athlete }: { athlete: ResultEntry }) {
             </td>
             <td className="pl-4 pt-2">
                 <div className="flex gap-1">
-                    {athlete.boulders.map((b) => (
+                    {athlete.routes.map((b) => (
                         <ResultDisplayWidget
-                            key={b.boulder_number}
+                            key={b.route_number}
                             boulderScore={b}
                         />
                     ))}

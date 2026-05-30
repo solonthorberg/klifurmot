@@ -543,7 +543,7 @@ def delete_registration(registration_id: int, user) -> None:
 
     with transaction.atomic():
         Climb.objects.filter(
-            boulder__round__competition_category__competition=registration.competition,
+            route__round__competition_category__competition=registration.competition,
             climber=registration.climber,
             deleted=False,
         ).update(deleted=True)

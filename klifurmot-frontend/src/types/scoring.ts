@@ -2,8 +2,8 @@ export interface Climb {
     id: number;
     climber_id: number;
     climber_name: string | null;
-    boulder_id: number;
-    boulder_number: number;
+    route_id: number;
+    route_number: number;
     attempts_top: number;
     attempts_zone: number;
     top_reached: boolean;
@@ -12,7 +12,7 @@ export interface Climb {
 
 export interface CreateClimbRequest {
     climber: number;
-    boulder: number;
+    route: number;
     attempts_top?: number;
     attempts_zone?: number;
     top_reached?: boolean;

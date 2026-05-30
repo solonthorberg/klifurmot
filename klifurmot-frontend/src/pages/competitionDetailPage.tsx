@@ -2,7 +2,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import { getErrorMessage } from '@/api';
 import AthletesRegisterTab from '@/components/tabs/athletesRegisterTab';
-import BouldersTab from '@/components/tabs/bouldersTab';
 import OverviewTab from '@/components/tabs/overviewTab';
 import ResultsTab from '@/components/tabs/resultsTab';
 import StartlistTab from '@/components/tabs/startlistTab';
@@ -11,6 +10,7 @@ import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import TabButton from '@/components/ui/tabButton';
 import { useCompetition } from '@/hooks/api/useCompetitions';
+import RoutesTab from '@/components/tabs/routesTab';
 
 export default function CompetitionDetailPage() {
     const { competitionId } = useParams();
@@ -50,9 +50,7 @@ export default function CompetitionDetailPage() {
                     {tab === 1 && (
                         <AthletesRegisterTab competitionId={competition.id} />
                     )}
-                    {tab === 2 && (
-                        <BouldersTab competitionId={competition.id} />
-                    )}
+                    {tab === 2 && <RoutesTab competitionId={competition.id} />}
                     {tab === 3 && (
                         <StartlistTab competitionId={competition.id} />
                     )}

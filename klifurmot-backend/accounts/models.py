@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 
-from core.models import UserGender
+from core.models import AuditedSoftDeleteModel, UserGender
 
 
 class Country(models.Model):
@@ -47,23 +47,13 @@ class UserAccount(models.Model):
         return self.user.get_full_name() or self.user.username
 
 
-class CompetitionRole(models.Model):
+class CompetitionRole(AuditedSoftDeleteModel):
     ROLE_CHOICES = [("admin", "Admin"), ("judge", "Judge")]
-
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     competition = models.ForeignKey(
         "competitions.Competition", on_delete=models.CASCADE
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    created_by = models.ForeignKey(
-        UserAccount, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
-    last_modified_by = models.ForeignKey(
-        UserAccount, on_delete=models.SET_NULL, null=True, related_name="+"
-    )
-    deleted = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         constraints = [

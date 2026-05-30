@@ -7,14 +7,14 @@ import LoadingSpinner from '../ui/loadingSpinner';
 import Select from '../ui/select';
 
 import { getErrorMessage } from '@/api';
-import { useCompetitionBoulders } from '@/hooks/api/useCompetitions';
+import { useCompetitionRoutes } from '@/hooks/api/useCompetitions';
 
-export default function BouldersTab({
+export default function RoutesTab({
     competitionId,
 }: {
     competitionId: number;
 }) {
-    const { data, isLoading, error } = useCompetitionBoulders(competitionId);
+    const { data, isLoading, error } = useCompetitionRoutes(competitionId);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedRound, setSelectedRound] = useState('');
 
@@ -89,7 +89,7 @@ export default function BouldersTab({
                                                 </h2>
                                             </div>
                                             <span className="text-lg text-gray-500 whitespace-nowrap">
-                                                Leiðir: {round.boulders.length}
+                                                Leiðir: {round.routes.length}
                                             </span>
                                         </div>
                                         <div className="border border-outline rounded-lg">
@@ -108,7 +108,7 @@ export default function BouldersTab({
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {round.boulders.map((b) => (
+                                                    {round.routes.map((b) => (
                                                         <BoulderCard
                                                             key={b.number}
                                                             boulder={b}

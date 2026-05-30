@@ -23,27 +23,27 @@ def BroadcastScoreUpdate(competition_id):
     )
 
 
-def UpdateRoundScoreForBoulder(climb):
+def UpdateRoundScoreForRoute(climb):
     climber = climb.climber
-    round_obj = climb.boulder.round
+    round_obj = climb.route.round
 
     if not climber or not round_obj:
         return
 
-    boulder_climbs = climber.climb_set.filter(
-        boulder__round=round_obj,
+    route_climbs = climber.climb_set.filter(
+        route__round=round_obj,
         deleted=False,
     )
 
-    total_tops = sum(1 for c in boulder_climbs if c.top_reached)
-    total_zones = sum(1 for c in boulder_climbs if c.zone_reached)
-    attempts_tops = sum(c.attempts_top for c in boulder_climbs if c.top_reached)
-    attempts_zones = sum(c.attempts_zone for c in boulder_climbs if c.zone_reached)
+    total_tops = sum(1 for c in route_climbs if c.top_reached)
+    total_zones = sum(1 for c in route_climbs if c.zone_reached)
+    attempts_tops = sum(c.attempts_top for c in route_climbs if c.top_reached)
+    attempts_zones = sum(c.attempts_zone for c in route_climbs if c.zone_reached)
 
     zone_score = 0
     top_score = 0
 
-    for c in boulder_climbs:
+    for c in route_climbs:
         if c.top_reached:
             top_score += 25 - 0.1 * (c.attempts_top - 1)
         elif c.zone_reached:

@@ -188,13 +188,13 @@ def competition_athletes(_request, competition_id):
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def competition_boulders(_request, competition_id):
+def competition_routes(_request, competition_id):
     try:
-        result = services.get_competition_boulders(competition_id=competition_id)
+        result = services.get_competition_routes(competition_id=competition_id)
 
         return utils.success_response(
             data=result,
-            message="Boulders retrieved successfully",
+            message="Routes retrieved successfully",
         )
 
     except ValueError as e:
@@ -606,14 +606,14 @@ def category_groups(_request):
 
 @api_view(["GET", "PATCH"])
 @permission_classes([AllowAny])
-def boulder_detail(request, boulder_id):
+def route_detail(request, route_id):
     if request.method == "GET":
         try:
-            result = services.get_boulder(boulder_id=boulder_id)
+            result = services.get_route(route_id=route_id)
 
             return utils.success_response(
                 data=result,
-                message="Boulder retrieved successfully",
+                message="Route retrieved successfully",
             )
 
         except ValueError as e:
@@ -624,7 +624,7 @@ def boulder_detail(request, boulder_id):
             )
 
     if request.method == "PATCH":
-        serializer = serializers.UpdateBoulderSerializer(data=request.data)
+        serializer = serializers.UpdateRouteSerializer(data=request.data)
 
         if not serializer.is_valid():
             errors_dict = cast(Dict[str, Any], serializer.errors)
@@ -634,8 +634,8 @@ def boulder_detail(request, boulder_id):
             validated_data = cast(Dict[str, Any], serializer.validated_data)
             image = validated_data.pop("image", None)
 
-            result = services.update_boulder(
-                boulder_id=boulder_id,
+            result = services.update_route(
+                route_id=route_id,
                 user=request.user,
                 image=image,
                 **validated_data,
@@ -643,7 +643,7 @@ def boulder_detail(request, boulder_id):
 
             return utils.success_response(
                 data=result,
-                message="Boulder updated successfully",
+                message="Route updated successfully",
             )
 
         except ValueError as e:
@@ -670,9 +670,9 @@ def boulder_detail(request, boulder_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def round_boulders(request, round_id):
-    boulders = models.Boulder.objects.filter(round_id=round_id, deleted=False).order_by(
-        "boulder_number"
+def round_routes(request, round_id):
+    routes = models.Route.objects.filter(round_id=round_id, deleted=False).order_by(
+        "route_number"
     )
-    data = [{"id": b.pk, "boulder_number": b.boulder_number} for b in boulders]
-    return utils.success_response(data=data, message="Boulders retrieved successfully")
+    data = [{"id": b.pk, "route_number": b.route_number} for b in routes]
+    return utils.success_response(data=data, message="Routes retrieved successfully")

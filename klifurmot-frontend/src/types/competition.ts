@@ -70,7 +70,7 @@ export interface Round {
     round_group_name: string;
     round_order: number;
     climbers_advance: number;
-    boulder_count: number;
+    route_count: number;
     start_date: null;
     end_date: null;
     is_self_scoring: boolean;
@@ -78,14 +78,14 @@ export interface Round {
     status: string;
 }
 
-export interface Boulder {
+export interface Route {
     id: number;
     round: number;
-    boulder_number: number;
+    route_number: number;
     section_style: string | null;
 }
 
-export interface UpdateBoulderRequest {
+export interface UpdateRouteRequest {
     image?: File;
     section_style?: string;
 }
@@ -105,20 +105,20 @@ export interface CompetitionAthletesResponse {
     categories: Record<string, CompetitionAthlete[]>;
 }
 
-export interface BoulderStats {
+export interface RouteStats {
     number: number;
     tops: number;
     zones: number;
 }
 
-export interface RoundBoulders {
+export interface RoundRoutes {
     round_name: string;
-    boulders: BoulderStats[];
+    routes: RouteStats[];
 }
 
-export interface CategoryBoulders {
+export interface CategoryRoutes {
     category: string;
-    rounds: RoundBoulders[];
+    rounds: RoundRoutes[];
 }
 
 export interface StartlistAthlete {
@@ -137,8 +137,8 @@ export interface CategoryStartlist {
     rounds: RoundStartlist[];
 }
 
-export interface BoulderScore {
-    boulder_number: number;
+export interface RouteScore {
+    route_number: number;
     attempted: boolean;
     top_reached: boolean;
     zone_reached: boolean;
@@ -154,7 +154,7 @@ export interface ResultEntry {
     zones: number;
     attempts_zone: number;
     total_score: number;
-    boulders: BoulderScore[];
+    routes: RouteScore[];
 }
 
 export interface RoundResults {

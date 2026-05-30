@@ -15,12 +15,12 @@ from django.db.models import Count, Q
 from scoring.models import Climb, ClimberRoundScore, RoundResult
 
 from competitions.models import (
-    Boulder,
     CategoryGroup,
     Competition,
     CompetitionCategory,
     CompetitionRound,
     RoundGroup,
+    Route,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ def delete_competition(competition_id: int) -> None:
 
         with transaction.atomic():
             Climb.objects.filter(
-                boulder__round__competition_category__competition=competition,
+                route__round__competition_category__competition=competition,
                 deleted=False,
             ).update(deleted=True)
 
@@ -111,7 +111,7 @@ def delete_competition(competition_id: int) -> None:
                 deleted=False,
             ).update(deleted=True)
 
-            Boulder.objects.filter(
+            Route.objects.filter(
                 round__competition_category__competition=competition,
                 deleted=False,
             ).update(deleted=True)
@@ -196,19 +196,19 @@ def create_round(
                 **round_data,
             )
 
-            boulder_count = round_data.get("boulder_count", 0)
-            if boulder_count > 0:
-                boulders = [
-                    Boulder(
+            route_count = round_data.get("route_count", 0)
+            if route_count > 0:
+                routes = [
+                    Route(
                         round=competition_round,
-                        boulder_number=i,
+                        route_number=i,
                         section_style="",
                         created_by=user,
                         last_modified_by=user,
                     )
-                    for i in range(1, boulder_count + 1)
+                    for i in range(1, route_count + 1)
                 ]
-                Boulder.objects.bulk_create(boulders)
+                Route.objects.bulk_create(routes)
 
             return competition_round
 
@@ -244,42 +244,40 @@ def update_round(
                 round_group = RoundGroup.objects.get(id=round_group_id)
                 competition_round.round_group = round_group
 
-            new_boulder_count = update_data.pop("boulder_count", None)
-            if new_boulder_count is not None:
-                current_boulder_count = (
-                    cast(Any, competition_round)
-                    .boulder_set.filter(deleted=False)
-                    .count()
+            new_route_count = update_data.pop("route_count", None)
+            if new_route_count is not None:
+                current_route_count = (
+                    cast(Any, competition_round).route_set.filter(deleted=False).count()
                 )
 
-                if new_boulder_count > current_boulder_count:
-                    boulders = [
-                        Boulder(
+                if new_route_count > current_route_count:
+                    routes = [
+                        Route(
                             round=competition_round,
-                            boulder_number=i,
+                            route_number=i,
                             section_style="",
                             created_by=user,
                             last_modified_by=user,
                         )
-                        for i in range(current_boulder_count + 1, new_boulder_count + 1)
+                        for i in range(current_route_count + 1, new_route_count + 1)
                     ]
-                    Boulder.objects.bulk_create(boulders)
+                    Route.objects.bulk_create(routes)
 
-                elif new_boulder_count < current_boulder_count:
-                    boulders_to_delete = Boulder.objects.filter(
+                elif new_route_count < current_route_count:
+                    routes_to_delete = Route.objects.filter(
                         round=competition_round,
-                        boulder_number__gt=new_boulder_count,
+                        route_number__gt=new_route_count,
                         deleted=False,
                     )
 
                     Climb.objects.filter(
-                        boulder__in=boulders_to_delete,
+                        route__in=routes_to_delete,
                         deleted=False,
                     ).update(deleted=True)
 
-                    boulders_to_delete.update(deleted=True)
+                    routes_to_delete.update(deleted=True)
 
-                competition_round.boulder_count = new_boulder_count
+                competition_round.route_count = new_route_count
 
             for field, value in update_data.items():
                 if hasattr(competition_round, field):
@@ -318,7 +316,7 @@ def delete_round(round_id: int, user) -> None:
 
     with transaction.atomic():
         Climb.objects.filter(
-            boulder__round=competition_round,
+            route__round=competition_round,
             deleted=False,
         ).update(deleted=True)
 
@@ -332,7 +330,7 @@ def delete_round(round_id: int, user) -> None:
             deleted=False,
         ).update(deleted=True)
 
-        Boulder.objects.filter(
+        Route.objects.filter(
             round=competition_round,
             deleted=False,
         ).update(deleted=True)
@@ -521,7 +519,7 @@ def delete_category(category_id: int, user) -> None:
 
     with transaction.atomic():
         Climb.objects.filter(
-            boulder__round__competition_category=category,
+            route__round__competition_category=category,
             deleted=False,
         ).update(deleted=True)
 
@@ -535,7 +533,7 @@ def delete_category(category_id: int, user) -> None:
             deleted=False,
         ).update(deleted=True)
 
-        Boulder.objects.filter(
+        Route.objects.filter(
             round__competition_category=category,
             deleted=False,
         ).update(deleted=True)
@@ -617,7 +615,7 @@ def get_competition_athletes(competition_id: int) -> Dict[str, Any]:
     }
 
 
-def get_competition_boulders(competition_id: int) -> list[Dict[str, Any]]:
+def get_competition_routes(competition_id: int) -> list[Dict[str, Any]]:
     if not Competition.objects.filter(id=competition_id, deleted=False).exists():
         raise ValueError(f"Competition with id {competition_id} not found")
 
@@ -629,25 +627,25 @@ def get_competition_boulders(competition_id: int) -> list[Dict[str, Any]]:
         .select_related("category_group")
         .prefetch_related(
             "competitionround_set__round_group",
-            "competitionround_set__boulder_set",
+            "competitionround_set__route_set",
         )
     )
 
-    boulder_ids = Boulder.objects.filter(
+    route_ids = Route.objects.filter(
         round__competition_category__competition_id=competition_id,
         deleted=False,
     ).values_list("id", flat=True)
 
     climb_stats = (
-        Climb.objects.filter(boulder_id__in=boulder_ids, deleted=False)
-        .values("boulder_id")
+        Climb.objects.filter(route_id__in=route_ids, deleted=False)
+        .values("route_id")
         .annotate(
             tops=Count("id", filter=Q(top_reached=True)),
             zones=Count("id", filter=Q(zone_reached=True)),
         )
     )
 
-    stats_map = {stat["boulder_id"]: stat for stat in climb_stats}
+    stats_map = {stat["route_id"]: stat for stat in climb_stats}
 
     result = []
 
@@ -662,16 +660,16 @@ def get_competition_boulders(competition_id: int) -> list[Dict[str, Any]]:
         )
 
         for competition_round in category_rounds:
-            boulders_data = []
+            routes_data = []
 
-            for boulder in competition_round.boulder_set.filter(deleted=False).order_by(
-                "boulder_number"
+            for route in competition_round.route_set.filter(deleted=False).order_by(
+                "route_number"
             ):
-                stats = stats_map.get(boulder.id, {"tops": 0, "zones": 0})
+                stats = stats_map.get(route.id, {"tops": 0, "zones": 0})
 
-                boulders_data.append(
+                routes_data.append(
                     {
-                        "number": boulder.boulder_number,
+                        "number": route.route_number,
                         "tops": stats["tops"],
                         "zones": stats["zones"],
                     }
@@ -680,7 +678,7 @@ def get_competition_boulders(competition_id: int) -> list[Dict[str, Any]]:
             rounds_data.append(
                 {
                     "round_name": competition_round.round_group.name,
-                    "boulders": boulders_data,
+                    "routes": routes_data,
                 }
             )
 
@@ -783,9 +781,9 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
             .competitionround_set.filter(deleted=False)
             .order_by("round_order")
         ):
-            boulders = list(
-                Boulder.objects.filter(round=round_obj, deleted=False).order_by(
-                    "boulder_number"
+            routes = list(
+                Route.objects.filter(round=round_obj, deleted=False).order_by(
+                    "route_number"
                 )
             )
 
@@ -804,17 +802,17 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
 
             climbs = (
                 Climb.objects.filter(
-                    boulder__round=round_obj,
+                    route__round=round_obj,
                     climber_id__in=climber_ids,
                     deleted=False,
                 )
-                .select_related("boulder")
-                .order_by("boulder__boulder_number")
+                .select_related("route")
+                .order_by("route__route_number")
             )
 
             climbs_by_climber: Dict[int, Dict[int, Climb]] = {}
             for climb in climbs:
-                climbs_by_climber.setdefault(climb.climber.pk, {})[climb.boulder.pk] = (
+                climbs_by_climber.setdefault(climb.climber.pk, {})[climb.route.pk] = (
                     climb
                 )
 
@@ -832,25 +830,25 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                     )
 
                 climber_climbs = climbs_by_climber.get(climber_id, {})
-                boulder_scores = []
+                route_scores = []
 
-                for boulder in boulders:
-                    climb = climber_climbs.get(boulder.pk)
+                for route in routes:
+                    climb = climber_climbs.get(route.pk)
                     if climb:
-                        boulder_scores.append(
+                        route_scores.append(
                             {
-                                "boulder_number": boulder.boulder_number,
+                                "route_number": route.route_number,
                                 "attempted": True,
-                                "top_reached": climb.top_reached,
-                                "zone_reached": climb.zone_reached,
-                                "attempts_top": climb.attempts_top,
-                                "attempts_zone": climb.attempts_zone,
+                                "top_reached": climb.top_reached or False,
+                                "zone_reached": climb.zone_reached or False,
+                                "attempts_top": climb.attempts_top or 0,
+                                "attempts_zone": climb.attempts_zone or 0,
                             }
                         )
                     else:
-                        boulder_scores.append(
+                        route_scores.append(
                             {
-                                "boulder_number": boulder.boulder_number,
+                                "route_number": route.route_number,
                                 "attempted": False,
                                 "top_reached": False,
                                 "zone_reached": False,
@@ -868,7 +866,7 @@ def get_competition_results(competition_id: int) -> list[Dict[str, Any]]:
                         "zones": score.zones,
                         "attempts_zone": score.attempts_zones,
                         "total_score": float(round(score.total_score, 1)),
-                        "boulders": boulder_scores,
+                        "routes": route_scores,
                     }
                 )
 
@@ -901,62 +899,62 @@ def get_round(round_id: int) -> CompetitionRound:
         raise ValueError(f"Round with id {round_id} not found")
 
 
-def get_boulder(boulder_id: int) -> dict[str, Any]:
+def get_route(route_id: int) -> dict[str, Any]:
     try:
-        boulder = Boulder.objects.select_related(
+        route = Route.objects.select_related(
             "round__competition_category__competition"
-        ).get(id=boulder_id, deleted=False)
-    except Boulder.DoesNotExist:
-        raise ValueError(f"Boulder with id {boulder_id} not found")
+        ).get(id=route_id, deleted=False)
+    except Route.DoesNotExist:
+        raise ValueError(f"Route with id {route_id} not found")
 
     return {
-        "id": boulder.pk,
-        "boulder_number": boulder.boulder_number,
-        "section_style": boulder.section_style,
-        "image": boulder.image.url if boulder.image else None,
-        "round_id": boulder.round.pk,
+        "id": route.pk,
+        "route_number": route.route_number,
+        "section_style": route.section_style,
+        "image": route.image.url if route.image else None,
+        "round_id": route.round.pk,
     }
 
 
-def update_boulder(
-    boulder_id: int,
+def update_route(
+    route_id: int,
     user,
     image=None,
     **update_data: Any,
 ) -> dict[str, Any]:
     try:
-        boulder = Boulder.objects.select_related(
+        route = Route.objects.select_related(
             "round__competition_category__competition"
-        ).get(id=boulder_id, deleted=False)
-    except Boulder.DoesNotExist:
-        raise ValueError(f"Boulder with id {boulder_id} not found")
+        ).get(id=route_id, deleted=False)
+    except Route.DoesNotExist:
+        raise ValueError(f"Route with id {route_id} not found")
 
-    competition = boulder.round.competition_category.competition
+    competition = route.round.competition_category.competition
 
     if competition.status != "not_started":
-        raise PermissionError("Cannot update boulder after competition has started")
+        raise PermissionError("Cannot update route after competition has started")
 
     if image is not None:
         if image == "":
-            if boulder.image:
-                boulder.image.delete(save=False)
-            setattr(boulder, "image", None)
+            if route.image:
+                route.image.delete(save=False)
+            setattr(route, "image", None)
         else:
-            if boulder.image:
-                boulder.image.delete(save=False)
-            boulder.image = image
+            if route.image:
+                route.image.delete(save=False)
+            route.image = image
 
     for field, value in update_data.items():
-        if hasattr(boulder, field):
-            setattr(boulder, field, value)
+        if hasattr(route, field):
+            setattr(route, field, value)
 
-    boulder.last_modified_by = user
-    boulder.save()
+    route.last_modified_by = user
+    route.save()
 
     return {
-        "id": boulder.pk,
-        "boulder_number": boulder.boulder_number,
-        "section_style": boulder.section_style,
-        "image": boulder.image.url if boulder.image else None,
-        "round_id": boulder.round.pk,
+        "id": route.pk,
+        "route_number": route.route_number,
+        "section_style": route.section_style,
+        "image": route.image.url if route.image else None,
+        "round_id": route.round.pk,
     }

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { competitionsApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
 import { notify } from '@/stores/notificationStore';
-import type { UpdateBoulderRequest } from '@/types';
+import type { UpdateRouteRequest } from '@/types';
 import type {
     CreateCategoryFormData,
     CreateCompetitionFormData,
@@ -101,10 +101,10 @@ export function useCompetitionAthletes(competitionId: number) {
     });
 }
 
-export function useCompetitionBoulders(competitionId: number) {
+export function useCompetitionRoutes(competitionId: number) {
     return useQuery({
-        queryKey: ['competitions', competitionId, 'boulders'],
-        queryFn: () => competitionsApi.getCompetitionBoulders(competitionId),
+        queryKey: ['competitions', competitionId, 'routes'],
+        queryFn: () => competitionsApi.getCompetitionRoutes(competitionId),
         enabled: !!competitionId,
     });
 }
@@ -309,37 +309,37 @@ export function useCategoryGroups() {
     });
 }
 
-// Boulders
-export function useBoulder(boulderId: number) {
+// Routes
+export function useRoute(routeId: number) {
     return useQuery({
-        queryKey: ['boulders', boulderId],
-        queryFn: () => competitionsApi.getBoulder(boulderId),
-        enabled: !!boulderId,
+        queryKey: ['routes', routeId],
+        queryFn: () => competitionsApi.getRoute(routeId),
+        enabled: !!routeId,
     });
 }
 
-export function useBoulders(roundId: number) {
+export function useRoutes(roundId: number) {
     return useQuery({
-        queryKey: ['boulders', 'round', roundId],
-        queryFn: () => competitionsApi.listBoulders(roundId),
+        queryKey: ['routes', 'round', roundId],
+        queryFn: () => competitionsApi.listRoutes(roundId),
         enabled: !!roundId,
     });
 }
 
-export function useUpdateBoulder() {
+export function useUpdateRoute() {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: ({
-            boulderId,
+            routeId,
             data,
         }: {
-            boulderId: number;
-            data: UpdateBoulderRequest;
-        }) => competitionsApi.updateBoulder(boulderId, data),
-        onSuccess: ({ message }, { boulderId }) => {
+            routeId: number;
+            data: UpdateRouteRequest;
+        }) => competitionsApi.updateRoute(routeId, data),
+        onSuccess: ({ message }, { routeId }) => {
             queryClient.invalidateQueries({
-                queryKey: ['boulders', boulderId],
+                queryKey: ['routes', routeId],
             });
             queryClient.invalidateQueries({ queryKey: ['competitions'] });
             notify.success(message);

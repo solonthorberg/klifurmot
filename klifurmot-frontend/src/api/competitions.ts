@@ -15,13 +15,13 @@ import type {
     CategoryGroup,
     CompetitionCategory,
     Round,
-    Boulder,
-    UpdateBoulderRequest,
     CompetitionAthletesResponse,
-    CategoryBoulders,
     CategoryStartlist,
     CategoryResults,
     RoundData,
+    CategoryRoutes,
+    Route,
+    UpdateRouteRequest,
 } from '@/types';
 
 export const competitionsApi = {
@@ -113,11 +113,11 @@ export const competitionsApi = {
         return response.data;
     },
 
-    getCompetitionBoulders: async (
+    getCompetitionRoutes: async (
         competitionId: number,
-    ): Promise<ApiSuccessResponse<CategoryBoulders[]>> => {
-        const response = await api.get<ApiSuccessResponse<CategoryBoulders[]>>(
-            `/competitions/${competitionId}/boulders/`,
+    ): Promise<ApiSuccessResponse<CategoryRoutes[]>> => {
+        const response = await api.get<ApiSuccessResponse<CategoryRoutes[]>>(
+            `/competitions/${competitionId}/routes/`,
         );
         return response.data;
     },
@@ -265,38 +265,36 @@ export const competitionsApi = {
         return response.data;
     },
 
-    // Boulders
-    getBoulder: async (
-        boulderId: number,
-    ): Promise<ApiSuccessResponse<Boulder>> => {
-        const response = await api.get<ApiSuccessResponse<Boulder>>(
-            `/competitions/boulders/${boulderId}/`,
+    // Routes
+    getRoute: async (routeId: number): Promise<ApiSuccessResponse<Route>> => {
+        const response = await api.get<ApiSuccessResponse<Route>>(
+            `/competitions/routes/${routeId}/`,
         );
         return response.data;
     },
 
-    updateBoulder: async (
-        boulderId: number,
-        data: UpdateBoulderRequest,
-    ): Promise<ApiSuccessResponse<Boulder>> => {
+    updateRoute: async (
+        routeId: number,
+        data: UpdateRouteRequest,
+    ): Promise<ApiSuccessResponse<Route>> => {
         const formData = new FormData();
         if (data.image) formData.append('image', data.image);
         if (data.section_style)
             formData.append('section_style', data.section_style);
 
-        const response = await api.patch<ApiSuccessResponse<Boulder>>(
-            `/competitions/boulders/${boulderId}/`,
+        const response = await api.patch<ApiSuccessResponse<Route>>(
+            `/competitions/routes/${routeId}/`,
             formData,
             { headers: { 'Content-Type': 'multipart/form-data' } },
         );
         return response.data;
     },
 
-    listBoulders: async (
+    listRoutes: async (
         roundId: number,
-    ): Promise<ApiSuccessResponse<Boulder[]>> => {
-        const response = await api.get<ApiSuccessResponse<Boulder[]>>(
-            `/competitions/rounds/${roundId}/boulders/`,
+    ): Promise<ApiSuccessResponse<Route[]>> => {
+        const response = await api.get<ApiSuccessResponse<Route[]>>(
+            `/competitions/rounds/${roundId}/routes/`,
         );
         return response.data;
     },
