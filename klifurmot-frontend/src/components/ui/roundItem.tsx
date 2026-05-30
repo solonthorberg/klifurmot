@@ -47,7 +47,7 @@ export default function RoundItem({ round, onEdit, onDelete }: RoundItemProps) {
                         {`${round.round_order}. ${round.round_group_name}`}
                     </span>
                     <span className="text-xs text-secondary">
-                        {round.boulder_count} leiðir
+                        {round.route_count} leiðir
                         {round.climbers_advance
                             ? ` - ${round.climbers_advance} keppendur`
                             : ''}
