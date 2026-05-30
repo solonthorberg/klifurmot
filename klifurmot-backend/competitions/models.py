@@ -15,6 +15,11 @@ class Competition(AuditedSoftDeleteModel):
     location = models.TextField()
     image = models.ImageField(upload_to="competitions/", blank=True, null=True)
     visible = models.BooleanField(default=True)
+    discipline = models.CharField(
+        max_length=10,
+        choices=DISCIPLINE_CHOICES,
+        default="boulder",
+    )
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

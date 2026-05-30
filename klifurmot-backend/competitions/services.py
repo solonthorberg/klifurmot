@@ -35,6 +35,7 @@ def create_competition(
     created_by: User,
     image: Optional[UploadedFile] = None,
     visible: bool = True,
+    discipline: str = "boulder",
 ) -> Competition:
     if start_date >= end_date:
         raise ValueError("start_date must be before end_date")
@@ -49,6 +50,7 @@ def create_competition(
                 location=location,
                 image=image,
                 visible=visible,
+                discipline=discipline,
                 created_by=created_by,
                 last_modified_by=created_by,
             )

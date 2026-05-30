@@ -40,6 +40,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
             "location",
             "image",
             "visible",
+            "discipline",
         ]
 
     def validate_image(self, value):
@@ -103,6 +104,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "location",
             "image",
             "visible",
+            "discipline",
             "status",
             "created_at",
             "created_by",
