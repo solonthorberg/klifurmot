@@ -1,3 +1,4 @@
+from django.utils import timezone as dj_timezone
 from typing import Any, Optional, cast
 
 from accounts.authorization import require_competition_admin
@@ -93,6 +94,7 @@ def get_athlete_detail(athlete_id: int) -> dict[str, Any]:
     registrations = CompetitionRegistration.objects.filter(
         climber=climber,
         deleted=False,
+        competition__end_date__lt=dj_timezone.now(),
     ).select_related("competition", "competition_category__category_group")
 
     competitions_result = []
