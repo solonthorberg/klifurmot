@@ -27,8 +27,16 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(max_length=50, min_length=2)
     description = serializers.CharField(max_length=3000, min_length=2)
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
     location = serializers.CharField(max_length=50, min_length=2)
     image = serializers.ImageField(required=False, allow_null=True)
+    visible = serializers.BooleanField(required=False, default=True)
+    discipline = serializers.ChoiceField(
+        choices=["boulder", "lead"],
+        required=False,
+        default="boulder",
+    )
 
     class Meta:
         model = models.Competition
@@ -52,6 +60,11 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     def validate_start_date(self, value):
         if value < timezone.now():
             raise serializers.ValidationError("Start date cannot be in the past")
+        return value
+
+    def validate_end_date(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("End date cannot be in the past")
         return value
 
     def validate(self, data):

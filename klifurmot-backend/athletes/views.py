@@ -108,6 +108,12 @@ def athletes(request):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([permissions.IsAdmin])
@@ -184,6 +190,12 @@ def athlete_detail(request, climber_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["POST"])
@@ -270,6 +282,12 @@ def registrations(request):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["DELETE"])

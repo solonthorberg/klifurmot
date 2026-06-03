@@ -13,7 +13,7 @@ export default function CompetitionsPage() {
     const { data, isLoading, error } = usePublicCompetitions();
     const [search, setSearch] = useState('');
     const [year, setYear] = useState('');
-    const [eventStatus, setEventStatus] = useState('not_started');
+    const [eventStatus, setEventStatus] = useState('');
 
     if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;

@@ -91,6 +91,12 @@ def climbs(request):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticatedOrReadOnly])
@@ -166,6 +172,12 @@ def climb_detail(request, climb_id):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticatedOrReadOnly])
@@ -236,6 +248,12 @@ def startlist(request):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -299,6 +317,12 @@ def startlist_detail(request, result_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["PATCH"])

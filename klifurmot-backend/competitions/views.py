@@ -32,6 +32,12 @@ def public_competitions(request):
             message="Competitions retrieved successfully",
         )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["GET", "POST"])
 @permission_classes([permissions.IsAdmin])
@@ -81,6 +87,12 @@ def competitions(request):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["GET", "PATCH", "DELETE"])
@@ -165,6 +177,12 @@ def competition_detail(request, competition_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["GET"])
@@ -416,6 +434,12 @@ def round_detail(request, round_id):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
@@ -528,6 +552,12 @@ def categories(request, competition_id):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
+
 
 @api_view(["PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -591,6 +621,12 @@ def category_detail(request, category_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["GET"])
@@ -666,6 +702,12 @@ def route_detail(request, route_id):
                 message=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    return utils.error_response(
+        code="Method_not_allowed",
+        message="Method not allowed",
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+    )
 
 
 @api_view(["GET"])
