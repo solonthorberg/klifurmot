@@ -30,7 +30,7 @@ export default function CompetitionCard({
                     {new Date(competition.end_date).toLocaleDateString('is-IS')}
                 </p>
             </div>
-            {competition.status === 'not_started' && (
+            {competition.status === 'ongoing' && (
                 <div className="absolute top-4 right-4 rounded-full">
                     <LivePill />
                 </div>
