@@ -24,7 +24,7 @@ ALLOWED_HOSTS = config(
 sentry_sdk.init(
     dsn=config("SENTRY_DSN", cast=str),  # pyright: ignore[reportArgumentType]
     environment=config("ENVIRONMENT", default="production", cast=str),  # pyright: ignore[reportArgumentType]
-    send_default_pii=True,
+    send_default_pii=False,
 )
 
 
@@ -92,23 +92,12 @@ if DEBUG:
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
-    ALLOWED_WEBSOCKET_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "ws://localhost:5173",
-        "ws://127.0.0.1:5173",
-        "ws://localhost:8000",
-        "ws://127.0.0.1:8000",
-    ]
 else:
     CORS_ALLOWED_ORIGINS = config(
         "CORS_ALLOWED_ORIGINS", cast=lambda v: [s.strip() for s in v.split(",")]
     )
     CSRF_TRUSTED_ORIGINS = config(
         "CSRF_TRUSTED_ORIGINS", cast=lambda v: [s.strip() for s in v.split(",")]
-    )
-    ALLOWED_WEBSOCKET_ORIGINS = config(
-        "ALLOWED_WEBSOCKET_ORIGINS", cast=lambda v: [s.strip() for s in v.split(",")]
     )
 
 

@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 def verify_recaptcha(token: str) -> bool:
+    if settings.DEBUG:
+        return True
+
     try:
         response = http_requests.post(
             "https://www.google.com/recaptcha/api/siteverify",

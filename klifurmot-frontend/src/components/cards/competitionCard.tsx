@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Image from '@/components/ui/image';
 
 import type { Competition } from '@/types';
+import LivePill from '../ui/livePill';
 
 export default function CompetitionCard({
     competition,
@@ -11,7 +12,7 @@ export default function CompetitionCard({
     return (
         <Link
             to={`/competitions/${competition.id}`}
-            className="flex sm:flex-row flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline animate-fade-in"
+            className="flex sm:flex-row relative flex-col w-full sm:h-40 rounded-lg overflow-hidden hover:shadow-md transition-shadow border border-outline animate-fade-in"
         >
             <Image
                 image={competition.image}
@@ -29,6 +30,11 @@ export default function CompetitionCard({
                     {new Date(competition.end_date).toLocaleDateString('is-IS')}
                 </p>
             </div>
+            {competition.status === 'ongoing' && (
+                <div className="absolute top-4 right-4 rounded-full">
+                    <LivePill />
+                </div>
+            )}
         </Link>
     );
 }
