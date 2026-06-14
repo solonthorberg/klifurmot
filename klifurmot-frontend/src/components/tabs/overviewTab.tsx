@@ -7,11 +7,7 @@ import Image from '../ui/image';
 import type { Competition } from '@/types';
 import { memo } from 'react';
 
-function OverviewTab({
-    competition,
-}: {
-    competition: Competition;
-}) {
+function OverviewTab({ competition }: { competition: Competition }) {
     return (
         <Container
             variant="tab"
@@ -49,4 +45,4 @@ function OverviewTab({
     );
 }
 
-export default memo(OverviewTab)
+export default memo(OverviewTab);

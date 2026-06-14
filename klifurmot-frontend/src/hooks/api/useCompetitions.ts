@@ -16,14 +16,14 @@ import type {
 // Competitions
 export function useCompetitions() {
     return useQuery({
-        queryKey: ['competitions'],
+        queryKey: ['competitions', 'admin'],
         queryFn: competitionsApi.listCompetitions,
     });
 }
 
 export function usePublicCompetitions() {
     return useQuery({
-        queryKey: ['competitions', 'admin'],
+        queryKey: ['competitions'],
         queryFn: competitionsApi.listPublicCompetitions,
     });
 }
