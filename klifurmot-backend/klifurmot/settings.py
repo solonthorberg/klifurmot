@@ -1,12 +1,12 @@
-from pathlib import Path
 import os
 from datetime import timedelta
+from pathlib import Path
 
 import dj_database_url
+import sentry_sdk
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
-import sentry_sdk
-
+from django.core.exceptions import DisallowedHost
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,10 +21,18 @@ ALLOWED_HOSTS = config(
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 
+
+def _before_send(event, hint):
+    if isinstance(hint.get("exc_info", (None,))[1], DisallowedHost):
+        return None
+    return event
+
+
 sentry_sdk.init(
     dsn=config("SENTRY_DSN", cast=str),  # pyright: ignore[reportArgumentType]
     environment=config("ENVIRONMENT", default="production", cast=str),  # pyright: ignore[reportArgumentType]
     send_default_pii=False,
+    before_send=_before_send,
 )
 
 
@@ -331,6 +339,10 @@ LOGGING = {
         "scoring": {
             "handlers": ["console"],
             "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "django.security.DisallowedHost": {
+            "handlers": [],
             "propagate": False,
         },
     },
