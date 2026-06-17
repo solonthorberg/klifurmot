@@ -147,7 +147,7 @@ export default function RegisterPage() {
                                 options={
                                     countries?.map((c) => ({
                                         value: c.country_code,
-                                        label: c.name_local,
+                                        label: c.name_en,
                                     })) ?? []
                                 }
                                 error={errors.nationality?.message}

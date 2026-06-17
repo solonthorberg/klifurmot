@@ -6,10 +6,6 @@ import textwrap
 import time
 from datetime import date, timedelta
 from typing import Any, Dict, Optional, cast
-from PIL import Image as PilImage
-from io import BytesIO
-from django.core.files.uploadedfile import InMemoryUploadedFile
-import sys
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -22,6 +18,8 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from core.images import compress_image
 
 from .models import CompetitionRole, Country, UserAccount
 
@@ -55,28 +53,6 @@ def send_email_via_resend(to: str, subject: str, body: str) -> None:
                 raise Exception(f"Failed to send email: {response.status_code}")
 
     asyncio.run(_send())
-
-
-def compress_profile_picture(uploaded_file):
-    img = PilImage.open(uploaded_file)
-
-    if img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-
-    img.thumbnail((400, 400), PilImage.Resampling.LANCZOS)
-
-    output = BytesIO()
-    img.save(output, format="JPEG", quality=85, optimize=True)
-    output.seek(0)
-
-    return InMemoryUploadedFile(
-        output,
-        "ImageField",
-        f"{uploaded_file.name.split('.')[0]}.jpg",
-        "image/jpeg",
-        sys.getsizeof(output),
-        None,
-    )
 
 
 def list_user_accounts() -> list[dict]:
@@ -167,7 +143,9 @@ def update_profile(
             else:
                 if user_account.profile_picture:
                     user_account.profile_picture.delete(save=False)
-                user_account.profile_picture = compress_profile_picture(profile_picture)  # pyright: ignore[reportAttributeAccessIssue]
+                user_account.profile_picture = compress_image(  # pyright: ignore[reportAttributeAccessIssue]
+                    profile_picture, max_size=(400, 400)
+                )
 
         user_account.save()
 

@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.db.models import Count, Q
+from core.images import compress_image
 from scoring.models import Climb, ClimberRoundScore, RoundResult
 
 from competitions.models import (
@@ -39,6 +40,9 @@ def create_competition(
 ) -> Competition:
     if start_date >= end_date:
         raise ValueError("start_date must be before end_date")
+
+    if image is not None:
+        image = compress_image(image, max_size=(1200, 1200))
 
     try:
         with transaction.atomic():
@@ -78,7 +82,7 @@ def update_competition(
                     competition.image.delete(save=False)
                 setattr(competition, "image", None)
             elif image is not None:
-                competition.image = image
+                competition.image = compress_image(image, max_size=(1200, 1200))  # pyright: ignore[reportAttributeAccessIssue]
 
             for field, value in update_data.items():
                 if hasattr(competition, field):
