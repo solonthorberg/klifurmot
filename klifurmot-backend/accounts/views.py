@@ -11,6 +11,7 @@ import requests as http_requests
 from . import permissions
 from core import utils
 from . import services
+from . import selectors
 from . import serializers
 from . import models
 
@@ -50,8 +51,8 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request):
         """List all countries"""
         try:
-            result = services.get_countries()
-            serializer = self.get_serializer(result["countries"], many=True)
+            result = selectors.countries_get()
+            serializer = self.get_serializer(result, many=True)
 
             return utils.success_response(
                 data=serializer.data,
@@ -79,11 +80,10 @@ class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
             competition_id = request.query_params.get("competition_id")
             role = request.query_params.get("role")
 
-            result = services.get_competition_roles(
+            result = selectors.competition_role_list(
                 user=request.user, competition_id=competition_id, role=role
             )
-
-            serializer = self.get_serializer(result["roles"], many=True)
+            serializer = self.get_serializer(result, many=True)
 
             return utils.success_response(
                 data=serializer.data, message="Roles retrieved successfully"
@@ -113,11 +113,11 @@ class CompetitionRoleViewSet(viewsets.ReadOnlyModelViewSet):
 
             role_id_int = int(role_id)
 
-            result = services.get_competition_role_by_id(
+            result = selectors.competition_role_get(
                 user=request.user, role_id=role_id_int
             )
 
-            serializer = self.get_serializer(result["role"])
+            serializer = self.get_serializer(result)
 
             return utils.success_response(
                 data=serializer.data, message="Role retrieved successfully"
@@ -263,6 +263,12 @@ def me(request):
                 message="Failed to update profile",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+    else:
+        return utils.error_response(
+            code="Method_not_allowed",
+            message="Method not allowed",
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 @api_view(["POST"])
@@ -311,7 +317,7 @@ def login(request):
             data={
                 "access": result["access"],
                 "user": {
-                    "id": result["user"].id,
+                    "id": result["user"].pk,
                     "username": result["user"].username,
                     "email": result["user"].email,
                     "full_name": result["user_account"].full_name,
@@ -384,7 +390,7 @@ def google_login(request):
             data={
                 "access": result["access"],
                 "user": {
-                    "id": result["user"].id,
+                    "id": result["user"].pk,
                     "username": result["user"].username,
                     "email": result["user"].email,
                     "full_name": result["user_account"].full_name,
@@ -489,7 +495,7 @@ def register(request):
             data={
                 "access": result["access"],
                 "user": {
-                    "id": result["user"].id,
+                    "id": result["user"].pk,
                     "username": result["user"].username,
                     "email": result["user"].email,
                     "full_name": result["user_account"].full_name,
@@ -546,7 +552,7 @@ def logout(request):
         result = services.logout(request=request, refresh_token_str=refresh_token)
         response = utils.success_response(
             data=None,
-            message=result["message"],
+            message=result,
             status_code=status.HTTP_200_OK,
         )
         response.delete_cookie("refresh_token")
@@ -690,7 +696,7 @@ def reset_password(request):
         )
 
         return utils.success_response(
-            data=None, message=result["message"], status_code=status.HTTP_200_OK
+            data=None, message=result, status_code=status.HTTP_200_OK
         )
 
     except ValueError as e:
