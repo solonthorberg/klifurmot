@@ -43,7 +43,6 @@ def send_judge_invitation(
             if not created:
                 judge_link.expires_at = expires_at
                 judge_link.save()
-
             role_assigned = CompetitionRole.objects.get_or_create(
                 user=user_account_target,
                 competition=competition,
@@ -56,7 +55,6 @@ def send_judge_invitation(
                 "created": created,
                 "role_assigned": role_assigned,
             }
-
         except User.DoesNotExist:
             try:
                 existing_invitation = JudgeLink.objects.get(
@@ -67,6 +65,7 @@ def send_judge_invitation(
                 existing_invitation.invited_name = name
                 existing_invitation.expires_at = expires_at
                 existing_invitation.save()
+
                 return {
                     "judge_link": existing_invitation,
                     "type": "updated_invitation",
@@ -82,6 +81,7 @@ def send_judge_invitation(
                     created_by=user,
                     expires_at=expires_at,
                 )
+
                 return {
                     "judge_link": judge_link,
                     "type": "new_user",

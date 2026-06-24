@@ -349,3 +349,24 @@ export function useUpdateRoute() {
         },
     });
 }
+
+export function useJudgeBulkEmail() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (competitionId: number) =>
+            competitionsApi.judgeBulkEmail(competitionId),
+
+        onSuccess: (response, competitionId) => {
+            notify.success(response.message);
+
+            queryClient.invalidateQueries({
+                queryKey: ['competitions', competitionId],
+            });
+        },
+
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
+}

@@ -41,4 +41,9 @@ urlpatterns = [
     path("category-groups/", views.category_groups, name="category_groups"),
     path("routes/<int:route_id>/", views.route_detail, name="route_detail"),
     path("rounds/<int:round_id>/routes/", views.round_routes, name="round_routes"),
+    path(
+        "<int:competition_id>/judges/email/",
+        views.email_judges,
+        name="competition-email-judges",
+    ),
 ]

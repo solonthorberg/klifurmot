@@ -718,3 +718,16 @@ def round_routes(request, round_id):
     )
     data = [{"id": b.pk, "route_number": b.route_number} for b in routes]
     return utils.success_response(data=data, message="Routes retrieved successfully")
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAdmin])
+def email_judges(request, competition_id):
+    sent_count = services.send_judge_bulk_emails(
+        competition_id=competition_id,
+    )
+
+    return utils.success_response(
+        message=f"Emails sent: {sent_count}",
+        status_code=status.HTTP_200_OK,
+    )

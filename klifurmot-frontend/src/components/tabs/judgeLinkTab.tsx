@@ -15,6 +15,7 @@ import {
     usePotentialJudges,
     useSendInvitation,
 } from '@/hooks/api/useJudges';
+import { useJudgeBulkEmail } from '@/hooks/api/useCompetitions';
 import {
     CreateJudgeLinkSchema,
     SendInvitationSchema,
@@ -50,6 +51,7 @@ const getStatusLabel = (status: string) => {
             className: 'text-green-600 bg-green-50 border-green-300',
         },
     };
+
     return (
         map[status] ?? {
             label: status,
@@ -115,6 +117,8 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
     const { mutate: sendInvitation, isPending: isSendingInvitation } =
         useSendInvitation(competitionId);
     const { mutate: deleteLink } = useDeleteJudgeLink(competitionId);
+    const { mutate: sendJudgeBulkEmail, isPending: isSendingBulkEmail } =
+        useJudgeBulkEmail();
 
     const linkForm = useForm<CreateJudgeLinkFormData>({
         resolver: zodResolver(CreateJudgeLinkSchema),
@@ -214,6 +218,9 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
                     onSubmit={invitationForm.handleSubmit(handleSendInvitation)}
                     className="flex flex-col gap-4"
                 >
+                    <p className="text-gray-600">
+                        Fyrir dómara sem ekki hafa klifurmót.is aðgang.
+                    </p>
                     <Input
                         {...invitationForm.register('email')}
                         label="Netfang"
@@ -309,6 +316,17 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
                         })}
                     </div>
                 )}
+
+                <MainButton
+                    className="sm:w-fit w-full self-center sm:self-end"
+                    variant="outline"
+                    disabled={isSendingBulkEmail || allEntries.length === 0}
+                    onClick={() => sendJudgeBulkEmail(competitionId)}
+                >
+                    {isSendingBulkEmail
+                        ? 'Sendi...'
+                        : 'Senda tölvupóst á dómara'}
+                </MainButton>
             </div>
 
             {deleteTarget && (
