@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import re
 import secrets
 import textwrap
 import time
@@ -19,74 +18,23 @@ from google.oauth2 import id_token
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from . import selectors
+from . import types
+from core.email import send_email_via_resend
 from core.images import compress_image
 
-from .models import CompetitionRole, Country, UserAccount
+from .models import Country, UserAccount
 
 logger = logging.getLogger(__name__)
 
 
-def send_email_via_resend(to: str, subject: str, body: str) -> None:
-    import asyncio
-    import httpx
-
-    async def _send() -> None:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "from": settings.DEFAULT_FROM_EMAIL,
-                    "to": [to],
-                    "subject": subject,
-                    "text": body,
-                },
-                timeout=10,
-            )
-            if response.status_code not in (200, 201):
-                logger.error(
-                    f"Resend API error: {response.status_code} {response.text}"
-                )
-                raise Exception(f"Failed to send email: {response.status_code}")
-
-    asyncio.run(_send())
+def list_user_accounts() -> list[types.UserAccountListItem]:
+    return selectors.user_account_list()
 
 
-def list_user_accounts() -> list[dict]:
-    users = (
-        User.objects.select_related("profile")
-        .filter(is_active=True)
-        .order_by("profile__full_name", "username")
-    )
-    result = []
-    for u in users:
-        profile = getattr(u, "profile", None)
-        if profile:
-            result.append(
-                {
-                    "id": profile.id,
-                    "full_name": profile.full_name,
-                    "email": u.email,
-                    "username": u.username,
-                }
-            )
-    return result
-
-
-def get_profile(user: User) -> Dict[str, Any]:
+def get_profile(user: User) -> types.UserProfileResult:
     """Get user profile data"""
-    try:
-        user_account = UserAccount.objects.get(user=user)
-    except UserAccount.DoesNotExist:
-        raise ValueError("User profile not found")
-
-    return {
-        "user": user,
-        "user_account": user_account,
-    }
+    return selectors.user_profile_get(user)
 
 
 def update_profile(
@@ -99,8 +47,7 @@ def update_profile(
     height_cm: Optional[int] = None,
     wingspan_cm: Optional[int] = None,
     profile_picture=None,
-) -> Dict[str, Any]:
-    """Update user profile"""
+) -> types.UserProfileResult:
 
     with transaction.atomic():
         user_account, _ = UserAccount.objects.get_or_create(user=user)
@@ -155,44 +102,47 @@ def update_profile(
         }
 
 
-def login(email: str, password: str) -> Dict[str, Any]:
-    """Login for a user"""
+def login(email: str, password: str) -> types.AuthResult:
     start_time = time.time()
-    user = None
 
     try:
-        user_obj = User.objects.get(email__iexact=email)
-        user = authenticate(username=user_obj.username, password=password)
-
-        if user is not None and user.is_active:
-            user_account = UserAccount.objects.get(user=user)
-
-            if user_account.deleted:
-                user = None
-
+        username = User.objects.get(email__iexact=email).username
     except User.DoesNotExist:
-        authenticate(username="nonexistent_user", password=password)
+        username = "nonexistent_user"
 
-    except UserAccount.DoesNotExist:
-        logger.error(f"UserAccount not found for user: {user_obj.username}")
-        user = None
+    user = authenticate(username=username, password=password)
+
+    user_account = None
+    if user is not None and user.is_active:
+        try:
+            user_account = UserAccount.objects.get(user=user)
+        except UserAccount.DoesNotExist:
+            logger.error(f"UserAccount not found for user: {user.username}")
+
+    valid = (
+        user is not None
+        and user.is_active
+        and user_account is not None
+        and not user_account.deleted
+    )
 
     elapsed = time.time() - start_time
     min_time = 0.5
     if elapsed < min_time:
         time.sleep(min_time - elapsed)
 
-    if user is not None and user.is_active:
-        refresh = RefreshToken.for_user(user)
-
-        return {
-            "user": user,
-            "user_account": user_account,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }
-    else:
+    if not valid:
         raise ValueError("Invalid email or password")
+
+    assert isinstance(user, User) and user_account is not None
+    refresh = RefreshToken.for_user(user)
+
+    return {
+        "user": user,
+        "user_account": user_account,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+    }
 
 
 def register(
@@ -205,43 +155,11 @@ def register(
     nationality: str,
     height_cm: Optional[int] = None,
     wingspan_cm: Optional[int] = None,
-) -> Dict[str, Any]:
-    try:
-        existing_user = User.objects.get(email__iexact=email)
-
-        if existing_user.is_active:
-            raise IntegrityError("User already exists")
-
-        user_account = UserAccount.objects.get(user=existing_user)
-
-        with transaction.atomic():
-            user_account.full_name = full_name
-            user_account.gender = gender
-            user_account.date_of_birth = date_of_birth
-            user_account.nationality = Country.objects.get(country_code=nationality)
-            user_account.height_cm = height_cm
-            user_account.wingspan_cm = wingspan_cm
-            user_account.save()
-
-            existing_user.set_password(password)
-            existing_user.username = username
-            existing_user.save()
-
-            refresh = RefreshToken.for_user(existing_user)
-            logger.info(f"User reactivated: {username} ({email})")
-
-            return {
-                "user": existing_user,
-                "user_account": user_account,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-            }
-
-    except User.DoesNotExist:
-        pass
+) -> types.AuthResult:
+    if User.objects.filter(email__iexact=email).exists():
+        raise IntegrityError("User already exists")
 
     user = User.objects.create_user(username=username, email=email, password=password)
-
     nationality_obj = Country.objects.get(country_code=nationality)
 
     user_account = UserAccount.objects.create(
@@ -265,7 +183,7 @@ def register(
     }
 
 
-def google_login(google_token: str) -> Dict[str, Any]:
+def google_login(google_token: str) -> types.AuthResult:
     """Handle Google OAuth login/registration"""
 
     try:
@@ -320,42 +238,14 @@ def google_login(google_token: str) -> Dict[str, Any]:
         raise
 
 
-def generate_unique_username(email: str, max_length: int = 150) -> str:
-    """Generate a unique username from email"""
-    base_username = email.split("@")[0]
-    base_username = re.sub(r"[^a-zA-Z0-9_.-]", "", base_username)[:30]
-
-    if not base_username:
-        base_username = "user"
-
-    if not User.objects.filter(username=base_username).exists():
-        return base_username
-
-    counter = 1
-    while counter < 1000:
-        candidate = f"{base_username}{counter}"
-        if (
-            len(candidate) <= max_length
-            and not User.objects.filter(username=candidate).exists()
-        ):
-            return candidate
-        counter += 1
-
-    import time
-
-    timestamp = str(int(time.time()))[-6:]
-    return f"{base_username[:20]}_{timestamp}"
-
-
-def logout(request, refresh_token_str) -> Dict[str, Any]:
+def logout(request, refresh_token_str) -> str:
     """Logout user by blacklisting their refresh token"""
     try:
         token = RefreshToken(refresh_token_str)
         token.blacklist()
 
         logger.info("User logged out successfully (token blacklisted)")
-
-        return {"success": True, "message": "Successfully logged out"}
+        return "Successfully logged out"
 
     except TokenError as e:
         logger.warning(f"Logout failed with TokenError: {str(e)}")
@@ -366,7 +256,7 @@ def logout(request, refresh_token_str) -> Dict[str, Any]:
         raise ValueError(f"Logout failed: {str(e)}")
 
 
-def refresh_token(refresh_token_str) -> Dict[str, Any]:
+def refresh_token(refresh_token_str) -> types.TokenPair:
     try:
         token = RefreshToken(refresh_token_str)
         user_id = token["user_id"]
@@ -387,59 +277,11 @@ def refresh_token(refresh_token_str) -> Dict[str, Any]:
         raise ValueError(f"Invalid or expired refresh token: {str(e)}")
 
 
-def get_competition_roles(
-    user: User, competition_id: Optional[int] = None, role: Optional[str] = None
-) -> Dict[str, Any]:
-    """Get competition roles filtered by permissions"""
-    qs = CompetitionRole.objects.select_related("competition", "user__user")
-
-    if competition_id:
-        qs = qs.filter(competition_id=competition_id)
-
-    if role:
-        qs = qs.filter(role=role)
-
-    user_profile = getattr(user, "profile", None)
-
-    if user.is_staff or (user_profile and user_profile.is_admin):
-        return {"roles": list(qs)}
-
-    if user_profile:
-        return {"roles": list(qs.filter(user=user_profile))}
-
-    return {"roles": []}
-
-
-def get_competition_role_by_id(user: User, role_id: int) -> Dict[str, Any]:
-    """Get a specific competition role by ID"""
-    try:
-        role = CompetitionRole.objects.select_related("competition", "user__user").get(
-            id=role_id
-        )
-    except CompetitionRole.DoesNotExist:
-        raise CompetitionRole.DoesNotExist("Role not found")
-
-    user_profile = getattr(user, "profile", None)
-
-    if user.is_staff or (user_profile and user_profile.is_admin):
-        return {"role": role}
-
-    if user_profile and role.user == user_profile:
-        return {"role": role}
-
-    raise PermissionError("You do not have permission to view this role")
-
-
-def get_countries() -> Dict[str, Any]:
-    """Get all countries"""
-    countries = Country.objects.all().order_by("name_en")
-    return {"countries": list(countries)}
-
-
-def request_password_reset(
-    email: str, request_ip: Optional[str] = None
-) -> Dict[str, Any]:
+def request_password_reset(email: str, request_ip: Optional[str] = None) -> str:
     """Request password reset - Always returns success to prevent email enumeration"""
+    message = (
+        "If an account exists with this email, you will receive reset instructions"
+    )
 
     try:
         user = User.objects.get(email__iexact=email.lower())
@@ -454,10 +296,7 @@ def request_password_reset(
                     logger.warning(
                         f"Password reset rate limit exceeded for {email} from IP {request_ip}"
                     )
-                    return {
-                        "success": True,
-                        "message": "If account exists, reset email sent",
-                    }
+                    return message
 
                 user_account.reset_attempts += 1
             else:
@@ -483,7 +322,7 @@ def request_password_reset(
             body=textwrap.dedent(f"""
                 Þú baðst um að breyta lykilorði.
                 
-                Smelltu hér til að breyta lykilorði (gildir í 1 klukkustund):
+                Smelltu hér til að breyta lykilorði (gildir í korter):
                 {reset_url}
                 
                 Ef þú baðst ekki um að breyta lykilorðinu þínu, hunsaðu þennan tölvupóst.
@@ -505,15 +344,12 @@ def request_password_reset(
         logger.error(f"Error in password reset request: {str(e)}")
         pass
 
-    return {
-        "success": True,
-        "message": "If an account exists with this email, you will receive reset instructionas",
-    }
+    return message
 
 
 def reset_password(
     token: str, new_password: str, request_ip: Optional[str] = None
-) -> Dict[str, Any]:
+) -> str:
     """Reset password with token"""
 
     token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -525,7 +361,7 @@ def reset_password(
             raise ValueError("Invalid reset token")
 
         time_since_created = timezone.now() - user_account.reset_token_created
-        if time_since_created > timedelta(hours=1):
+        if time_since_created > timedelta(minutes=15):
             user_account.reset_token_hash = None
             user_account.reset_token_created = None
             user_account.save()
@@ -573,10 +409,7 @@ def reset_password(
             f"Password reset completed for user {user.username} ({user.email}) from IP {request_ip}"
         )
 
-        return {
-            "success": True,
-            "message": "Password reset successful. Please login with your new password.",
-        }
+        return "Password reset successful. Please login with your new password."
 
     except UserAccount.DoesNotExist:
         logger.warning(f"Invalid password reset token attempted from IP {request_ip}")

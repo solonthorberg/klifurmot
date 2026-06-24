@@ -35,3 +35,10 @@ def require_competition_judge(
 ) -> None:
     if not is_competition_judge(user, competition_id):
         raise PermissionError(message)
+
+
+def is_platform_admin(user) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    profile = getattr(user, "profile", None)
+    return bool(profile and profile.is_admin)
