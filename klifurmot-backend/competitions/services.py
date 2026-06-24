@@ -998,24 +998,25 @@ def send_judge_bulk_emails(competition_id: int) -> int:
     except Competition.DoesNotExist:
         raise ValueError("Competition not found")
 
+    sent_count = 0
+
     judge_roles = CompetitionRole.objects.filter(
         competition=competition,
         role="judge",
         deleted=False,
     ).select_related("user__user")
 
-    sent_count = 0
-
     for role in judge_roles:
         account = role.user
         user = account.user
 
-        try:
-            judge_link = JudgeLink.objects.get(
-                competition=competition,
-                user=user,
-            )
-        except JudgeLink.DoesNotExist:
+        judge_link = JudgeLink.objects.filter(
+            competition=competition,
+            user=user,
+            type="link",
+        ).first()
+
+        if not judge_link:
             continue
 
         transaction.on_commit(
@@ -1023,6 +1024,27 @@ def send_judge_bulk_emails(competition_id: int) -> int:
                 _send_judge_link_email(
                     email=user.email,
                     name=account.full_name,
+                    competition_title=competition.title,
+                    token=token,
+                )
+            )
+        )
+
+        sent_count += 1
+
+    pending_invitations = JudgeLink.objects.filter(
+        competition=competition,
+        type="invitation",
+        claimed_at__isnull=True,
+        deleted=False,
+    )
+
+    for invitation in pending_invitations:
+        transaction.on_commit(
+            lambda email=invitation.invited_email, name=invitation.invited_name, token=invitation.token: (
+                _send_judge_link_email(
+                    email=email,
+                    name=name,
                     competition_title=competition.title,
                     token=token,
                 )
