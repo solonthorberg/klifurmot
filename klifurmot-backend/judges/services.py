@@ -46,8 +46,9 @@ def send_judge_invitation(
             role_assigned = CompetitionRole.objects.get_or_create(
                 user=user_account_target,
                 competition=competition,
-                defaults={"role": "judge"},
+                role="judge",
             )
+
             return {
                 "judge_link": judge_link,
                 "type": "existing_user",
@@ -64,6 +65,7 @@ def send_judge_invitation(
                 existing_invitation.invited_name = name
                 existing_invitation.expires_at = expires_at
                 existing_invitation.save()
+
                 return {
                     "judge_link": existing_invitation,
                     "type": "updated_invitation",
@@ -79,6 +81,7 @@ def send_judge_invitation(
                     created_by=user,
                     expires_at=expires_at,
                 )
+
                 return {
                     "judge_link": judge_link,
                     "type": "new_user",
@@ -143,8 +146,9 @@ def claim_invitation(token: str, user: Optional[User] = None) -> Dict[str, Any]:
         link.save()
 
         user_account, _ = UserAccount.objects.get_or_create(user=user)
+
         CompetitionRole.objects.get_or_create(
-            user=user_account, competition=link.competition, defaults={"role": "judge"}
+            user=user_account, competition=link.competition, role="judge"
         )
 
         return {"authenticated": True, "competition_id": link.competition.id}
@@ -211,11 +215,13 @@ def create_judge_link(competition_id: int, user: User, user_id: int) -> Dict[str
             judge_link.expires_at = expires_at
             judge_link.save()
         user_account_target, _ = UserAccount.objects.get_or_create(user=target_user)
+
         role_assigned = CompetitionRole.objects.get_or_create(
             user=user_account_target,
             competition=competition,
-            defaults={"role": "judge"},
+            role="judge",
         )
+
         return {
             "judge_link": judge_link,
             "created": created,

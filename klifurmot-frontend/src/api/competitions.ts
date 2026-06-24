@@ -298,4 +298,14 @@ export const competitionsApi = {
         );
         return response.data;
     },
+
+    // Judge emails
+    judgeBulkEmail: async (
+        competitionId: number,
+    ): Promise<ApiSuccessResponse<null>> => {
+        const response = await api.post<ApiSuccessResponse<null>>(
+            `/competitions/${competitionId}/judges/email/`,
+        );
+        return response.data;
+    },
 };

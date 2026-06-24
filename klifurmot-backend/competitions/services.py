@@ -1,8 +1,10 @@
 import logging
 from datetime import datetime
+import textwrap
 from typing import Any, Dict, Optional, cast
 
 from accounts.authorization import require_competition_admin
+from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration
 from athletes.utils import (
     build_age_category_resolver,
@@ -12,6 +14,10 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.db.models import Count, Q
+from core.email import send_email_via_resend
+from core.images import compress_image
+from judges.models import JudgeLink
+from klifurmot import settings
 from scoring.models import Climb, ClimberRoundScore, RoundResult
 
 from competitions.models import (
@@ -39,6 +45,9 @@ def create_competition(
 ) -> Competition:
     if start_date >= end_date:
         raise ValueError("start_date must be before end_date")
+
+    if image is not None:
+        image = compress_image(image, max_size=(1200, 1200))
 
     try:
         with transaction.atomic():
@@ -78,7 +87,7 @@ def update_competition(
                     competition.image.delete(save=False)
                 setattr(competition, "image", None)
             elif image is not None:
-                competition.image = image
+                competition.image = compress_image(image, max_size=(1200, 1200))  # pyright: ignore[reportAttributeAccessIssue]
 
             for field, value in update_data.items():
                 if hasattr(competition, field):
@@ -960,3 +969,66 @@ def update_route(
         "image": route.image.url if route.image else None,
         "round_id": route.round.pk,
     }
+
+
+def _send_judge_link_email(
+    email: str, name: str, competition_title: str, token
+) -> None:
+    invitation_url = f"{settings.FRONTEND_BASE_URL}/judge/{token}"
+    send_email_via_resend(
+        to=email,
+        subject=f"Boð um að dæma {competition_title}",
+        body=textwrap.dedent(f"""
+            Hæ, {name or email.split("@")[0]}
+
+            Þér hefur verið boðið að dæma á mótinu {competition_title}.
+
+            Smelltu hér til að samþykkja boðið:
+            {invitation_url}
+
+            Kveðja,
+            klifurmot.is
+        """).strip(),
+    )
+
+
+def send_judge_bulk_emails(competition_id: int) -> int:
+    try:
+        competition = Competition.objects.get(id=competition_id)
+    except Competition.DoesNotExist:
+        raise ValueError("Competition not found")
+
+    judge_roles = CompetitionRole.objects.filter(
+        competition=competition,
+        role="judge",
+        deleted=False,
+    ).select_related("user__user")
+
+    sent_count = 0
+
+    for role in judge_roles:
+        account = role.user
+        user = account.user
+
+        try:
+            judge_link = JudgeLink.objects.get(
+                competition=competition,
+                user=user,
+            )
+        except JudgeLink.DoesNotExist:
+            continue
+
+        transaction.on_commit(
+            lambda user=user, account=account, token=judge_link.token: (
+                _send_judge_link_email(
+                    email=user.email,
+                    name=account.full_name,
+                    competition_title=competition.title,
+                    token=token,
+                )
+            )
+        )
+
+        sent_count += 1
+
+    return sent_count
