@@ -43,17 +43,20 @@ def send_judge_invitation(
             if not created:
                 judge_link.expires_at = expires_at
                 judge_link.save()
+
             role_assigned = CompetitionRole.objects.get_or_create(
                 user=user_account_target,
                 competition=competition,
-                defaults={"role": "judge"},
+                role="judge",
             )
+
             return {
                 "judge_link": judge_link,
                 "type": "existing_user",
                 "created": created,
                 "role_assigned": role_assigned,
             }
+
         except User.DoesNotExist:
             try:
                 existing_invitation = JudgeLink.objects.get(
@@ -143,8 +146,9 @@ def claim_invitation(token: str, user: Optional[User] = None) -> Dict[str, Any]:
         link.save()
 
         user_account, _ = UserAccount.objects.get_or_create(user=user)
+
         CompetitionRole.objects.get_or_create(
-            user=user_account, competition=link.competition, defaults={"role": "judge"}
+            user=user_account, competition=link.competition, role="judge"
         )
 
         return {"authenticated": True, "competition_id": link.competition.id}
@@ -211,11 +215,13 @@ def create_judge_link(competition_id: int, user: User, user_id: int) -> Dict[str
             judge_link.expires_at = expires_at
             judge_link.save()
         user_account_target, _ = UserAccount.objects.get_or_create(user=target_user)
+
         role_assigned = CompetitionRole.objects.get_or_create(
             user=user_account_target,
             competition=competition,
-            defaults={"role": "judge"},
+            role="judge",
         )
+
         return {
             "judge_link": judge_link,
             "created": created,

@@ -286,7 +286,12 @@ def google_login(google_token: str) -> Dict[str, Any]:
                     "No account found with this Google email. Please register first."
                 )
 
-            user_account = UserAccount.objects.get(user=user)
+            try:
+                user_account = UserAccount.objects.get(user=user)
+            except UserAccount.DoesNotExist:
+                raise ValueError(
+                    "No profile found for this account. Please contact support."
+                )
 
             if user_account.deleted:
                 raise ValueError("This account has been deleted.")

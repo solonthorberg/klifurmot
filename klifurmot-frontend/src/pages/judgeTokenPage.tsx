@@ -19,7 +19,7 @@ export default function JudgeTokenPage() {
     useEffect(() => {
         if (isInitializing) return;
         if (!token) {
-            setErrorMessage('Invalid link');
+            setErrorMessage('Ógild slóð');
             setPageState('error');
             return;
         }
@@ -70,8 +70,8 @@ export default function JudgeTokenPage() {
                     ?.response?.status;
                 setErrorMessage(
                     status === 403
-                        ? 'This link is for a different user'
-                        : 'Link is invalid or expired',
+                        ? 'Þessi slóð er ekki fyrir þig'
+                        : 'Þessi slóð er ógild eða útrunnin',
                 );
                 setPageState('error');
             }
@@ -80,10 +80,10 @@ export default function JudgeTokenPage() {
 
     if (pageState === 'error') {
         return (
-            <Container variant="centered" className="gap-4">
-                <h1 className="text-2xl font-semibold">Invalid link</h1>
+            <Container variant="primaryCenter" className="gap-4">
+                <h1 className="text-2xl font-semibold">Ógild slóð</h1>
                 <p className="text-gray-500 text-center">{errorMessage}</p>
-                <MainButton onClick={() => navigate('/')}>Go home</MainButton>
+                <MainButton onClick={() => navigate('/')}>Tilbaka</MainButton>
             </Container>
         );
     }
