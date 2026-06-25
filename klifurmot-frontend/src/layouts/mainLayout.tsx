@@ -10,7 +10,6 @@ export default function MainLayout() {
             <main className="flex-1 min-h-0 overflow-auto">
                 <Outlet />
             </main>
-            <Footer />
         </div>
     );
 }
