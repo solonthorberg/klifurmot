@@ -23,7 +23,7 @@ export default function AddAthleteCard({
             className={`flex flex-col text-left gap-1 border border-outline rounded-lg p-4 hover:shadow-md transition-shadow ${className}`}
         >
             <div className="flex gap-1 justify-between">
-                <p>{athlete.name}</p>
+                <p>{athlete.full_name}</p>
                 {children}
             </div>
             <div className="flex gap-1 text-gray-500">

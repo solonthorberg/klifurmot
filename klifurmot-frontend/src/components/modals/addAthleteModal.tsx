@@ -57,7 +57,7 @@ export default function AddAthleteModal({
     const filteredAllAthletes = useMemo(
         () =>
             allAthletes.filter((a) => {
-                const matchesSearch = (a.name ?? '')
+                const matchesSearch = (a.full_name ?? '')
                     .toLowerCase()
                     .includes(search.toLowerCase());
                 const matchesCategory =

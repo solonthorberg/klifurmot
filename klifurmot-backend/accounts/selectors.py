@@ -42,10 +42,7 @@ def user_profile_get(user: User) -> types.UserProfileResult:
     except UserAccount.DoesNotExist:
         raise ValueError("User profile not found")
 
-    return {
-        "user": user,
-        "user_account": user_account,
-    }
+    return types.UserProfileResult(user=user, user_account=user_account)
 
 
 def competition_role_list(

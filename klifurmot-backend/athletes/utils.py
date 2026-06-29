@@ -17,7 +17,7 @@ def calculate_age(date_of_birth) -> Optional[int]:
 
 
 def calculate_age_for_category(date_of_birth) -> Optional[int]:
-    """Year-based age for category assignment — ignores birthday"""
+    """Year-based age for category assignment, ignores birthday"""
     if not date_of_birth:
         return None
     return timezone.now().year - date_of_birth.year

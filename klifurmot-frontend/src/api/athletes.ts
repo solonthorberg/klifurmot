@@ -125,8 +125,8 @@ export const athletesApi = {
     linkAthlete: async (
         climberId: number,
         userAccountId: number,
-    ): Promise<ApiSuccessResponse<AthleteAdmin>> => {
-        const response = await api.post<ApiSuccessResponse<AthleteAdmin>>(
+    ): Promise<ApiSuccessResponse<null>> => {
+        const response = await api.post<ApiSuccessResponse<null>>(
             `/athletes/${climberId}/link/`,
             { user_account_id: userAccountId },
         );

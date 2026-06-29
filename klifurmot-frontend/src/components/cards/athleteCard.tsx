@@ -11,7 +11,7 @@ export default function AthleteCard({ athlete, onClick }: AthleteCardProps) {
             onClick={onClick}
             className="flex flex-col cursor-pointer text-left gap-1 border border-outline rounded-lg p-4 hover:shadow-md transition-shadow"
         >
-            <p>{athlete.name}</p>
+            <p>{athlete.full_name}</p>
             <div className="flex gap-4 text-gray-500">
                 <span>{`${athlete.age} ára`}</span>
             </div>

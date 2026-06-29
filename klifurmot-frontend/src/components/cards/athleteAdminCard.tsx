@@ -20,7 +20,7 @@ export default function AthleteAdminCard({
                 disabled={!onClick}
                 className="flex flex-col gap-1 text-left flex-1 min-w-0 disabled:cursor-default"
             >
-                <span>{athlete.name ?? 'Óþekkt'}</span>
+                <span>{athlete.full_name ?? 'Óþekkt'}</span>
                 <div className="flex gap-4 text-gray-500 text-sm">
                     {athlete.age && <span>{`${athlete.age} ára`}</span>}
                     {athlete.gender && <span>{athlete.gender}</span>}
