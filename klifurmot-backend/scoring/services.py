@@ -1,58 +1,19 @@
-from typing import Any, Optional
+from typing import Any
 
+from accounts.authorization import require_competition_admin, require_competition_judge
+from athletes.models import Climber
+from competitions.models import CompetitionRound, Route
 from django.db import transaction
 from django.utils import timezone
-from .models import Climb, ClimberRoundScore, RoundResult
-from .utils import UpdateRoundScoreForRoute, BroadcastScoreUpdate
-from competitions.models import Route, CompetitionRound
-from athletes.models import Climber
-from accounts.authorization import require_competition_judge, require_competition_admin
 
 
-def list_climbs(
-    round_id: int, climber_id: Optional[int] = None
-) -> list[dict[str, Any]]:
-    queryset = Climb.objects.select_related(
-        "climber__user_account",
-        "route",
-    ).filter(
-        route__round_id=round_id,
-        deleted=False,
-    )
-
-    if climber_id:
-        queryset = queryset.filter(climber_id=climber_id)
-
-    result = []
-
-    for climb in queryset:
-        climber = climb.climber
-
-        if climber.is_simple_athlete:
-            climber_name = climber.simple_name
-        else:
-            climber_name = (
-                climber.user_account.full_name if climber.user_account else None
-            )
-
-        result.append(
-            {
-                "id": climb.pk,
-                "climber_id": climber.pk,
-                "climber_name": climber_name,
-                "route_id": climb.route.pk,
-                "route_number": climb.route.route_number,
-                "attempts_top": climb.attempts_top,
-                "attempts_zone": climb.attempts_zone,
-                "top_reached": climb.top_reached,
-                "zone_reached": climb.zone_reached,
-            }
-        )
-
-    return result
+from . import types
+from . import selectors
+from .models import Climb, RoundResult
+from .utils import BroadcastScoreUpdate, UpdateRoundScoreForRoute
 
 
-def add_to_startlist(user, **data: Any) -> dict[str, Any]:
+def add_to_startlist(user, **data: Any) -> types.StartlistEntry:
     try:
         round_obj = CompetitionRound.objects.select_related("competition_category").get(
             id=data["round"], deleted=False
@@ -119,26 +80,23 @@ def add_to_startlist(user, **data: Any) -> dict[str, Any]:
         climber_name = climber.user_account.full_name if climber.user_account else None
         gender = climber.user_account.gender if climber.user_account else None
 
-    return {
-        "id": result.pk,
-        "climber_id": climber.pk,
-        "climber_name": climber_name,
-        "start_order": result.start_order,
-        "gender": gender,
-        "rank": result.rank,
-    }
+    return types.StartlistEntry(
+        id=result.pk,
+        climber_id=climber.pk,
+        climber_name=climber_name,
+        start_order=result.start_order,
+        gender=gender,
+        rank=result.rank,
+    )
 
 
-def _normalize_climb_data(
+def _build_boulder_attempt_record(
     attempts_top: int,
     attempts_zone: int,
     top_reached: bool,
     zone_reached: bool,
-) -> dict[str, Any]:
+) -> types.BoulderAttemptRecord:
     """
-    Apply consistency rules to climb data. Returns the (possibly adjusted)
-    values as a dict ready to splat into Climb fields.
-
     Rules (matching World Climbing boulder scoring):
       - A top implies a zone was reached on the way (so attempts_zone >= 1)
       - attempts_top cannot be fewer than attempts_zone (you reach zone before top)
@@ -166,15 +124,18 @@ def _normalize_climb_data(
     if not zone_reached:
         attempts_zone = attempts_top
 
-    return {
-        "attempts_top": attempts_top,
-        "attempts_zone": attempts_zone,
-        "top_reached": top_reached,
-        "zone_reached": zone_reached,
-    }
+    return types.BoulderAttemptRecord(
+        attempts_top=attempts_top,
+        attempts_zone=attempts_zone,
+        top_reached=top_reached,
+        zone_reached=zone_reached,
+    )
 
 
-def create_climb(user, **data: Any) -> dict[str, Any]:
+def record_climb_attempt(user, **data: Any) -> types.Climb:
+    """
+    Record a result from a climber on a given boulder.
+    """
     try:
         climber = Climber.objects.get(id=data["climber"], deleted=False)
     except Climber.DoesNotExist:
@@ -198,7 +159,7 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
     if not in_startlist:
         raise ValueError("Climber is not in the start list for this round")
 
-    normalized = _normalize_climb_data(
+    record = _build_boulder_attempt_record(
         attempts_top=data.get("attempts_top", 0),
         attempts_zone=data.get("attempts_zone", 0),
         top_reached=data.get("top_reached", False),
@@ -206,29 +167,29 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
     )
 
     with transaction.atomic():
-        existing = Climb.objects.filter(
+        existing_climb = Climb.objects.filter(
             climber=climber,
             route=route,
         ).first()
 
-        if existing and not existing.deleted:
+        if existing_climb and not existing_climb.deleted:
             raise ValueError("A climb already exists for this climber and route.")
 
-        if existing:
-            existing.deleted = False
-            existing.attempts_top = normalized["attempts_top"]
-            existing.attempts_zone = normalized["attempts_zone"]
-            existing.top_reached = normalized["top_reached"]
-            existing.zone_reached = normalized["zone_reached"]
-            existing.judge = user
-            existing.last_modified_by = user
-            existing.save()
-            climb = existing
+        if existing_climb:
+            existing_climb.deleted = False
+            existing_climb.attempts_top = record["attempts_top"]
+            existing_climb.attempts_zone = record["attempts_zone"]
+            existing_climb.top_reached = record["top_reached"]
+            existing_climb.zone_reached = record["zone_reached"]
+            existing_climb.judge = user
+            existing_climb.last_modified_by = user
+            existing_climb.save()
+            climb = existing_climb
         else:
             climb = Climb.objects.create(
                 climber=climber,
                 route=route,
-                **normalized,
+                **record,
                 judge=user,
                 created_by=user,
                 last_modified_by=user,
@@ -243,21 +204,21 @@ def create_climb(user, **data: Any) -> dict[str, Any]:
     else:
         climber_name = climber.user_account.full_name if climber.user_account else None
 
-    return {
-        "id": climb.pk,
-        "climber_id": climber.pk,
-        "climber_name": climber_name,
-        "route_id": route.pk,
-        "route_number": route.route_number,
-        "attempts_top": climb.attempts_top,
-        "attempts_zone": climb.attempts_zone,
-        "top_reached": climb.top_reached,
-        "zone_reached": climb.zone_reached,
-    }
+    return types.Climb(
+        id=climb.pk,
+        climber_id=climber.pk,
+        climber_name=climber_name,
+        route_id=climb.route.pk,
+        route_number=climb.route.route_number,
+        attempts_top=climb.attempts_top,
+        attempts_zone=climb.attempts_zone,
+        top_reached=climb.top_reached,
+        zone_reached=climb.zone_reached,
+    )
 
 
 def _update_round_results(round_obj):
-    ranked = _rank_climbers_in_round(round_obj)
+    ranked = selectors.rank_climbers_in_round(round_obj)
     with transaction.atomic():
         for climber_id, _score, rank in ranked:
             RoundResult.objects.filter(
@@ -265,36 +226,7 @@ def _update_round_results(round_obj):
             ).update(rank=rank, last_modified_at=timezone.now())
 
 
-def get_climb(climb_id: int) -> dict[str, Any]:
-    try:
-        climb = Climb.objects.select_related(
-            "climber__user_account",
-            "route",
-        ).get(id=climb_id, deleted=False)
-    except Climb.DoesNotExist:
-        raise ValueError(f"Climb with id {climb_id} not found")
-
-    climber = climb.climber
-
-    if climber.is_simple_athlete:
-        climber_name = climber.simple_name
-    else:
-        climber_name = climber.user_account.full_name if climber.user_account else None
-
-    return {
-        "id": climb.pk,
-        "climber_id": climber.pk,
-        "climber_name": climber_name,
-        "route_id": climb.route.pk,
-        "route_number": climb.route.route_number,
-        "attempts_top": climb.attempts_top,
-        "attempts_zone": climb.attempts_zone,
-        "top_reached": climb.top_reached,
-        "zone_reached": climb.zone_reached,
-    }
-
-
-def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
+def update_climb(climb_id: int, user, **update_data: Any) -> types.Climb:
     try:
         climb = Climb.objects.select_related(
             "climber__user_account",
@@ -308,7 +240,7 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
     )
 
     with transaction.atomic():
-        normalized = _normalize_climb_data(
+        normalized = _build_boulder_attempt_record(
             attempts_top=update_data.get("attempts_top", climb.attempts_top),
             attempts_zone=update_data.get("attempts_zone", climb.attempts_zone),
             top_reached=update_data.get("top_reached", climb.top_reached),
@@ -332,17 +264,17 @@ def update_climb(climb_id: int, user, **update_data: Any) -> dict[str, Any]:
     else:
         climber_name = climber.user_account.full_name if climber.user_account else None
 
-    return {
-        "id": climb.pk,
-        "climber_id": climber.pk,
-        "climber_name": climber_name,
-        "route_id": climb.route.pk,
-        "route_number": climb.route.route_number,
-        "attempts_top": climb.attempts_top,
-        "attempts_zone": climb.attempts_zone,
-        "top_reached": climb.top_reached,
-        "zone_reached": climb.zone_reached,
-    }
+    return types.Climb(
+        id=climb.pk,
+        climber_id=climber.pk,
+        climber_name=climber_name,
+        route_id=climb.route.pk,
+        route_number=climb.route.route_number,
+        attempts_top=climb.attempts_top,
+        attempts_zone=climb.attempts_zone,
+        top_reached=climb.top_reached,
+        zone_reached=climb.zone_reached,
+    )
 
 
 def delete_climb(climb_id: int, user) -> None:
@@ -371,7 +303,7 @@ def delete_climb(climb_id: int, user) -> None:
         BroadcastScoreUpdate(competition_id)
 
 
-def list_startlist(round_id: int) -> list[dict[str, Any]]:
+def list_startlist(round_id: int) -> list[types.StartlistEntry]:
     results = (
         RoundResult.objects.select_related(
             "climber__user_account",
@@ -398,20 +330,20 @@ def list_startlist(round_id: int) -> list[dict[str, Any]]:
             gender = climber.user_account.gender if climber.user_account else None
 
         data.append(
-            {
-                "id": result.pk,
-                "climber_id": climber.pk,
-                "climber_name": climber_name,
-                "start_order": result.start_order,
-                "gender": gender,
-                "rank": result.rank,
-            }
+            types.StartlistEntry(
+                id=result.pk,
+                climber_id=climber.pk,
+                climber_name=climber_name,
+                start_order=result.start_order,
+                gender=gender,
+                rank=result.rank,
+            )
         )
 
     return data
 
 
-def update_startlist(result_id: int, user, **update_data: Any):
+def update_startlist(result_id: int, user, **update_data: Any) -> types.StartlistEntry:
     try:
         result = RoundResult.objects.select_related(
             "round__competition_category",
@@ -454,19 +386,19 @@ def update_startlist(result_id: int, user, **update_data: Any):
         climber_name = climber.user_account.full_name if climber.user_account else None
         gender = climber.user_account.gender if climber.user_account else None
 
-    return {
-        "id": result.pk,
-        "climber_id": climber.pk,
-        "climber_name": climber_name,
-        "start_order": result.start_order,
-        "gender": gender,
-        "rank": result.rank,
-    }
+    return types.StartlistEntry(
+        id=result.pk,
+        climber_id=climber.pk,
+        climber_name=climber_name,
+        start_order=result.start_order,
+        gender=gender,
+        rank=result.rank,
+    )
 
 
 def bulk_update_startlist_order(
     round_id: int,
-    entries: list[dict[str, Any]],
+    entries: list[types.StartlistEntry],
     user,
 ) -> list[dict[str, Any]]:
     """Atomically renumber start_order across every entry in a round.
@@ -530,14 +462,14 @@ def bulk_update_startlist_order(
             gender = climber.user_account.gender if climber.user_account else None
 
         data.append(
-            {
-                "id": result.pk,
-                "climber_id": climber.pk,
-                "climber_name": climber_name,
-                "start_order": result.start_order,
-                "gender": gender,
-                "rank": result.rank,
-            }
+            types.StartlistEntry(
+                id=result.pk,
+                climber_id=climber.pk,
+                climber_name=climber_name,
+                start_order=result.start_order,
+                gender=gender,
+                rank=result.rank,
+            )
         )
 
     return data
@@ -557,39 +489,7 @@ def remove_from_startlist(result_id: int, user) -> None:
     result.save()
 
 
-def list_scores(round_id: int) -> list[dict[str, Any]]:
-    try:
-        round_obj = CompetitionRound.objects.get(id=round_id, deleted=False)
-    except CompetitionRound.DoesNotExist:
-        return []
-
-    ranked = _rank_climbers_in_round(round_obj)
-
-    result = []
-    for climber_id, score, rank in ranked:
-        climber = score.climber
-        climber_name = (
-            climber.simple_name
-            if climber.is_simple_athlete
-            else (climber.user_account.full_name if climber.user_account else None)
-        )
-        result.append(
-            {
-                "rank": rank,
-                "climber_id": climber_id,
-                "climber_name": climber_name,
-                "tops": score.tops,
-                "zones": score.zones,
-                "attempts_tops": score.attempts_tops,
-                "attempts_zones": score.attempts_zones,
-                "total_score": float(score.total_score),
-            }
-        )
-
-    return result
-
-
-def advance_climbers(round_id: int, user) -> dict[str, Any]:
+def advance_climbers(round_id: int, user) -> types.AdvanceClimbersResult:
     try:
         current_round = CompetitionRound.objects.select_related(
             "competition_category"
@@ -635,7 +535,10 @@ def advance_climbers(round_id: int, user) -> dict[str, Any]:
     if not all_results.exists():
         raise ValueError("No ranked results found for this round")
 
-    num_to_advance = next_round.climbers_advance
+    if current_round.climbers_advance is None:
+        raise ValueError("This round is not configured to advance climbers")
+    num_to_advance = current_round.climbers_advance
+
     existing_climber_ids = set(
         RoundResult.objects.filter(
             round=next_round,
@@ -689,73 +592,8 @@ def advance_climbers(round_id: int, user) -> dict[str, Any]:
 
     BroadcastScoreUpdate(current_round.competition_category.competition_id)
 
-    return {
-        "advanced": added,
-        "next_round_id": next_round.pk,
-        "next_round_name": next_round.round_group.name,
-    }
-
-
-def _rank_climbers_in_round(round_obj):
-    """
-    IFSC boulder ranking (Annex C §7.1):
-      1. total_score descending
-      2. countback to previous round rank (no group-split for klifurmot)
-      3. attempts_tops ascending
-      4. attempts_zones ascending
-
-    Returns list of (climber_id, score, rank) sorted by rank ascending.
-    Climbers with no ClimberRoundScore (didn't attempt any boulder) are excluded.
-    """
-    scores = list(
-        ClimberRoundScore.objects.filter(round=round_obj, deleted=False).select_related(
-            "climber"
-        )
+    return types.AdvanceClimbersResult(
+        advanced=added,
+        next_round_id=next_round.pk,
+        next_round_name=next_round.round_group.name,
     )
-    if not scores:
-        return []
-
-    all_rounds = list(
-        CompetitionRound.objects.filter(
-            competition_category=round_obj.competition_category,
-            deleted=False,
-        ).order_by("round_order")
-    )
-    try:
-        idx = all_rounds.index(round_obj)
-        previous_round = all_rounds[idx - 1] if idx > 0 else None
-    except ValueError:
-        previous_round = None
-
-    prev_rank_map = {}
-    if previous_round:
-        prev_rank_map = {
-            r.climber.pk: r.rank
-            for r in RoundResult.objects.filter(round=previous_round, deleted=False)
-            if r.rank is not None
-        }
-
-    def rank_key(s):
-        return (
-            -float(s.total_score),
-            prev_rank_map.get(s.climber_id, 9999),
-            s.attempts_tops,
-            s.attempts_zones,
-        )
-
-    scores.sort(key=rank_key)
-
-    ranked = []
-    previous_key = None
-    previous_rank = 0
-    for position, score in enumerate(scores, start=1):
-        key = rank_key(score)
-        if previous_key is not None and key == previous_key:
-            assigned_rank = previous_rank
-        else:
-            assigned_rank = position
-            previous_rank = position
-            previous_key = key
-        ranked.append((score.climber.pk, score, assigned_rank))
-
-    return ranked
