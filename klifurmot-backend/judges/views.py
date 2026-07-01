@@ -11,6 +11,7 @@ from competitions.models import Competition
 from .models import JudgeLink
 
 from . import services
+from . import selectors
 from . import serializers
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,7 @@ def claim_invitation(request, token):
             token=token, user=request.user if request.user.is_authenticated else None
         )
 
-        if not result["authenticated"]:
+        if result["authenticated"] is False:
             return utils.success_response(
                 data=serializers.ClaimInvitationUnauthenticatedResponseSerializer(
                     result
@@ -170,7 +171,7 @@ def get_competition_invitations(request, competition_id):
     """Get all invitations for a competition"""
 
     try:
-        result = services.get_competition_invitations(
+        result = selectors.competition_invitations_get(
             competition_id=competition_id, user=request.user
         )
 
@@ -267,7 +268,7 @@ def validate_judge_link(request, token):
     """Validate a judge link token"""
 
     try:
-        result = services.validate_judge_link(token=token, user=request.user)
+        result = selectors.judge_link_validate(token=token, user=request.user)
 
         return utils.success_response(
             data=serializers.ValidateJudgeLinkResponseSerializer(result).data,
@@ -306,7 +307,7 @@ def get_competition_judge_links(request, competition_id):
     """Get all judge links for a competition"""
 
     try:
-        result = services.get_competition_judge_links(
+        result = selectors.competition_judge_links_get(
             competition_id=competition_id, user=request.user
         )
 
@@ -373,11 +374,11 @@ def get_all_judges(request, competition_id):
     """Get all judges (both invitations and links) for a competition"""
 
     try:
-        invitations_result = services.get_competition_invitations(
+        invitations_result = selectors.competition_invitations_get(
             competition_id=competition_id, user=request.user
         )
 
-        links_result = services.get_competition_judge_links(
+        links_result = selectors.competition_judge_links_get(
             competition_id=competition_id, user=request.user
         )
 
@@ -409,7 +410,7 @@ def get_all_judges(request, competition_id):
 def get_potential_judges(request):
     """Get list of users who can be assigned as judges"""
     try:
-        result = services.get_potential_judges()
+        result = selectors.potential_judges_get()
         return utils.success_response(
             data=result["judges"],
             message="Potential judges retrieved successfully",
