@@ -1,5 +1,9 @@
 import logging
-from typing import Any, cast, Dict
+from collections import defaultdict
+from typing import Any, Dict, cast
+
+from accounts import permissions
+from core import utils
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import (
@@ -7,13 +11,8 @@ from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
 )
-from collections import defaultdict
 
-from accounts import permissions
-from . import services
-from . import serializers
-from . import models
-from core import utils
+from . import models, selectors, serializers, services
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ def public_competitions(request):
         year_param = request.query_params.get("year")
         year = int(year_param) if year_param and year_param.isdigit() else None
 
-        result = services.list_public_competitions(year=year)
+        result = selectors.list_public_competitions(year=year)
 
         return utils.success_response(
             data=serializers.CompetitionSerializer(result, many=True).data,
@@ -46,7 +45,7 @@ def competitions(request):
         year_param = request.query_params.get("year")
         year = int(year_param) if year_param and year_param.isdigit() else None
 
-        result = services.list_competitions(year=year)
+        result = selectors.list_competitions(year=year)
 
         return utils.success_response(
             data=serializers.CompetitionSerializer(result, many=True).data,
@@ -100,7 +99,7 @@ def competitions(request):
 def competition_detail(request, competition_id):
     if request.method == "GET":
         try:
-            result = services.get_competition(competition_id=competition_id)
+            result = selectors.get_competition(competition_id=competition_id)
 
             return utils.success_response(
                 data=serializers.CompetitionSerializer(result).data,
@@ -189,7 +188,7 @@ def competition_detail(request, competition_id):
 @permission_classes([AllowAny])
 def competition_athletes(_request, competition_id):
     try:
-        result = services.get_competition_athletes(competition_id=competition_id)
+        result = selectors.get_competition_athletes(competition_id=competition_id)
 
         return utils.success_response(
             data=result,
@@ -208,7 +207,7 @@ def competition_athletes(_request, competition_id):
 @permission_classes([AllowAny])
 def competition_routes(_request, competition_id):
     try:
-        result = services.get_competition_routes(competition_id=competition_id)
+        result = selectors.get_competition_routes(competition_id=competition_id)
 
         return utils.success_response(
             data=result,
@@ -227,7 +226,7 @@ def competition_routes(_request, competition_id):
 @permission_classes([AllowAny])
 def competition_startlist(_request, competition_id):
     try:
-        result = services.get_competition_startlist(competition_id=competition_id)
+        result = selectors.get_competition_startlist(competition_id=competition_id)
 
         return utils.success_response(
             data=result,
@@ -246,7 +245,7 @@ def competition_startlist(_request, competition_id):
 @permission_classes([AllowAny])
 def competition_results(_request, competition_id):
     try:
-        result = services.get_competition_results(competition_id=competition_id)
+        result = selectors.get_competition_results(competition_id=competition_id)
 
         return utils.success_response(
             data=result,
@@ -280,7 +279,7 @@ def list_rounds(request):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    result = services.list_rounds(competition_id=int(competition_id))
+    result = selectors.list_rounds(competition_id=int(competition_id))
 
     flat_rounds = serializers.RoundSerializer(result, many=True).data
 
@@ -363,7 +362,7 @@ def create_round(request, competition_id, category_id):
 def round_detail(request, round_id):
     if request.method == "GET":
         try:
-            result = services.get_round(round_id=round_id)
+            result = selectors.get_round(round_id=round_id)
             return utils.success_response(
                 data=serializers.RoundSerializer(result).data,
                 message="Round retrieved successfully",
@@ -489,7 +488,7 @@ def round_status(request, round_id):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def round_groups(_request):
-    result = services.list_round_groups()
+    result = selectors.list_round_groups()
 
     return utils.success_response(
         data=serializers.RoundGroupSerializer(result, many=True).data,
@@ -501,7 +500,7 @@ def round_groups(_request):
 @permission_classes([AllowAny])
 def categories(request, competition_id):
     if request.method == "GET":
-        result = services.list_categories(competition_id=competition_id)
+        result = selectors.list_categories(competition_id=competition_id)
 
         return utils.success_response(
             data=serializers.CompetitionCategorySerializer(result, many=True).data,
@@ -632,7 +631,7 @@ def category_detail(request, category_id):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def category_groups(_request):
-    result = services.list_category_groups()
+    result = selectors.list_category_groups()
 
     return utils.success_response(
         data=serializers.CategoryGroupSerializer(result, many=True).data,
@@ -645,7 +644,7 @@ def category_groups(_request):
 def route_detail(request, route_id):
     if request.method == "GET":
         try:
-            result = services.get_route(route_id=route_id)
+            result = selectors.get_route(route_id=route_id)
 
             return utils.success_response(
                 data=result,

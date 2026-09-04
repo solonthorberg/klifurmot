@@ -535,9 +535,9 @@ def advance_climbers(round_id: int, user) -> types.AdvanceClimbersResult:
     if not all_results.exists():
         raise ValueError("No ranked results found for this round")
 
-    if current_round.climbers_advance is None:
+    if next_round.climbers_advance is None:
         raise ValueError("This round is not configured to advance climbers")
-    num_to_advance = current_round.climbers_advance
+    num_to_advance = next_round.climbers_advance
 
     existing_climber_ids = set(
         RoundResult.objects.filter(

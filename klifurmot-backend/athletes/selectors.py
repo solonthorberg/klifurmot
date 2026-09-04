@@ -3,6 +3,7 @@ from typing import Optional
 from django.db.models import Q
 from django.utils.timezone import datetime
 
+from accounts.models import UserAccount
 from athletes.models import Climber, CompetitionRegistration
 
 from athletes.utils import (
@@ -19,7 +20,7 @@ from . import types
 
 def public_athlete_list(
     search: Optional[str] = None,
-) -> list[types.PublicAthleteResult]:
+) -> list[UserAccount]:
     queryset = (
         Climber.objects.select_related("user_account__nationality")
         .filter(
@@ -54,17 +55,17 @@ def public_athlete_list(
         )
 
         result.append(
-            {
-                "id": climber.pk,
-                "user_account_id": user_account.pk,
-                "full_name": user_account.full_name or "Name not provided",
-                "age": age,
-                "gender": user_account.gender,
-                "category": category_for_age(category_age),
-                "nationality": user_account.nationality.country_code
+            types.PublicClimber(
+                id=climber.pk,
+                user_account_id=user_account.pk,
+                full_name=user_account.full_name or "Name not provided",
+                age=age,
+                gender=user_account.gender,
+                category=category_for_age(category_age),
+                nationality=user_account.nationality.country_code
                 if user_account.nationality
                 else None,
-            }
+            )
         )
 
     return result
@@ -116,36 +117,36 @@ def public_athlete_detail_get(athlete_id: int) -> types.PublicAthleteDetailResul
     for reg in registrations:
         results = _get_climber_results(reg.competition, climber)
         competitions_result.append(
-            {
-                "id": reg.competition.id,
-                "title": reg.competition.title,
-                "category": f"{reg.competition_category.category_group.name} {reg.competition_category.gender}",
-                "start_date": reg.competition.start_date,
-                "results": results,
-            }
+            types.CompetitionResult(
+                id=reg.competition.id,
+                title=reg.competition.title,
+                category=f"{reg.competition_category.category_group.name} {reg.competition_category.gender}",
+                start_date=reg.competition.start_date,
+                results=results,
+            )
         )
 
     wins = sum(_calculate_wins(reg.competition, climber) for reg in registrations)
 
-    return {
-        "id": climber.pk,
-        "user_account_id": user_account.pk,
-        "full_name": user_account.full_name or "Name not provided",
-        "age": age,
-        "height_cm": user_account.height_cm,
-        "wingspan_cm": user_account.wingspan_cm,
-        "profile_picture": user_account.profile_picture.url
+    return types.PublicAthleteDetailResult(
+        id=climber.pk,
+        user_account_id=user_account.pk,
+        full_name=user_account.full_name or "Name not provided",
+        age=age,
+        height_cm=user_account.height_cm,
+        wingspan_cm=user_account.wingspan_cm,
+        profile_picture=user_account.profile_picture.url
         if user_account.profile_picture
         else None,
-        "gender": user_account.gender,
-        "nationality": user_account.nationality.name_local
+        gender=user_account.gender,
+        nationality=user_account.nationality.name_local
         if user_account.nationality
         else None,
-        "category": get_age_based_category(category_age) if category_age else None,
-        "competitions_count": participation_count,
-        "wins_count": wins,
-        "competition_results": competitions_result,
-    }
+        category=get_age_based_category(category_age) if category_age else None,
+        competitions_count=participation_count,
+        wins_count=wins,
+        competition_results=competitions_result,
+    )
 
 
 def _get_climber_results(competition, climber) -> types.ClimberScoreResult | None:
@@ -164,11 +165,11 @@ def _get_climber_results(competition, climber) -> types.ClimberScoreResult | Non
     if round_result is None:
         return None
 
-    return {
-        "round_name": round_result.round.round_group.name,
-        "round_order": round_result.round.round_order,
-        "rank": round_result.rank,
-    }
+    return types.ClimberScoreResult(
+        round_name=round_result.round.round_group.name,
+        round_order=round_result.round.round_order,
+        rank=round_result.rank,
+    )
 
 
 def _calculate_wins(competition, climber) -> int:

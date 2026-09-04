@@ -3,7 +3,7 @@ import logging
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from competitions.services import get_competition_results
+from competitions.selectors import get_competition_results
 from scoring.models import ClimberRoundScore
 
 

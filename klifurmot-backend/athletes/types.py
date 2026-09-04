@@ -3,14 +3,14 @@ from typing import Literal, Optional, TypedDict, Union
 from rest_framework.fields import DateField
 
 
-class PublicAthleteResult(TypedDict):
+class PublicClimber(TypedDict):
     id: int
     user_account_id: int
     full_name: str
-    age: int | None
-    gender: str | None
-    category: str | None
-    nationality: str | None
+    age: Optional[int]
+    gender: Optional[str]
+    category: Optional[str]
+    nationality: Optional[str]
 
 
 class ClimberScoreResult(TypedDict):
@@ -24,10 +24,10 @@ class CompetitionResult(TypedDict):
     title: str
     category: str
     start_date: DateField
-    results: ClimberScoreResult | None
+    results: Optional[ClimberScoreResult]
 
 
-class PublicAthleteDetailResult(PublicAthleteResult):
+class PublicAthleteDetailResult(PublicClimber):
     height_cm: Optional[int]
     wingspan_cm: Optional[int]
     profile_picture: Optional[str]
