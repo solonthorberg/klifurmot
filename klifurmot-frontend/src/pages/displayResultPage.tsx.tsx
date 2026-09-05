@@ -1,0 +1,149 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+
+import { getErrorMessage } from '@/api';
+import { useCompetitionResults } from '@/hooks/api/useCompetitions';
+import { useWebSocket } from '@/hooks/useWebsocket';
+import LoadingSpinner from '@/components/ui/loadingSpinner';
+import ErrorMessage from '@/components/ui/errorMessage';
+import Container from '@/components/ui/container';
+import Select from '@/components/ui/select';
+import ResultCard from '@/components/cards/resultCard';
+import { useParams } from 'react-router-dom';
+
+const WS_URL = import.meta.env.VITE_WS_URL;
+
+export default function DisplayResultsPage() {
+    const { competitionId: competitionIdParam } = useParams<{
+        competitionId: string;
+    }>();
+    const competitionId = Number(competitionIdParam);
+    const queryClient = useQueryClient();
+    const { data, isLoading, error } = useCompetitionResults(competitionId);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedRound, setSelectedRound] = useState('');
+
+    useWebSocket(`${WS_URL}/ws/results/${competitionId}/`, {
+        onMessage: (data) => {
+            queryClient.setQueryData(
+                ['competitions', competitionId, 'results'],
+                (old: unknown) => ({
+                    ...(old as object),
+                    data: data,
+                }),
+            );
+        },
+    });
+
+    if (isLoading) return <LoadingSpinner />;
+    if (error) return <ErrorMessage message={getErrorMessage(error)} />;
+
+    const categories = data?.data ?? [];
+
+    const categoryOptions = categories.map((c) => ({
+        value: c.category,
+        label: c.category,
+    }));
+
+    const roundOptions = [
+        ...new Set(
+            categories.flatMap((c) => c.rounds.map((r) => r.round_name)),
+        ),
+    ].map((name) => ({ value: name, label: name }));
+
+    const filteredCategories = selectedCategory
+        ? categories.filter((c) => c.category === selectedCategory)
+        : categories;
+
+    return (
+        <Container variant="primaryCenter" className="flex-col gap-4">
+            <div className="flex gap-4 w-full justify-center">
+                <Select
+                    value={selectedCategory}
+                    onChange={setSelectedCategory}
+                    options={categoryOptions}
+                    placeholder="Allir flokkar"
+                    className="flex-1 sm:flex-none"
+                />
+                <Select
+                    value={selectedRound}
+                    onChange={setSelectedRound}
+                    options={roundOptions}
+                    placeholder="Allar umferðir"
+                    className="flex-1 sm:flex-none"
+                />
+            </div>
+            <div className="flex flex-col gap-4 w-full">
+                {filteredCategories.length === 0 ? (
+                    <p className="text-gray-500 mx-auto">
+                        Engar niðurstöður skráðar...
+                    </p>
+                ) : (
+                    filteredCategories.map((c, index) => {
+                        const rounds = selectedRound
+                            ? c.rounds.filter(
+                                  (r) => r.round_name === selectedRound,
+                              )
+                            : c.rounds;
+                        if (rounds.length === 0) return null;
+                        const label = `${c.category}`;
+                        return (
+                            <div
+                                key={index}
+                                className="flex flex-col overflow-hidden"
+                            >
+                                {rounds.map((round) => (
+                                    <div
+                                        className="mb-8"
+                                        key={round.round_name}
+                                    >
+                                        <div className="p-4">
+                                            <div className="flex flex-row gap-4">
+                                                <h2 className="text-lg font-semibold">
+                                                    {label}
+                                                </h2>
+                                                <h2 className="text-lg text-gray-500">
+                                                    {round.round_name}
+                                                </h2>
+                                            </div>
+                                        </div>
+                                        <div className="border border-outline rounded-lg overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead>
+                                                    <tr className="border-b border-outline text-left text-sm text-gray-500">
+                                                        <th className="pl-4 py-2 font-normal w-10">
+                                                            #
+                                                        </th>
+                                                        <th className="pl-4 font-normal">
+                                                            Nafn
+                                                        </th>
+                                                        <th className="pl-4 font-normal">
+                                                            Leiðir
+                                                        </th>
+                                                        <th className="px-4 text-right font-normal w-10">
+                                                            Stig
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {round.results.map(
+                                                        (r, id) => (
+                                                            <ResultCard
+                                                                key={id}
+                                                                athlete={r}
+                                                            />
+                                                        ),
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+        </Container>
+    );
+}

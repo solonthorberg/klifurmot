@@ -23,9 +23,13 @@ import {
 } from '@/schemas/athlete';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Input from '../ui/input';
-import type { AthleteAdmin } from '@/types';
+import type { AthleteAdmin, LinkedClimberResult } from '@/types';
 import { useUserAccounts } from '@/hooks/api/useAccounts';
 import TabButton from '../ui/tabButton';
+
+function isLinkedClimber(a: AthleteAdmin): a is LinkedClimberResult {
+    return !a.is_simple_athlete;
+}
 
 function AddAthleteModal({ onClose }: { onClose: () => void }) {
     const [tab, setTab] = useState<'simple' | 'account'>('simple');
@@ -52,7 +56,8 @@ function AddAthleteModal({ onClose }: { onClose: () => void }) {
         const list = athletesData?.data ?? [];
         return new Set(
             list
-                .filter((a) => !a.is_simple_athlete && a.user_account_id)
+                .filter(isLinkedClimber)
+                .filter((a) => a.user_account_id)
                 .map((a) => a.user_account_id),
         );
     }, [athletesData]);
@@ -184,7 +189,8 @@ function LinkAthleteModal({
         const list = athletesData?.data ?? [];
         return new Set(
             list
-                .filter((a) => !a.is_simple_athlete && a.user_account_id)
+                .filter(isLinkedClimber)
+                .filter((a) => a.user_account_id)
                 .map((a) => a.user_account_id),
         );
     }, [athletesData]);
@@ -208,8 +214,8 @@ function LinkAthleteModal({
         <Modal onClose={onClose}>
             <h2 className="text-lg font-semibold mb-1">Tengja við aðgang</h2>
             <p className="text-sm text-gray-500 mb-4">
-                Tengja <span className="font-medium">{athlete.name}</span> við
-                notendaaðgang
+                Tengja <span className="font-medium">{athlete.full_name}</span>{' '}
+                við notendaaðgang
             </p>
             <SearchBar
                 value={search}
@@ -259,7 +265,7 @@ export default function AthletesAdminTab() {
     const filteredAthletes = useMemo(() => {
         const list = athletesData?.data ?? [];
         return list.filter((a) => {
-            const matchesSearch = (a.name ?? '')
+            const matchesSearch = (a.full_name ?? '')
                 .toLowerCase()
                 .includes(search.toLowerCase());
             const matchesCategory =

@@ -1,7 +1,7 @@
 export interface PublicAthlete {
     id: number;
     user_account_id: number;
-    name: string;
+    full_name: string;
     age: number;
     gender: 'KK' | 'KVK';
     category: string;
@@ -38,16 +38,27 @@ export interface Result {
     rank: number;
 }
 
-export interface AthleteAdmin {
+export interface SimpleClimberResult {
     id: number;
-    is_simple_athlete: boolean;
-    user_account_id: number;
-    name: string;
-    age: number;
-    gender: 'KK' | 'KVK';
-    category: string;
-    nationality: string;
+    is_simple_athlete: true;
+    full_name: string;
+    age: number | null;
+    gender: 'KK' | 'KVK' | null;
+    category: string | null;
 }
+
+export interface LinkedClimberResult {
+    id: number;
+    is_simple_athlete: false;
+    user_account_id: number;
+    full_name: string;
+    age: number | null;
+    gender: 'KK' | 'KVK' | null;
+    category: string | null;
+    nationality: string | null;
+}
+
+export type AthleteAdmin = SimpleClimberResult | LinkedClimberResult;
 
 export interface ClimberUserAccount {
     id: number;

@@ -10,6 +10,7 @@ from core import utils
 import logging
 
 from . import services
+from . import selectors
 from . import serializers
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ def climbs(request):
                 )
             climber_id_int = int(climber_id)
 
-        result = services.list_climbs(
+        result = selectors.climb_list(
             round_id=int(round_id),
             climber_id=climber_id_int,
         )
@@ -66,7 +67,7 @@ def climbs(request):
         try:
             validated_data = cast(Dict[str, Any], serializer.validated_data)
 
-            result = services.create_climb(
+            result = services.record_climb_attempt(
                 user=request.user,
                 **validated_data,
             )
@@ -103,7 +104,7 @@ def climbs(request):
 def climb_detail(request, climb_id):
     if request.method == "GET":
         try:
-            result = services.get_climb(climb_id=climb_id)
+            result = selectors.climb_get(climb_id=climb_id)
             return utils.success_response(
                 data=result, message="Climb retrieved successfully"
             )
@@ -382,7 +383,7 @@ def scores(request):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-    result = services.list_scores(round_id=int(round_id))
+    result = selectors.boulder_scores_list(round_id=int(round_id))
 
     return utils.success_response(
         data=result,

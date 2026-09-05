@@ -36,3 +36,20 @@ export interface AllJudgesResponse {
     links: JudgeLinkEntry[];
     total_count: number;
 }
+
+export interface ClaimInvitationTrueResponse {
+    authenticated: boolean;
+    competition_id: number;
+}
+
+export interface ClaimInvitationFalseResponse {
+    authenticated: boolean;
+    requires_auth: boolean;
+    invitation_valid: boolean;
+    competition_title: string;
+    invited_name: string;
+}
+
+export type ClaimInvitationResponse =
+    | ClaimInvitationTrueResponse
+    | ClaimInvitationFalseResponse;

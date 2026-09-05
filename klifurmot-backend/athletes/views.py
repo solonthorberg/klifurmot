@@ -1,10 +1,13 @@
-from typing import Dict, cast, Any
+from typing import Dict, Optional, cast, Any
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 
 from accounts import permissions
+from athletes.models import CompetitionRegistration
+from athletes.types import RegistrationResult
 from . import services
+from . import selectors
 from . import serializers
 from core import utils
 
@@ -14,7 +17,7 @@ from core import utils
 def public_athletes(request):
     search = request.query_params.get("search")
 
-    result = services.list_public_athletes(search=search)
+    result = selectors.public_athlete_list(search=search)
 
     return utils.success_response(
         data=result,
@@ -26,7 +29,7 @@ def public_athletes(request):
 @permission_classes([AllowAny])
 def public_athlete_detail(_, athlete_id):
     try:
-        result = services.get_athlete_detail(athlete_id=athlete_id)
+        result = selectors.public_athlete_detail_get(athlete_id=athlete_id)
 
         return utils.success_response(
             data=result,
@@ -46,7 +49,7 @@ def public_athlete_detail(_, athlete_id):
 def athletes(request):
     if request.method == "GET":
         search = request.query_params.get("search")
-        result = services.list_all_climbers(search=search)
+        result = selectors.climber_list(search=search)
         return utils.success_response(
             data=result,
             message="Climbers retrieved successfully",
@@ -120,7 +123,7 @@ def athletes(request):
 def athlete_detail(request, climber_id):
     if request.method == "GET":
         try:
-            result = services.get_climber(climber_id=climber_id)
+            result = selectors.climber_get(climber_id=climber_id)
 
             return utils.success_response(
                 data=result,
@@ -239,7 +242,7 @@ def registrations(request):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = services.list_registrations(
+        result = selectors.registration_list(
             competition_id=int(competition_id) if competition_id else None
         )
 
@@ -322,3 +325,41 @@ def registration_detail(request, registration_id):
             message=str(e),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+def list_registrations(
+    competition_id: Optional[int] = None,
+) -> list[RegistrationResult]:
+    queryset = CompetitionRegistration.objects.select_related(
+        "climber__user_account",
+        "competition",
+        "competition_category__category_group",
+    ).filter(deleted=False)
+
+    if competition_id:
+        queryset = queryset.filter(competition_id=competition_id)
+
+    result = []
+
+    for reg in queryset:
+        climber = reg.climber
+
+        if climber.is_simple_athlete:
+            climber_name = climber.simple_name
+        else:
+            climber_name = (
+                climber.user_account.full_name if climber.user_account else None
+            )
+
+        result.append(
+            RegistrationResult(
+                id=reg.pk,
+                climber_id=climber.pk,
+                climber_name=climber_name,
+                competition_id=reg.competition.id,
+                competition_title=reg.competition.title,
+                category=f"{reg.competition_category.category_group.name} {reg.competition_category.gender}",
+            )
+        )
+
+    return result

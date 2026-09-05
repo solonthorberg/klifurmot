@@ -4,7 +4,7 @@ import secrets
 import textwrap
 import time
 from datetime import date, timedelta
-from typing import Any, Dict, Optional, cast
+from typing import Any, Optional, cast
 
 from django.conf import settings
 from django.contrib.auth import authenticate
@@ -277,7 +277,7 @@ def refresh_token(refresh_token_str) -> types.TokenPair:
         raise ValueError(f"Invalid or expired refresh token: {str(e)}")
 
 
-def request_password_reset(email: str, request_ip: Optional[str] = None) -> str:
+def request_password_reset(email: str) -> str:
     """Request password reset - Always returns success to prevent email enumeration"""
     message = (
         "If an account exists with this email, you will receive reset instructions"
@@ -294,7 +294,7 @@ def request_password_reset(email: str, request_ip: Optional[str] = None) -> str:
             if time_since_last < timedelta(hours=1):
                 if user_account.reset_attempts >= 3:
                     logger.warning(
-                        f"Password reset rate limit exceeded for {email} from IP {request_ip}"
+                        f"Password reset rate limit exceeded for {email} from IP"
                     )
                     return message
 
@@ -332,12 +332,10 @@ def request_password_reset(email: str, request_ip: Optional[str] = None) -> str:
             """).strip(),
         )
 
-        logger.info(f"Password reset requested for {email} from IP {request_ip}")
+        logger.info(f"Password reset requested for {email}")
 
     except User.DoesNotExist:
-        logger.info(
-            f"Password reset requested for non-existent email {email} from IP {request_ip}"
-        )
+        logger.info(f"Password reset requested for non-existent email {email}")
         pass
 
     except Exception as e:
@@ -347,9 +345,7 @@ def request_password_reset(email: str, request_ip: Optional[str] = None) -> str:
     return message
 
 
-def reset_password(
-    token: str, new_password: str, request_ip: Optional[str] = None
-) -> str:
+def reset_password(token: str, new_password: str) -> str:
     """Reset password with token"""
 
     token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -398,21 +394,18 @@ def reset_password(
                 Ef þetta varst ekki þú hafðu samband strax.
                 
                 Tími: {timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
-                IP-tala: {request_ip or "Óþekkt"}
 
                 Kveðja,
                 klifurmot.is
             """).strip(),
         )
 
-        logger.info(
-            f"Password reset completed for user {user.username} ({user.email}) from IP {request_ip}"
-        )
+        logger.info(f"Password reset completed for user {user.username} ({user.email})")
 
         return "Password reset successful. Please login with your new password."
 
     except UserAccount.DoesNotExist:
-        logger.warning(f"Invalid password reset token attempted from IP {request_ip}")
+        logger.warning(f"Invalid password reset token attempted")
         raise ValueError("Invalid or expired reset token")
 
     except Exception as e:

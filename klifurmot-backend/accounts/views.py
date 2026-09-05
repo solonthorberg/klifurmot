@@ -640,9 +640,7 @@ def request_password_reset(request):
     )
 
     try:
-        client_ip = request.META.get("REMOTE_ADDR")
-
-        services.request_password_reset(email=email, request_ip=client_ip)
+        services.request_password_reset(email=email)
 
         return utils.success_response(
             data=None, message=SUCCESS_MESSAGE, status_code=status.HTTP_200_OK
@@ -689,11 +687,7 @@ def reset_password(request):
         )
 
     try:
-        client_ip = request.META.get("REMOTE_ADDR")
-
-        result = services.reset_password(
-            token=token, new_password=password, request_ip=client_ip
-        )
+        result = services.reset_password(token=token, new_password=password)
 
         return utils.success_response(
             data=None, message=result, status_code=status.HTTP_200_OK

@@ -241,6 +241,26 @@ export default function RoundStartlistCard({
 
     const alreadyInStartlist = new Set(localEntries.map((e) => e.climber_id));
 
+    const randomizeStartlist = async () => {
+        const shuffled = [...localEntries];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const reordered = shuffled.map((e, i) => ({
+            ...e,
+            start_order: i + 1,
+        }));
+        setLocalEntries(reordered);
+        await reorderStartlist({
+            round_id: round.id,
+            entries: reordered.map((e) => ({
+                id: e.id,
+                start_order: e.start_order,
+            })),
+        });
+    };
+
     return (
         <div className="border border-outline rounded-lg p-4 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -339,6 +359,15 @@ export default function RoundStartlistCard({
                     onClose={() => setShowAddModal(false)}
                 />
             )}
+
+            <div className="text-gray-500 text-end">
+                <button
+                    onClick={randomizeStartlist}
+                    className="hover:text-gray-600"
+                >
+                    Rugla röð ráslista
+                </button>
+            </div>
         </div>
     );
 }

@@ -20,6 +20,8 @@ import JudgeDashboardPage from '@/pages/judgeDashboardPage';
 import JudgeTokenPage from '@/pages/judgeTokenPage';
 import RequestPasswordResetPage from '@/pages/requestPasswordResetPage';
 import ResetPasswordPage from '@/pages/resetPasswordPage';
+import DisplayResultsPage from '@/pages/displayResultPage.tsx';
+import DisplayLayout from '@/layouts/displayLayout';
 
 export default function Router() {
     return (
@@ -65,6 +67,12 @@ export default function Router() {
                         element={<EditCompetitionPage />}
                     />
                 </Route>
+            </Route>
+            <Route element={<DisplayLayout />}>
+                <Route
+                    path="/competitions/:competitionId/display"
+                    element={<DisplayResultsPage />}
+                />
             </Route>
         </Routes>
     );

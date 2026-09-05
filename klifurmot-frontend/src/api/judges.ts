@@ -3,6 +3,7 @@ import type {
     ApiSuccessResponse,
     PotentialJudge,
     AllJudgesResponse,
+    ClaimInvitationResponse,
 } from '@/types';
 
 export const judgesApi = {
@@ -68,17 +69,7 @@ export const judgesApi = {
 
     claimInvitation: async (
         token: string,
-    ): Promise<
-        ApiSuccessResponse<
-            | { competition_id: number }
-            | {
-                  requires_auth: boolean;
-                  invitation_valid: boolean;
-                  competition_title: string;
-                  invited_name: string;
-              }
-        >
-    > => {
+    ): Promise<ApiSuccessResponse<ClaimInvitationResponse>> => {
         const response = await api.post(`/judges/invitations/claim/${token}/`);
         return response.data;
     },

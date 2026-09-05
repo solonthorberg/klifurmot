@@ -436,6 +436,10 @@ export default function JudgeScoringView({
                     onClose={() => setEditingScore(null)}
                 />
             )}
+            <p className="text-center text-gray-600">
+                ATH: Ýtið á eftirfarandi takka þegar klifrari er búin með sína
+                tilraun.
+            </p>
         </div>
     );
 }
