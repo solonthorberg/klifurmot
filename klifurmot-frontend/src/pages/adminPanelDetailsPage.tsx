@@ -42,19 +42,31 @@ export default function AdminPanelDetailsPage() {
 
     return (
         <Container className="gap-4">
-            <div className="flex justify-between items-center gap-2">
+            <div className="flex justify-between gap-2 flex-col sm:flex-row">
                 <h2 className="text-2xl font-semibold wrap-break-word">
                     {competition?.title}
                 </h2>
-                <MainButton
-                    onClick={() =>
-                        navigate(
-                            `/competitions/${competitionId}/judge-dashboard`,
-                        )
-                    }
-                >
-                    Dómaraviðmót
-                </MainButton>
+                <div className="flex flex-row sm:flex-row sm:justify-end gap-2">
+                    <MainButton
+                        className="w-full sm:fit"
+                        variant="outline"
+                        onClick={() =>
+                            navigate(`/competitions/${competitionId}/display`)
+                        }
+                    >
+                        Niðurstöður
+                    </MainButton>
+                    <MainButton
+                        className="w-full sm:fit"
+                        onClick={() =>
+                            navigate(
+                                `/competitions/${competitionId}/judge-dashboard`,
+                            )
+                        }
+                    >
+                        Dómaraviðmót
+                    </MainButton>
+                </div>
             </div>
 
             <div className="flex gap-2 border-b border-outline w-full overflow-x-auto">
