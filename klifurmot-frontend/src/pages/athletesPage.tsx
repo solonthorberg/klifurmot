@@ -28,7 +28,7 @@ export default function AthletesPage() {
     const filteredAthletes = useMemo(() => {
         const list = athletesData?.data ?? [];
         return list.filter((a) => {
-            const matchesSearch = (a.name ?? '')
+            const matchesSearch = (a.full_name ?? '')
                 .toLowerCase()
                 .includes(search.toLowerCase());
             const matchesCategory =
