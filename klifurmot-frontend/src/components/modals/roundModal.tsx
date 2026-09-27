@@ -113,6 +113,14 @@ export default function RoundModal({
                         {error && (
                             <p className="text-red-500 text-sm">{error}</p>
                         )}
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                {...register('is_self_scoring')}
+                                type="checkbox"
+                                className="w-4 h-4 accent-primary"
+                            />
+                            <span className="text-sm">Sjálfstigagjöf?</span>
+                        </label>
                         <div className="flex gap-2 mt-2">
                             <MainButton
                                 className="w-full"

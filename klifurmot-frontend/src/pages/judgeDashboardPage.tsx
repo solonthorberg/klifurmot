@@ -10,7 +10,7 @@ import type { Round, Phase } from '@/types';
 import JudgeScoringTab from '@/components/tabs/judgeScoringTab';
 import { useAuthStore } from '@/stores';
 
-function RoundSelectionView({
+export function RoundSelectionView({
     phases,
     activePhaseIndex,
     onSelectPhase,
@@ -55,7 +55,7 @@ function RoundSelectionView({
     );
 }
 
-function AthleteListView({
+export function AthleteListView({
     round,
     onSelectAthlete,
 }: {

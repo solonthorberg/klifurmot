@@ -1,6 +1,10 @@
 from typing import Any
 
-from accounts.authorization import require_competition_admin, require_competition_judge
+from accounts.authorization import (
+    require_climber_scoring,
+    require_competition_admin,
+    require_competition_judge,
+)
 from athletes.models import Climber
 from competitions.models import CompetitionRound, Route
 from django.db import transaction
@@ -76,13 +80,16 @@ def add_to_startlist(user, **data: Any) -> types.StartlistEntry:
     if climber.is_simple_athlete:
         climber_name = climber.simple_name
         gender = climber.simple_gender
+        user_account_id = None
     else:
         climber_name = climber.user_account.full_name if climber.user_account else None
         gender = climber.user_account.gender if climber.user_account else None
+        user_account_id = climber.user_account.pk if climber.user_account else None
 
     return types.StartlistEntry(
         id=result.pk,
         climber_id=climber.pk,
+        user_account_id=user_account_id,
         climber_name=climber_name,
         start_order=result.start_order,
         gender=gender,
@@ -148,7 +155,7 @@ def record_climb_attempt(user, **data: Any) -> types.Climb:
     except Route.DoesNotExist:
         raise ValueError(f"Route with id {data['route']} not found")
 
-    require_competition_judge(user, route.round.competition_category.competition_id)
+    require_climber_scoring(user, climber, route.round)
 
     in_startlist = RoundResult.objects.filter(
         round=route.round,
@@ -235,9 +242,7 @@ def update_climb(climb_id: int, user, **update_data: Any) -> types.Climb:
     except Climb.DoesNotExist:
         raise ValueError(f"Climb with id {climb_id} not found")
 
-    require_competition_judge(
-        user, climb.route.round.competition_category.competition_id
-    )
+    require_climber_scoring(user, climb.climber, climb.route.round)
 
     with transaction.atomic():
         normalized = _build_boulder_attempt_record(
@@ -323,16 +328,19 @@ def list_startlist(round_id: int) -> list[types.StartlistEntry]:
         if climber.is_simple_athlete:
             climber_name = climber.simple_name
             gender = climber.simple_gender
+            user_account_id = None
         else:
             climber_name = (
                 climber.user_account.full_name if climber.user_account else None
             )
             gender = climber.user_account.gender if climber.user_account else None
+            user_account_id = climber.user_account.pk if climber.user_account else None
 
         data.append(
             types.StartlistEntry(
                 id=result.pk,
                 climber_id=climber.pk,
+                user_account_id=user_account_id,
                 climber_name=climber_name,
                 start_order=result.start_order,
                 gender=gender,
@@ -382,13 +390,16 @@ def update_startlist(result_id: int, user, **update_data: Any) -> types.Startlis
     if climber.is_simple_athlete:
         climber_name = climber.simple_name
         gender = climber.simple_gender
+        user_account_id = None
     else:
         climber_name = climber.user_account.full_name if climber.user_account else None
         gender = climber.user_account.gender if climber.user_account else None
+        user_account_id = climber.user_account.pk if climber.user_account else None
 
     return types.StartlistEntry(
         id=result.pk,
         climber_id=climber.pk,
+        user_account_id=user_account_id,
         climber_name=climber_name,
         start_order=result.start_order,
         gender=gender,
@@ -455,17 +466,20 @@ def bulk_update_startlist_order(
         if climber.is_simple_athlete:
             climber_name = climber.simple_name
             gender = climber.simple_gender
+            user_account_id = None
         else:
             climber_name = (
                 climber.user_account.full_name if climber.user_account else None
             )
             gender = climber.user_account.gender if climber.user_account else None
+            user_account_id = climber.user_account.pk if climber.user_account else None
 
         data.append(
             types.StartlistEntry(
                 id=result.pk,
                 climber_id=climber.pk,
                 climber_name=climber_name,
+                user_account_id=user_account_id,
                 start_order=result.start_order,
                 gender=gender,
                 rank=result.rank,

@@ -18,6 +18,7 @@ class Climb(TypedDict):
 class StartlistEntry(TypedDict):
     id: int
     climber_id: int
+    user_account_id: Optional[int]
     climber_name: Optional[str]
     start_order: Optional[int]
     gender: Optional[str]

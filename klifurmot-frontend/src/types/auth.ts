@@ -6,6 +6,7 @@ export interface User {
 
 export interface UserAccount {
     id: number;
+    climber_id: number;
     user: User;
     full_name: string | null;
     gender: 'KK' | 'KVK' | null;

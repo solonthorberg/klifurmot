@@ -108,7 +108,9 @@ function RemoveAthleteModal({
 }: RemoveAthleteModalProps) {
     return (
         <Modal onClose={onClose}>
-            <h2 className="text-lg font-semibold mb-4">Fjarlægja keppanda?</h2>
+            <h2 className="text-lg font-semibold mb-4">
+                Viltu rugla röð keppenda?
+            </h2>
             <p>
                 Ertu viss að þú viljir fjarlægja{' '}
                 <span className="font-medium">
@@ -137,6 +139,37 @@ function RemoveAthleteModal({
     );
 }
 
+function RandomizeModal({
+    onConfirm,
+    onClose,
+}: {
+    onConfirm: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <Modal onClose={onClose}>
+            <h2 className="text-lg font-semibold mb-4">Rugla röð keppenda?</h2>
+            <div className="flex justify-between gap-2 mt-4">
+                <MainButton
+                    variant="delete"
+                    square
+                    className="w-full"
+                    onClick={onConfirm}
+                >
+                    Rugla röðinni
+                </MainButton>
+                <MainButton
+                    variant="outline"
+                    className="w-full"
+                    onClick={onClose}
+                >
+                    Hætta við
+                </MainButton>
+            </div>
+        </Modal>
+    );
+}
+
 export default function RoundStartlistCard({
     round,
     registrations,
@@ -144,6 +177,7 @@ export default function RoundStartlistCard({
     isLastRound,
 }: RoundStartlistCardProps) {
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showRandomizeModal, setShowRandomizeModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState<StartlistEntry | null>(
         null,
     );
@@ -243,10 +277,15 @@ export default function RoundStartlistCard({
 
     const randomizeStartlist = async () => {
         const shuffled = [...localEntries];
+        if (shuffled.length === 0) {
+            return;
+        }
+
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
+
         const reordered = shuffled.map((e, i) => ({
             ...e,
             start_order: i + 1,
@@ -343,6 +382,16 @@ export default function RoundStartlistCard({
                     </div>
                 </DndContext>
             )}
+            <div className="text-gray-500 flex justify-end">
+                <MainButton
+                    onClick={() => setShowRandomizeModal(true)}
+                    variant="outline"
+                    disabled={round.completed}
+                >
+                    Rugla röð ráslista
+                </MainButton>
+            </div>
+
             {removeTarget && (
                 <RemoveAthleteModal
                     entry={removeTarget}
@@ -359,15 +408,15 @@ export default function RoundStartlistCard({
                     onClose={() => setShowAddModal(false)}
                 />
             )}
-
-            <div className="text-gray-500 text-end">
-                <button
-                    onClick={randomizeStartlist}
-                    className="hover:text-gray-600"
-                >
-                    Rugla röð ráslista
-                </button>
-            </div>
+            {showRandomizeModal && (
+                <RandomizeModal
+                    onConfirm={() => {
+                        randomizeStartlist();
+                        setShowRandomizeModal(false);
+                    }}
+                    onClose={() => setShowRandomizeModal(false)}
+                />
+            )}
         </div>
     );
 }

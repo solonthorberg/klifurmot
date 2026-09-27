@@ -22,6 +22,7 @@ import RequestPasswordResetPage from '@/pages/requestPasswordResetPage';
 import ResetPasswordPage from '@/pages/resetPasswordPage';
 import DisplayResultsPage from '@/pages/displayResultPage.tsx';
 import DisplayLayout from '@/layouts/displayLayout';
+import SelfscorePage from '@/pages/selfscorePage';
 
 export default function Router() {
     return (
@@ -50,6 +51,10 @@ export default function Router() {
                     <Route
                         path="/competitions/:competitionId/judge-dashboard"
                         element={<JudgeDashboardPage />}
+                    />
+                    <Route
+                        path="/competitions/:competitionId/selfscore"
+                        element={<SelfscorePage />}
                     />
                 </Route>
                 <Route element={<ProtectedRoutes requiredRole="admin" />}>

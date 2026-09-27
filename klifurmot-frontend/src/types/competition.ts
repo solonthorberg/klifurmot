@@ -12,6 +12,7 @@ export interface Competition {
     location: string | null;
     image: string | null;
     visible: boolean;
+    has_selfscore_round: boolean;
     status: 'not_started' | 'ongoing' | 'finished';
     created_at: string;
     created_by: string;

@@ -6,8 +6,11 @@ import Image from '../ui/image';
 
 import type { Competition } from '@/types';
 import { memo } from 'react';
+import MainButton from '../ui/mainButton';
+import { useNavigate } from 'react-router-dom';
 
 function OverviewTab({ competition }: { competition: Competition }) {
+    const navigate = useNavigate();
     return (
         <Container
             variant="tab"
@@ -39,6 +42,19 @@ function OverviewTab({ competition }: { competition: Competition }) {
                             'is-IS',
                         )}
                     </p>
+                    {competition.has_selfscore_round &&
+                        competition.status === 'ongoing' && (
+                            <MainButton
+                                onClick={() =>
+                                    navigate(
+                                        `/competitions/${competition.id}/selfscore`,
+                                    )
+                                }
+                                className="w-full"
+                            >
+                                Sjálfstigagjöf
+                            </MainButton>
+                        )}
                 </div>
             </div>
         </Container>
