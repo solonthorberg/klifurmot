@@ -112,7 +112,7 @@ def get_competition_athletes(competition_id: int) -> types.CompetitionAthletesRe
             )
         else:
             user_account = climber.user_account
-            athlete_data = Climber(
+            athlete_data = types.CompetitionAthlete(
                 id=climber.pk,
                 full_name=user_account.full_name if user_account else None,
                 age=calculate_age(user_account.date_of_birth)
