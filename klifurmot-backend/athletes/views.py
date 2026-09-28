@@ -230,7 +230,7 @@ def link_simple_athlete(request, climber_id: int):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def registrations(request):
     if request.method == "GET":
         competition_id = request.query_params.get("competition_id")
@@ -242,14 +242,23 @@ def registrations(request):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = selectors.registration_list(
-            competition_id=int(competition_id) if competition_id else None
-        )
+        try:
+            result = selectors.registration_list(
+                user=request.user,
+                competition_id=int(competition_id),
+            )
 
-        return utils.success_response(
-            data=result,
-            message="Registrations retrieved successfully",
-        )
+            return utils.success_response(
+                data=result,
+                message="Registrations retrieved successfully",
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
 
     if request.method == "POST":
         serializer = serializers.CreateRegistrationSerializer(data=request.data)
@@ -277,6 +286,13 @@ def registrations(request):
                 code="Invalid_registration",
                 message=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         except Exception as e:
