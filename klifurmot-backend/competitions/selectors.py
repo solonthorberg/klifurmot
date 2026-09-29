@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional, cast
 
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Exists, OuterRef
 
 from athletes.models import Climber, CompetitionRegistration
 from athletes.utils import build_age_category_resolver, calculate_age
@@ -18,9 +18,15 @@ from scoring.selectors import rank_climbers_in_round
 
 
 def get_competition(competition_id: int) -> Competition:
-    try:
-        return Competition.objects.get(id=competition_id, deleted=False)
+    selfscore_rounds = CompetitionRound.objects.filter(
+        competition_category__competition=OuterRef("pk"),
+        is_self_scoring=True,
+    )
 
+    try:
+        return Competition.objects.annotate(
+            has_selfscore_round=Exists(selfscore_rounds),
+        ).get(id=competition_id, deleted=False)
     except Competition.DoesNotExist:
         raise ValueError(f"Competition with id {competition_id} not found")
 

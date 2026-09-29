@@ -16,11 +16,13 @@ class UserProfileResponseSerializer(serializers.ModelSerializer):
     )
     user = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    climber_id = serializers.SerializerMethodField()
 
     class Meta:
         model = models.UserAccount
         fields = [
             "id",
+            "climber_id",
             "user",
             "full_name",
             "gender",
@@ -38,6 +40,9 @@ class UserProfileResponseSerializer(serializers.ModelSerializer):
             "username": obj.user.username,
             "email": obj.user.email,
         }
+
+    def get_climber_id(self, obj):
+        return obj.climber.id if hasattr(obj, "climber") else None
 
     def get_profile_picture(self, obj):
         return obj.profile_picture.url if obj.profile_picture else None

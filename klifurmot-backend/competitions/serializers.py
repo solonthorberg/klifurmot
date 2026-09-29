@@ -105,6 +105,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
 
 class CompetitionSerializer(serializers.ModelSerializer):
     created_by = serializers.CharField(source="created_by.username", read_only=True)
+    has_selfscore_round = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = models.Competition
@@ -122,6 +123,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "created_at",
             "created_by",
             "last_modified_at",
+            "has_selfscore_round",
         ]
         read_only_fields = ["id", "created_at", "created_by", "last_modified_at"]
 

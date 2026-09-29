@@ -1,12 +1,64 @@
 import JudgeScoringTab from '@/components/tabs/judgeScoringTab';
 import Container from '@/components/ui/container';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
+import MainButton from '@/components/ui/mainButton';
+import TabButton from '@/components/ui/tabButton';
 import { useCompetition, useRounds } from '@/hooks/api/useCompetitions';
 import { useStartlist } from '@/hooks/api/useScoring';
 import { useAuthStore } from '@/stores';
-import type { Phase } from '@/types';
+import type { Phase, Round } from '@/types';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { RoundSelectionView } from './judgeDashboardPage';
+
+export function RoundSelectionView({
+    phases,
+    activePhaseIndex,
+    onSelectPhase,
+    onSelectRound,
+}: {
+    phases: Phase[];
+    activePhaseIndex: number;
+    onSelectPhase: (index: number) => void;
+    onSelectRound: (round: Round) => void;
+}) {
+    const activePhase = phases[activePhaseIndex];
+
+    return (
+        <div className="flex flex-col gap-4 w-full">
+            <div className="flex gap-2 border-b border-outline overflow-x-auto">
+                {/* TODO: only display rounds with self scoring */}
+                {phases.map((phase, i) => (
+                    <TabButton
+                        key={phase.round_order}
+                        active={activePhaseIndex === i}
+                        onClick={() => onSelectPhase(i)}
+                        className="flex-1"
+                    >
+                        {phase.round_name}
+                    </TabButton>
+                ))}
+            </div>
+            {activePhase && (
+                <div className="flex flex-col gap-3">
+                    {activePhase.rounds
+                        .filter(
+                            (round) =>
+                                round.is_self_scoring && !round.completed,
+                        )
+                        .map((round) => (
+                            <MainButton
+                                key={round.id}
+                                variant="outline"
+                                className="h-16 text-lg w-full"
+                                onClick={() => onSelectRound(round)}
+                            >
+                                {round.category_group_name} {round.gender}
+                            </MainButton>
+                        ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function SelfscorePage() {
     const { competitionId } = useParams();
@@ -19,25 +71,19 @@ export default function SelfscorePage() {
     const competition = competitionData?.data ?? null;
     const phases: Phase[] = roundsData?.data.phases ?? [];
 
-    const selfscorePhases: Phase[] = phases
-        .map((phase) => ({
-            ...phase,
-            rounds: phase.rounds.filter((round) => round.is_self_scoring),
-        }))
-        .filter((phase) => phase.rounds.length > 0);
-
     const roundId = searchParams.get('round');
     const phaseIndex = Number(searchParams.get('phase') ?? 0);
 
     const selectedRound =
-        selfscorePhases
-            .flatMap((p) => p.rounds)
-            .find((r) => String(r.id) === roundId) ?? null;
+        phases.flatMap((p) => p.rounds).find((r) => String(r.id) === roundId) ??
+        null;
 
-    const { data: startlistData } = useStartlist(selectedRound?.id ?? 0);
+    const { data: startlistData, isLoading: startlistLoading } = useStartlist(
+        selectedRound?.id ?? 0,
+    );
     const athletes = startlistData?.data ?? [];
-    const athlete = athletes.find(
-        (c) => c.climber_id === userAccount?.climber_id,
+    const selfEntries = athletes.filter(
+        (a) => a.user_account_id === userAccount?.id,
     );
 
     if (isLoading) return <LoadingSpinner />;
@@ -53,7 +99,7 @@ export default function SelfscorePage() {
                         {`Velkomin/n ${userAccount?.user.username}, vinsamlega veldu umferð`}
                     </p>
                     <RoundSelectionView
-                        phases={selfscorePhases}
+                        phases={phases}
                         activePhaseIndex={phaseIndex}
                         onSelectPhase={(index) =>
                             setSearchParams({ phase: String(index) })
@@ -67,17 +113,21 @@ export default function SelfscorePage() {
                     />
                 </>
             )}
-            {selectedRound && athlete && (
+
+            {selectedRound && startlistLoading && <LoadingSpinner />}
+
+            {selectedRound && !startlistLoading && selfEntries.length === 0 && (
+                <p className="text-gray-600 text-center py-8">
+                    Þú ert ekki skráð/ur á ráslista í þessari umferð
+                </p>
+            )}
+
+            {selectedRound && selfEntries.length > 0 && (
                 <JudgeScoringTab
                     round={selectedRound}
-                    athletes={[athlete]}
+                    athletes={selfEntries}
                     initialIndex={0}
                 />
-            )}
-            {selectedRound && !athlete && (
-                <p className="text-center">
-                    Þú finnst ekki á ræsilista fyrir þessa umferð.
-                </p>
             )}
         </Container>
     );
