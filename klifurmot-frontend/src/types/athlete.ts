@@ -81,7 +81,12 @@ export interface Registration {
 }
 
 export interface CreateRegistrationRequest {
-    climber: number;
-    competition: number;
-    competition_category: number;
+    climber_id: number;
+    competition_id: number;
+    competition_category_id: number;
 }
+
+export type SelfRegistrationRequest = Omit<
+    CreateRegistrationRequest,
+    'climber_id'
+>;

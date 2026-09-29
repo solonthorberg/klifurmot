@@ -33,8 +33,8 @@ urlpatterns = [
     path("api/judges/", include("judges.urls")),
     path("api/scoring/", include("scoring.urls")),
     path("api/competitions/", include("competitions.urls")),
-    path("sentry-debug/", trigger_error),
 ]
 
 if settings.DEBUG:
+    (path("sentry-debug/", trigger_error),)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

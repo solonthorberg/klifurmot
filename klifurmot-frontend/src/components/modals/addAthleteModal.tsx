@@ -122,23 +122,24 @@ export default function AddAthleteModal({
                                     key={r.id}
                                     type="button"
                                     disabled={isAdded}
-                                    onClick={() =>
-                                        !isAdded && onAdd(r.climber_id)
-                                    }
-                                    className={`flex justify-between items-center px-4 py-3 rounded-lg border border-outline text-left transition-colors w-full ${
+                                    onClick={() => onAdd(r.climber_id)}
+                                    className={`flex flex-col text-left gap-1 border border-outline rounded-lg p-4 hover:shadow-md transition-shadow ${
                                         isAdded
-                                            ? 'text-gray-400 cursor-not-allowed bg-gray-50'
-                                            : 'hover:bg-primary-light cursor-pointer'
+                                            ? 'opacity-50 cursor-not-allowed hover:shadow-none'
+                                            : 'cursor-pointer'
                                     }`}
                                 >
-                                    <span className="font-medium text-sm">
-                                        {r.climber_name ?? '-'}
+                                    <div className="flex gap-1 justify-between">
+                                        <p>{r.climber_name ?? '-'}</p>
+                                        {isAdded && (
+                                            <span className="text-sm text-gray-500">
+                                                Á ráslista
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-gray-500">
+                                        {r.category}
                                     </span>
-                                    {isAdded && (
-                                        <span className="text-xs text-gray-400">
-                                            Skráð/ur
-                                        </span>
-                                    )}
                                 </button>
                             );
                         })
@@ -158,13 +159,17 @@ export default function AddAthleteModal({
                                     disabled={isAdded}
                                     athlete={a}
                                     onClick={() => onAdd(a.id)}
-                                    className={`${
+                                    className={
                                         isAdded
-                                            ? 'text-gray-500 cursor-not-allowed'
+                                            ? 'opacity-50 cursor-not-allowed hover:shadow-none'
                                             : 'cursor-pointer'
-                                    }`}
+                                    }
                                 >
-                                    {isAdded && <span>Skráð/ur</span>}
+                                    {isAdded && (
+                                        <span className="text-sm text-gray-500">
+                                            Á ráslista
+                                        </span>
+                                    )}
                                 </AddAthleteCard>
                             );
                         })

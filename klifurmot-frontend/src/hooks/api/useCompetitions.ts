@@ -12,6 +12,7 @@ import type {
     UpdateCompetitionFormData,
     UpdateRoundFormData,
 } from '@/schemas/competition';
+import { useAuthStore } from '@/stores';
 
 // Competitions
 export function useCompetitions() {
@@ -29,8 +30,10 @@ export function usePublicCompetitions() {
 }
 
 export function useCompetition(competitionId: number) {
+    const userAccountId = useAuthStore((s) => s.userAccount?.id ?? null);
+
     return useQuery({
-        queryKey: ['competitions', competitionId],
+        queryKey: ['competitions', competitionId, userAccountId],
         queryFn: () => competitionsApi.getCompetition(competitionId),
         enabled: !!competitionId,
     });

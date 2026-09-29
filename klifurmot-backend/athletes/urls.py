@@ -19,4 +19,5 @@ urlpatterns = [
         views.registration_detail,
         name="registration_detail",
     ),
+    path("registrations/me/", views.self_registration, name="self_registration"),
 ]

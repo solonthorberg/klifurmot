@@ -102,7 +102,9 @@ def competition_detail(request, competition_id):
             result = selectors.get_competition(competition_id=competition_id)
 
             return utils.success_response(
-                data=serializers.CompetitionSerializer(result).data,
+                data=serializers.CompetitionSerializer(
+                    result, context={"request": request}
+                ).data,
                 message="Competition retrieved successfully",
             )
 
@@ -141,6 +143,13 @@ def competition_detail(request, competition_id):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
         except Exception as e:
             return utils.error_response(
                 code="Update_failed",
@@ -149,15 +158,10 @@ def competition_detail(request, competition_id):
             )
 
     if request.method == "DELETE":
-        if not permissions.IsAdmin().has_permission(request, None):
-            return utils.error_response(
-                code="Access_denied",
-                message="Admin access required",
-                status_code=status.HTTP_403_FORBIDDEN,
-            )
-
         try:
-            services.delete_competition(competition_id=competition_id)
+            services.delete_competition(
+                competition_id=competition_id, user=request.user
+            )
 
             return utils.success_response(
                 message="Competition deleted successfully",
@@ -168,6 +172,13 @@ def competition_detail(request, competition_id):
                 code="Not_found",
                 message=str(e),
                 status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         except Exception as e:

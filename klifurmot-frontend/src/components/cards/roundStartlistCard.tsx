@@ -45,9 +45,10 @@ interface RoundStartlistCardProps {
 interface SortableRowProps {
     entry: StartlistEntry;
     onRemove: (entry: StartlistEntry) => void;
+    completed: boolean;
 }
 
-function SortableRow({ entry, onRemove }: SortableRowProps) {
+function SortableRow({ entry, onRemove, completed }: SortableRowProps) {
     const {
         attributes,
         listeners,
@@ -55,7 +56,7 @@ function SortableRow({ entry, onRemove }: SortableRowProps) {
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: entry.id });
+    } = useSortable({ id: entry.id, disabled: completed });
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
@@ -82,14 +83,16 @@ function SortableRow({ entry, onRemove }: SortableRowProps) {
             </td>
             <td className="px-2 py-2 text-sm">{entry.climber_name ?? '-'}</td>
             <td className="pr-2 py-2 w-10 text-right">
-                <MainButton
-                    variant="delete"
-                    size="small"
-                    square
+                <button
+                    type="button"
                     onClick={() => onRemove(entry)}
+                    disabled={completed}
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors ${
+                        completed ? 'invisible' : ''
+                    }`}
                 >
-                    <Icon variant="trash" size={14} />
-                </MainButton>
+                    <Icon variant="trash" size={18} />
+                </button>
             </td>
         </tr>
     );
@@ -108,20 +111,13 @@ function RemoveAthleteModal({
 }: RemoveAthleteModalProps) {
     return (
         <Modal onClose={onClose}>
-            <h2 className="text-lg font-semibold mb-4">
-                Viltu rugla röð keppenda?
-            </h2>
-            <p>
-                Ertu viss að þú viljir fjarlægja{' '}
-                <span className="font-medium">
-                    {entry.climber_name ?? 'þennan keppanda'}
-                </span>
-                {'?'}
-            </p>
+            <h2 className="text-lg font-semibold mb-4">Fjarlægja keppanda?</h2>
+            <span className="font-medium">
+                {entry.climber_name ?? 'þennan keppanda'}
+            </span>
             <div className="flex justify-between gap-2 mt-4">
                 <MainButton
                     variant="delete"
-                    square
                     className="w-full"
                     onClick={onConfirm}
                 >
@@ -210,6 +206,8 @@ export default function RoundStartlistCard({
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
+        isDraggingRef.current = false;
+        if (round.completed) return;
         isDraggingRef.current = false;
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -306,33 +304,35 @@ export default function RoundStartlistCard({
                 <div>
                     <h3 className="font-semibold text-lg">{categoryLabel}</h3>
                     <span className="text-sm text-gray-500">
-                        {localEntries.length} skráðir
+                        {localEntries.length} á ráslista
                         {round.climbers_advance
                             ? ` - ${round.climbers_advance} keppendur`
                             : ''}
                     </span>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 w-full sm:w-fit">
                     <MainButton
+                        className="w-full sm:w-fit"
                         size="small"
                         variant="outline"
-                        onClick={() => setShowAddModal(true)}
-                        disabled={round.completed}
-                    >
-                        + Keppandi
-                    </MainButton>
-                    <MainButton
-                        size="small"
-                        variant={round.completed ? 'primary' : 'outline'}
                         onClick={handleToggleCompleted}
                     >
-                        {round.completed ? 'Lokið' : 'Merkja lokið'}
+                        {round.completed ? 'Opna umferð' : 'Loka umferð'}
                     </MainButton>
-                    {!isLastRound && (
+                    {!round.completed && (
                         <MainButton
+                            className="w-full sm:w-fit"
+                            size="small"
+                            onClick={() => setShowAddModal(true)}
+                        >
+                            + Keppandi
+                        </MainButton>
+                    )}
+                    {!isLastRound && round.completed && (
+                        <MainButton
+                            className="w-full sm:w-fit whitespace-nowrap"
                             size="small"
                             onClick={handleAdvance}
-                            disabled={!round.completed}
                         >
                             Flytja í næstu umferð
                         </MainButton>
@@ -352,8 +352,8 @@ export default function RoundStartlistCard({
                 >
                     <div className="border border-outline rounded-lg overflow-hidden max-h-100 overflow-y-auto">
                         <table className="w-full">
-                            <thead className="sticky top-0 bg-background">
-                                <tr className="border-b border-outline text-left text-sm text-gray-500">
+                            <thead className="sticky top-0 bg-background shadow-[inset_0_-1px_0_var(--color-outline)]">
+                                <tr className="text-left text-sm text-gray-500">
                                     <th className="pl-2 py-2 w-8"></th>
                                     <th className="px-2 py-2 w-10 text-center font-normal">
                                         #
@@ -374,6 +374,7 @@ export default function RoundStartlistCard({
                                             key={entry.id}
                                             entry={entry}
                                             onRemove={setRemoveTarget}
+                                            completed={round.completed}
                                         />
                                     ))}
                                 </SortableContext>
@@ -382,15 +383,16 @@ export default function RoundStartlistCard({
                     </div>
                 </DndContext>
             )}
-            <div className="text-gray-500 flex justify-end">
-                <MainButton
-                    onClick={() => setShowRandomizeModal(true)}
-                    variant="outline"
-                    disabled={round.completed}
-                >
-                    Rugla röð ráslista
-                </MainButton>
-            </div>
+            {!round.completed && (
+                <div className="text-gray-500 flex justify-end">
+                    <button
+                        className="text-sm hover:text-gray-600"
+                        onClick={() => setShowRandomizeModal(true)}
+                    >
+                        Rugla röð
+                    </button>
+                </div>
+            )}
 
             {removeTarget && (
                 <RemoveAthleteModal

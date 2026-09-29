@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.utils import timezone
 
+from athletes.models import CompetitionRegistration
+
 from . import models
 
 
@@ -32,6 +34,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     location = serializers.CharField(max_length=50, min_length=2)
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False, default=True)
+    allow_self_registration = serializers.BooleanField(required=False, default=False)
     discipline = serializers.ChoiceField(
         choices=["boulder", "lead"],
         required=False,
@@ -48,6 +51,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
             "location",
             "image",
             "visible",
+            "allow_self_registration",
             "discipline",
         ]
 
@@ -82,6 +86,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
     location = serializers.CharField(max_length=50, min_length=2, required=False)
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False)
+    allow_self_registration = serializers.BooleanField(required=False)
     remove_image = serializers.BooleanField(required=False, default=False)
 
     def validate_image(self, value):
@@ -105,7 +110,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
 
 class CompetitionSerializer(serializers.ModelSerializer):
     created_by = serializers.CharField(source="created_by.username", read_only=True)
-    has_selfscore_round = serializers.BooleanField(read_only=True)
+    is_registered = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Competition
@@ -120,12 +125,24 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "visible",
             "discipline",
             "status",
+            "allow_self_registration",
+            "is_registered",
             "created_at",
             "created_by",
             "last_modified_at",
-            "has_selfscore_round",
         ]
         read_only_fields = ["id", "created_at", "created_by", "last_modified_at"]
+
+    def get_is_registered(self, obj) -> bool:
+        request = self.context.get("request")
+        profile = getattr(request.user, "profile", None) if request else None
+        if not profile:
+            return False
+        return CompetitionRegistration.objects.filter(
+            competition=obj,
+            climber__user_account=profile,
+            deleted=False,
+        ).exists()
 
 
 class RoundSerializer(serializers.ModelSerializer):

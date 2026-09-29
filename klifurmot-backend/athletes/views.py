@@ -379,3 +379,38 @@ def list_registrations(
         )
 
     return result
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def self_registration(request):
+    serializer = serializers.SelfRegistrationSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        errors_dict = cast(Dict[str, Any], serializer.errors)
+        return utils.validation_error_response(serializer_errors=errors_dict)
+
+    try:
+        validated_data = cast(Dict[str, Any], serializer.validated_data)
+
+        result = services.create_self_registation(user=request.user, **validated_data)
+
+        return utils.success_response(
+            data=result,
+            message="Registration created successfully",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+    except ValueError as e:
+        return utils.error_response(
+            code="Invalid_registration",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
