@@ -144,7 +144,7 @@ function RandomizeModal({
 }) {
     return (
         <Modal onClose={onClose}>
-            <h2 className="text-lg font-semibold mb-4">Rugla röð keppenda?</h2>
+            <h2 className="text-lg font-semibold mb-4">Rugla röð ráslista?</h2>
             <div className="flex justify-between gap-2 mt-4">
                 <MainButton
                     variant="delete"
@@ -304,9 +304,10 @@ export default function RoundStartlistCard({
                 <div>
                     <h3 className="font-semibold text-lg">{categoryLabel}</h3>
                     <span className="text-sm text-gray-500">
-                        {localEntries.length} á ráslista
+                        {localEntries.length}{' '}
+                        {localEntries.length === 1 ? 'keppandi' : 'keppendur'}
                         {round.climbers_advance
-                            ? ` - ${round.climbers_advance} keppendur`
+                            ? ` af ${round.climbers_advance}`
                             : ''}
                     </span>
                 </div>
