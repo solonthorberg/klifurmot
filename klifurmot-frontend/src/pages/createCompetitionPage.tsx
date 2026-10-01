@@ -32,7 +32,7 @@ export default function CreateCompetitionPage() {
         formState: { errors },
     } = useForm<CreateCompetitionFormData>({
         resolver: zodResolver(CreateCompetitionSchema),
-        defaultValues: { visible: true },
+        defaultValues: { visible: true, allow_self_registration: false },
     });
 
     const onSubmit = async (data: CreateCompetitionFormData) => {

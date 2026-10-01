@@ -51,6 +51,8 @@ export default function EditCompetitionPage() {
                 end_date: formatForDateTimeInput(competition.data.end_date),
                 location: competition.data.location ?? '',
                 visible: competition.data.visible,
+                allow_self_registration:
+                    competition.data.allow_self_registration,
             });
         }
     }, [competition, reset]);
