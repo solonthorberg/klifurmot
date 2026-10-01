@@ -11,6 +11,7 @@ import type {
     Registration,
     CreateRegistrationRequest,
     PublicAthleteDetail,
+    SelfRegistrationRequest,
 } from '@/types';
 
 export const athletesApi = {
