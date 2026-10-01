@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { PublicAthlete } from '@/types/athlete';
+import type { PublicAthlete, SelfRegistrationRequest } from '@/types/athlete';
 
 import { athletesApi } from '@/api';
 import { getErrorMessage } from '@/api/client';
@@ -131,10 +131,9 @@ export function useCreateRegistration() {
     return useMutation({
         mutationFn: (data: CreateRegistrationRequest) =>
             athletesApi.createRegistration(data),
-        onSuccess: ({ message }, { competition }) => {
-            queryClient.invalidateQueries({ queryKey: ['registrations'] });
+        onSuccess: ({ message }, { competition_id }) => {
             queryClient.invalidateQueries({
-                queryKey: ['registrations', competition],
+                queryKey: ['registrations', competition_id],
             });
             notify.success(message);
         },
@@ -173,6 +172,27 @@ export function useLinkAthlete() {
         onSuccess: ({ message }) => {
             queryClient.invalidateQueries({ queryKey: ['climbers'] });
             queryClient.invalidateQueries({ queryKey: ['athletes'] });
+            notify.success(message);
+        },
+        onError: (error) => {
+            notify.error(getErrorMessage(error));
+        },
+    });
+}
+
+export function useCreateSelfRegistration() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: SelfRegistrationRequest) =>
+            athletesApi.createSelfRegistration(data),
+        onSuccess: ({ message }, { competition_id }) => {
+            queryClient.invalidateQueries({
+                queryKey: ['registrations', competition_id],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ['competitions', competition_id],
+            });
             notify.success(message);
         },
         onError: (error) => {

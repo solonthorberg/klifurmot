@@ -42,3 +42,26 @@ def is_platform_admin(user) -> bool:
         return False
     profile = getattr(user, "profile", None)
     return bool(profile and profile.is_admin)
+
+
+def can_score_climber(user, climber, round_obj) -> bool:
+    if is_competition_judge(user, round_obj.competition_category.competition_id):
+        return True
+    profile = getattr(user, "profile", None)
+    if not profile:
+        return False
+    return (
+        round_obj.is_self_scoring
+        and not round_obj.completed
+        and climber.user_account_id == profile.pk
+    )
+
+
+def require_climber_scoring(
+    user,
+    climber,
+    round_obj,
+    message: str = "You do not have permission to score this climber",
+) -> None:
+    if not can_score_climber(user, climber, round_obj):
+        raise PermissionError(message)

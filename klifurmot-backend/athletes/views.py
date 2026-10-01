@@ -230,7 +230,7 @@ def link_simple_athlete(request, climber_id: int):
 
 
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def registrations(request):
     if request.method == "GET":
         competition_id = request.query_params.get("competition_id")
@@ -242,14 +242,23 @@ def registrations(request):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = selectors.registration_list(
-            competition_id=int(competition_id) if competition_id else None
-        )
+        try:
+            result = selectors.registration_list(
+                user=request.user,
+                competition_id=int(competition_id),
+            )
 
-        return utils.success_response(
-            data=result,
-            message="Registrations retrieved successfully",
-        )
+            return utils.success_response(
+                data=result,
+                message="Registrations retrieved successfully",
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
 
     if request.method == "POST":
         serializer = serializers.CreateRegistrationSerializer(data=request.data)
@@ -277,6 +286,13 @@ def registrations(request):
                 code="Invalid_registration",
                 message=str(e),
                 status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except PermissionError as e:
+            return utils.error_response(
+                code="Access_denied",
+                message=str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
             )
 
         except Exception as e:
@@ -363,3 +379,38 @@ def list_registrations(
         )
 
     return result
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def self_registration(request):
+    serializer = serializers.SelfRegistrationSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        errors_dict = cast(Dict[str, Any], serializer.errors)
+        return utils.validation_error_response(serializer_errors=errors_dict)
+
+    try:
+        validated_data = cast(Dict[str, Any], serializer.validated_data)
+
+        result = services.create_self_registation(user=request.user, **validated_data)
+
+        return utils.success_response(
+            data=result,
+            message="Registration created successfully",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    except PermissionError as e:
+        return utils.error_response(
+            code="Access_denied",
+            message=str(e),
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+    except ValueError as e:
+        return utils.error_response(
+            code="Invalid_registration",
+            message=str(e),
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )

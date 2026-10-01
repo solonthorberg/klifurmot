@@ -39,6 +39,7 @@ def create_competition(
     image: Optional[UploadedFile] = None,
     visible: bool = True,
     discipline: str = "boulder",
+    allow_self_registration: bool = False,
 ) -> Competition:
     if start_date >= end_date:
         raise ValueError("start_date must be before end_date")
@@ -57,6 +58,7 @@ def create_competition(
                 image=image,
                 visible=visible,
                 discipline=discipline,
+                allow_self_registration=allow_self_registration,
                 created_by=created_by,
                 last_modified_by=created_by,
             )
@@ -72,9 +74,12 @@ def update_competition(
     user: User,
     **update_data: Any,
 ) -> Competition:
+
     try:
         with transaction.atomic():
             competition = Competition.objects.get(id=competition_id, deleted=False)
+
+            require_competition_admin(user, competition.pk)
 
             remove_image = update_data.pop("remove_image", False)
             image = update_data.pop("image", None)
@@ -99,9 +104,11 @@ def update_competition(
         raise ValueError(f"Competition with id {competition_id} not found")
 
 
-def delete_competition(competition_id: int) -> None:
+def delete_competition(competition_id: int, user) -> None:
     try:
         competition = Competition.objects.get(id=competition_id, deleted=False)
+
+        require_competition_admin(user, competition.pk)
 
         with transaction.atomic():
             Climb.objects.filter(
@@ -634,3 +641,18 @@ def send_judge_bulk_emails(competition_id: int) -> int:
         sent_count += 1
 
     return sent_count
+
+
+def toggle_startlist_visibility(competition_id: int, user) -> bool:
+    with transaction.atomic():
+        try:
+            competition = Competition.objects.get(id=competition_id)
+        except Competition.DoesNotExist:
+            raise ValueError("Competition not found")
+
+        require_competition_admin(user, competition.pk)
+
+        competition.startlist_visible = not competition.startlist_visible
+        competition.save(update_fields=["startlist_visible"])
+
+    return competition.startlist_visible

@@ -29,6 +29,7 @@ export interface UpdateClimbRequest {
 export interface StartlistEntry {
     id: number;
     climber_id: number;
+    user_account_id: number | null;
     climber_name: string | null;
     start_order: number;
     gender: 'KK' | 'KVK' | null;

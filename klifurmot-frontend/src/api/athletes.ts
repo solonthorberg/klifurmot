@@ -132,4 +132,14 @@ export const athletesApi = {
         );
         return response.data;
     },
+
+    createSelfRegistration: async (
+        data: SelfRegistrationRequest,
+    ): Promise<ApiSuccessResponse<Registration>> => {
+        const response = await api.post<ApiSuccessResponse<Registration>>(
+            '/athletes/registrations/me/',
+            data,
+        );
+        return response.data;
+    },
 };

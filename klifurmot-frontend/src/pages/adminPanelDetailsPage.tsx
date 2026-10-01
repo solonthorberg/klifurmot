@@ -3,13 +3,19 @@ import Container from '@/components/ui/container';
 import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import TabButton from '@/components/ui/tabButton';
-import { useCompetition, useRounds } from '@/hooks/api/useCompetitions';
+import {
+    useCompetition,
+    useRounds,
+    useStartlistVisibleToggle,
+} from '@/hooks/api/useCompetitions';
 import { useAthletes, useRegistrations } from '@/hooks/api/useAthletes';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Phase } from '@/types';
 import MainButton from '@/components/ui/mainButton';
 import RoundStartlistCard from '@/components/cards/roundStartlistCard';
 import JudgeLinkTab from '@/components/tabs/judgeLinkTab';
+import LivePill from '@/components/ui/livePill';
+import Toggle from '@/components/ui/toggle';
 
 export default function AdminPanelDetailsPage() {
     const { competitionId } = useParams();
@@ -21,12 +27,15 @@ export default function AdminPanelDetailsPage() {
     const { data: roundsData } = useRounds(Number(competitionId));
     const { data: registrationsData } = useRegistrations(Number(competitionId));
     const { data: athletesData } = useAthletes();
+
+    const { mutate: startlistVisibleToggle, isPending } =
+        useStartlistVisibleToggle(Number(competitionId));
+
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
 
     const activeRoundOrder = Number(searchParams.get('tab') ?? 1);
 
-    if (isLoading) return <LoadingSpinner />;
     if (error) return <ErrorMessage message={getErrorMessage(error)} />;
 
     const setTab = (order: number) => setSearchParams({ tab: String(order) });
@@ -40,12 +49,33 @@ export default function AdminPanelDetailsPage() {
     const registrations = registrationsData?.data ?? [];
     const allAthletes = athletesData?.data ?? [];
 
+    if (isLoading) return <LoadingSpinner />;
+    if (!competition) return null;
+
     return (
         <Container className="gap-4">
             <div className="flex justify-between gap-2 flex-col sm:flex-row">
-                <h2 className="text-2xl font-semibold wrap-break-word">
-                    {competition?.title}
-                </h2>
+                <div>
+                    <div className="flex items-baseline gap-3">
+                        <h2 className="text-2xl font-semibold wrap-break-word">
+                            {competition.title}
+                        </h2>
+                        {competition.status === 'ongoing' && (
+                            <span className="translate-y-0.4">
+                                <LivePill />
+                            </span>
+                        )}
+                    </div>
+                    <p className="flex items-center gap-2 w-fit text-sm text-gray-600">
+                        {new Date(competition.start_date).toLocaleDateString(
+                            'is-IS',
+                        )}{' '}
+                        -{' '}
+                        {new Date(competition.end_date).toLocaleDateString(
+                            'is-IS',
+                        )}
+                    </p>
+                </div>
                 <div className="flex flex-row sm:flex-row sm:justify-end gap-2">
                     <MainButton
                         className="w-full sm:fit"
@@ -81,6 +111,14 @@ export default function AdminPanelDetailsPage() {
                 ))}
             </div>
 
+            <div className="flex flex-row gap-2 justify-end">
+                <p>Birta ráslista</p>
+                <Toggle
+                    checked={competition?.startlist_visible ?? false}
+                    onChange={() => startlistVisibleToggle()}
+                    disabled={isPending}
+                />
+            </div>
             {activePhase && (
                 <div className="flex flex-col gap-4">
                     {activePhase.rounds.map((round) => (

@@ -1,12 +1,5 @@
 from typing import Dict, List, Optional, TypedDict
 
-from athletes.models import Climber
-
-
-class CompetitionAthletesResult(TypedDict):
-    competition: str
-    categories: Dict[str, List[Climber]]
-
 
 class RouteInfo(TypedDict):
     number: int
@@ -68,3 +61,17 @@ class RoundResult(TypedDict):
 class CompetitionResult(TypedDict):
     category: str
     rounds: List[RoundResult]
+
+
+class CompetitionAthlete(TypedDict):
+    id: int
+    full_name: Optional[str]
+    age: Optional[int]
+    category_name: str
+    gender: Optional[str]
+    nationality: Optional[str]
+
+
+class CompetitionAthletesResult(TypedDict):
+    competition: str
+    categories: Dict[str, List[CompetitionAthlete]]

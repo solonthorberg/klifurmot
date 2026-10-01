@@ -24,6 +24,7 @@ export const CreateCompetitionSchema = z
             .min(2, 'Staðsetning verður að vera að minnsta kosti 2 stafir')
             .max(50, 'Staðsetning má ekki fara yfir 50 stafi'),
         image: z.any().optional(),
+        allow_self_registration: z.boolean(),
         visible: z.boolean(),
     })
     .superRefine((data, ctx) => {
@@ -98,6 +99,7 @@ export const UpdateCompetitionSchema = z
             .min(2, 'Staðsetning verður að vera að minnsta kosti 2 stafir')
             .max(50, 'Staðsetning má ekki fara yfir 50 stafi'),
         image: z.any().optional(),
+        allow_self_registration: z.boolean(),
         visible: z.boolean(),
     })
     .superRefine((data, ctx) => {

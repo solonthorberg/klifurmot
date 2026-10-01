@@ -62,6 +62,11 @@ export const competitionsApi = {
         if (data.image) formData.append('image', data.image);
         if (data.visible !== undefined)
             formData.append('visible', String(data.visible));
+        if (data.allow_self_registration !== undefined)
+            formData.append(
+                'allow_self_registration',
+                String(data.allow_self_registration),
+            );
 
         const response = await api.post<ApiSuccessResponse<Competition>>(
             '/competitions/',
@@ -86,6 +91,11 @@ export const competitionsApi = {
         if (data.image) formData.append('image', data.image);
         if (data.visible !== undefined)
             formData.append('visible', String(data.visible));
+        if (data.allow_self_registration !== undefined)
+            formData.append(
+                'allow_self_registration',
+                String(data.allow_self_registration),
+            );
         // if (data.remove_image) formData.append('remove_image', 'true');
 
         const response = await api.patch<ApiSuccessResponse<Competition>>(
@@ -305,6 +315,15 @@ export const competitionsApi = {
     ): Promise<ApiSuccessResponse<null>> => {
         const response = await api.post<ApiSuccessResponse<null>>(
             `/competitions/${competitionId}/judges/email/`,
+        );
+        return response.data;
+    },
+
+    startlistVisibleToggle: async (
+        competitionId: number,
+    ): Promise<ApiSuccessResponse<boolean>> => {
+        const response = await api.post<ApiSuccessResponse<boolean>>(
+            `/competitions/${competitionId}/startlist/visible/`,
         );
         return response.data;
     },

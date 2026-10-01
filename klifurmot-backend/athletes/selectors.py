@@ -3,6 +3,7 @@ from typing import Optional
 from django.db.models import Q
 from django.utils.timezone import datetime
 
+from accounts.authorization import require_competition_admin
 from accounts.models import UserAccount
 from athletes.models import Climber, CompetitionRegistration
 
@@ -302,8 +303,11 @@ def climber_get(climber_id: int) -> types.ClimberResult:
 
 
 def registration_list(
+    user,
     competition_id: Optional[int] = None,
 ) -> list[types.RegistrationResult]:
+    require_competition_admin(user, competition_id)
+
     queryset = CompetitionRegistration.objects.select_related(
         "climber__user_account",
         "competition",

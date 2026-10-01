@@ -35,6 +35,11 @@ class UpdateClimberSerializer(serializers.Serializer):
 
 
 class CreateRegistrationSerializer(serializers.Serializer):
-    climber = serializers.IntegerField()
-    competition = serializers.IntegerField()
-    competition_category = serializers.IntegerField()
+    climber_id = serializers.IntegerField()
+    competition_id = serializers.IntegerField()
+    competition_category_id = serializers.IntegerField()
+
+
+class SelfRegistrationSerializer(serializers.Serializer):
+    competition_id = serializers.IntegerField()
+    competition_category_id = serializers.IntegerField()

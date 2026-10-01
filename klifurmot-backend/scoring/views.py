@@ -78,6 +78,13 @@ def climbs(request):
                 status_code=status.HTTP_201_CREATED,
             )
 
+        except PermissionError as e:
+            return utils.error_response(
+                code="Authorized_denied",
+                message=str(e),
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+
         except ValueError as e:
             return utils.error_response(
                 code="Invalid_climb",

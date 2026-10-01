@@ -28,11 +28,14 @@ export function usePublicCompetitions() {
     });
 }
 
+export const competitionKeys = {
+    detail: (id: number) => ['competitions', id] as const,
+};
+
 export function useCompetition(competitionId: number) {
     return useQuery({
-        queryKey: ['competitions', competitionId],
+        queryKey: competitionKeys.detail(competitionId),
         queryFn: () => competitionsApi.getCompetition(competitionId),
-        enabled: !!competitionId,
     });
 }
 
@@ -367,6 +370,20 @@ export function useJudgeBulkEmail() {
 
         onError: (error) => {
             notify.error(getErrorMessage(error));
+        },
+    });
+}
+
+export function useStartlistVisibleToggle(competitionId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => competitionsApi.startlistVisibleToggle(competitionId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ['competitions', competitionId],
+            });
+            queryClient.invalidateQueries({ queryKey: ['startlist'] });
         },
     });
 }

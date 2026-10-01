@@ -3,11 +3,19 @@ import ReactMarkdown from 'react-markdown';
 import Container from '../ui/container';
 import Icon from '../ui/icons';
 import Image from '../ui/image';
+import MainButton from '../ui/mainButton';
+import SelfRegistrationModal from '../modals/selfRegistrationModal.tsx';
 
 import type { Competition } from '@/types';
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores';
 
 function OverviewTab({ competition }: { competition: Competition }) {
+    const navigate = useNavigate();
+    const { userAccount } = useAuthStore();
+    const [showRegister, setShowRegister] = useState(false);
+
     return (
         <Container
             variant="tab"
@@ -39,8 +47,40 @@ function OverviewTab({ competition }: { competition: Competition }) {
                             'is-IS',
                         )}
                     </p>
+                    {userAccount &&
+                        competition.allow_self_registration &&
+                        competition.status === 'not_started' && (
+                            <MainButton
+                                onClick={() => setShowRegister(true)}
+                                disabled={competition.is_registered}
+                                className="w-full"
+                            >
+                                {competition.is_registered
+                                    ? 'Þú ert skráð/ur'
+                                    : 'Skrá mig'}
+                            </MainButton>
+                        )}
+                    {competition.has_selfscore_round &&
+                        competition.status === 'ongoing' && (
+                            <MainButton
+                                onClick={() =>
+                                    navigate(
+                                        `/competitions/${competition.id}/selfscore`,
+                                    )
+                                }
+                                className="w-full"
+                            >
+                                Sjálfstigagjöf
+                            </MainButton>
+                        )}
                 </div>
             </div>
+            {showRegister && (
+                <SelfRegistrationModal
+                    competitionId={competition.id}
+                    onClose={() => setShowRegister(false)}
+                />
+            )}
         </Container>
     );
 }

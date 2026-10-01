@@ -24,6 +24,11 @@ const visibleOptions = [
     { value: 'false', label: 'Fela' },
 ];
 
+const registrationOptions = [
+    { value: 'true', label: 'Opin' },
+    { value: 'false', label: 'Lokuð' },
+];
+
 export default function CompetitionForm({
     register,
     control,
@@ -65,6 +70,20 @@ export default function CompetitionForm({
                 label="Staðsetning"
                 placeholder="t.d. Klifurhúsið, Ármúli 21/23"
                 error={errors.location?.message}
+            />
+            <Controller
+                name="allow_self_registration"
+                control={control}
+                render={({ field }) => (
+                    <Select
+                        label="Skráning (lokar þegar mót byrjar)"
+                        value={String(field.value)}
+                        onChange={(val) => field.onChange(val === 'true')}
+                        options={registrationOptions}
+                        inputClassName="bg-white"
+                        error={errors.allow_self_registration?.message}
+                    />
+                )}
             />
             <Controller
                 name="visible"

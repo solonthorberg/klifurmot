@@ -139,31 +139,38 @@ def link_climber(user, climber_id: int, user_account_id: int) -> None:
         climber.save()
 
 
-def create_registration(user, **data: Any) -> types.RegistrationResult:
-
+def create_registration(
+    user,
+    *,
+    climber_id: int,
+    competition_id: int,
+    competition_category_id: int,
+) -> types.RegistrationResult:
     try:
-        climber = Climber.objects.get(id=data["climber"], deleted=False)
-    except Climber.DoesNotExist:
-        raise ValueError(f"Climber with id {data['climber']} not found")
-
-    try:
-        competition = Competition.objects.get(id=data["competition"], deleted=False)
+        competition = Competition.objects.get(id=competition_id, deleted=False)
     except Competition.DoesNotExist:
-        raise ValueError(f"Competition with id {data['competition']} not found")
+        raise ValueError(f"Competition with id {competition_id} not found")
+
+    require_competition_admin(user, competition.pk)
 
     try:
-        category = CompetitionCategory.objects.get(
-            id=data["competition_category"],
+        climber = Climber.objects.get(id=climber_id, deleted=False)
+    except Climber.DoesNotExist:
+        raise ValueError(f"Climber with id {climber_id} not found")
+
+    try:
+        category = CompetitionCategory.objects.select_related("category_group").get(
+            id=competition_category_id,
+            competition=competition,
             deleted=False,
         )
     except CompetitionCategory.DoesNotExist:
-        raise ValueError(
-            f"Competition category with id {data['competition_category']} not found"
-        )
+        raise ValueError("Category not found in this competition")
 
-    if category.competition.pk != competition.pk:
-        raise ValueError("Category does not belong to this competition")
+    return _register_climber(user, climber, competition, category)
 
+
+def _register_climber(user, climber, competition, category) -> types.RegistrationResult:
     existing = CompetitionRegistration.objects.filter(
         climber=climber,
         competition=competition,
@@ -273,3 +280,45 @@ def create_climber_for_user(
         if user_account.nationality
         else None,
     )
+
+
+def create_self_registation(
+    user, competition_id: int, competition_category_id: int
+) -> types.RegistrationResult:
+    profile = getattr(user, "profile", None)
+    if not profile:
+        raise ValueError("User has no account profile")
+
+    try:
+        climber = Climber.objects.get(user_account=profile, deleted=False)
+    except Climber.DoesNotExist:
+        raise ValueError("No athlete profile linked to this account")
+    try:
+        competition = Competition.objects.get(id=competition_id, deleted=False)
+    except Competition.DoesNotExist:
+        raise ValueError(f"Competition with id {competition_id} not found")
+
+    if not competition.allow_self_registration:
+        raise PermissionError("Self registration is not enabled for this competition")
+
+    try:
+        category = CompetitionCategory.objects.select_related("category_group").get(
+            id=competition_category_id,
+            competition=competition,
+            deleted=False,
+        )
+    except CompetitionCategory.DoesNotExist:
+        raise ValueError("Category not found in this competition")
+
+    if competition.status != "not_started":
+        raise PermissionError("Registration is closed for this competition")
+
+    if not profile.date_of_birth:
+        raise ValueError("Date of birth is required to register")
+
+    if not category.category_group.contains_birth_year(
+        profile.date_of_birth.year, competition.start_date.year
+    ):
+        raise ValueError("Age does not match this category")
+
+    return _register_climber(user, climber, competition, category)
