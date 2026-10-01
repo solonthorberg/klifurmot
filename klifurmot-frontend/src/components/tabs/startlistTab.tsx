@@ -59,7 +59,7 @@ export default function StartlistTab({
             <div className="flex flex-col gap-4 w-full">
                 {filteredCategories.length === 0 ? (
                     <p className="text-gray-500 mx-auto">
-                        Engar leiðir skráðar...
+                        Enginn ráslisti birtur...
                     </p>
                 ) : (
                     filteredCategories.map((c) => {

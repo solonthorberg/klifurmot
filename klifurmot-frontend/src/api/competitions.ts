@@ -318,4 +318,13 @@ export const competitionsApi = {
         );
         return response.data;
     },
+
+    startlistVisibleToggle: async (
+        competitionId: number,
+    ): Promise<ApiSuccessResponse<boolean>> => {
+        const response = await api.post<ApiSuccessResponse<boolean>>(
+            `/competitions/${competitionId}/startlist/visible/`,
+        );
+        return response.data;
+    },
 };

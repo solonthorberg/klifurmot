@@ -222,6 +222,9 @@ def get_competition_startlist(competition_id: int) -> list[types.CompetitionStar
 
     category_for_age = build_age_category_resolver()
 
+    if Competition.objects.filter(id=competition_id, startlist_visible=False).exists():
+        return []
+
     categories = (
         CompetitionCategory.objects.filter(
             competition_id=competition_id,

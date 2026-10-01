@@ -35,6 +35,7 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False, default=True)
     allow_self_registration = serializers.BooleanField(required=False, default=False)
+    startlist_visible = serializers.BooleanField(required=False, default=False)
     discipline = serializers.ChoiceField(
         choices=["boulder", "lead"],
         required=False,
@@ -87,6 +88,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False)
     allow_self_registration = serializers.BooleanField(required=False)
+    startlist_visible = serializers.BooleanField(required=False, default=False)
     remove_image = serializers.BooleanField(required=False, default=False)
 
     def validate_image(self, value):
@@ -127,6 +129,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "status",
             "allow_self_registration",
             "is_registered",
+            "startlist_visible",
             "created_at",
             "created_by",
             "last_modified_at",

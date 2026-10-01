@@ -3,7 +3,11 @@ import Container from '@/components/ui/container';
 import ErrorMessage from '@/components/ui/errorMessage';
 import LoadingSpinner from '@/components/ui/loadingSpinner';
 import TabButton from '@/components/ui/tabButton';
-import { useCompetition, useRounds } from '@/hooks/api/useCompetitions';
+import {
+    useCompetition,
+    useRounds,
+    useStartlistVisibleToggle,
+} from '@/hooks/api/useCompetitions';
 import { useAthletes, useRegistrations } from '@/hooks/api/useAthletes';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Phase } from '@/types';
@@ -11,6 +15,7 @@ import MainButton from '@/components/ui/mainButton';
 import RoundStartlistCard from '@/components/cards/roundStartlistCard';
 import JudgeLinkTab from '@/components/tabs/judgeLinkTab';
 import LivePill from '@/components/ui/livePill';
+import Toggle from '@/components/ui/toggle';
 
 export default function AdminPanelDetailsPage() {
     const { competitionId } = useParams();
@@ -22,6 +27,10 @@ export default function AdminPanelDetailsPage() {
     const { data: roundsData } = useRounds(Number(competitionId));
     const { data: registrationsData } = useRegistrations(Number(competitionId));
     const { data: athletesData } = useAthletes();
+
+    const { mutate: startlistVisibleToggle, isPending } =
+        useStartlistVisibleToggle(Number(competitionId));
+
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
 
@@ -102,6 +111,14 @@ export default function AdminPanelDetailsPage() {
                 ))}
             </div>
 
+            <div className="flex flex-row gap-2 justify-end">
+                <p>Birta ráslista</p>
+                <Toggle
+                    checked={competition?.startlist_visible ?? false}
+                    onChange={() => startlistVisibleToggle()}
+                    disabled={isPending}
+                />
+            </div>
             {activePhase && (
                 <div className="flex flex-col gap-4">
                     {activePhase.rounds.map((round) => (

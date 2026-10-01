@@ -46,4 +46,9 @@ urlpatterns = [
         views.email_judges,
         name="competition-email-judges",
     ),
+    path(
+        "<int:competition_id>/startlist/visible/",
+        views.startlist_visibility,
+        name="startlist_visiblity",
+    ),
 ]
