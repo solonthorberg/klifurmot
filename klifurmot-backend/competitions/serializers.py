@@ -35,7 +35,6 @@ class CreateCompetitionSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False, allow_null=True)
     visible = serializers.BooleanField(required=False, default=True)
     allow_self_registration = serializers.BooleanField(required=False, default=False)
-    startlist_visible = serializers.BooleanField(required=False, default=False)
     discipline = serializers.ChoiceField(
         choices=["boulder", "lead"],
         required=False,
