@@ -245,7 +245,7 @@ def registrations(request):
         try:
             result = selectors.registration_list(
                 user=request.user,
-                competition_id=int(competition_id),
+                competition_id=int(competition_id) if competition_id else None,
             )
 
             return utils.success_response(
