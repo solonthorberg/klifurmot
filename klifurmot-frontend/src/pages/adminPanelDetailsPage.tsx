@@ -5,6 +5,7 @@ import LoadingSpinner from '@/components/ui/loadingSpinner';
 import TabButton from '@/components/ui/tabButton';
 import {
     useCompetition,
+    useResultsVisibleToggle,
     useRounds,
     useStartlistVisibleToggle,
 } from '@/hooks/api/useCompetitions';
@@ -28,8 +29,11 @@ export default function AdminPanelDetailsPage() {
     const { data: registrationsData } = useRegistrations(Number(competitionId));
     const { data: athletesData } = useAthletes();
 
-    const { mutate: startlistVisibleToggle, isPending } =
+    const { mutate: startlistVisibleToggle, isPending: startlistsPending } =
         useStartlistVisibleToggle(Number(competitionId));
+
+    const { mutate: resultsVisibleToggle, isPending: resultsPending } =
+        useResultsVisibleToggle(Number(competitionId));
 
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -99,9 +103,29 @@ export default function AdminPanelDetailsPage() {
                 </div>
             </div>
 
+            <div className="border-t border-outline border-grey-500" />
+
+            <div className="flex flex-row gap-2 justify-end">
+                <p>Birta ráslista</p>
+                <Toggle
+                    checked={competition?.startlist_visible ?? false}
+                    onChange={() => startlistVisibleToggle()}
+                    disabled={startlistsPending}
+                />
+            </div>
+            <div className="flex flex-row gap-2 justify-end">
+                <p>Birta niðurstöður</p>
+                <Toggle
+                    checked={competition?.results_visible ?? false}
+                    onChange={() => resultsVisibleToggle()}
+                    disabled={resultsPending}
+                />
+            </div>
+
             <div className="flex gap-2 border-b border-outline w-full overflow-x-auto">
                 {phases.map((phase) => (
                     <TabButton
+                        className="w-full sm:w-fit"
                         key={phase.round_order}
                         active={activeRoundOrder === phase.round_order}
                         onClick={() => setTab(phase.round_order)}
@@ -109,15 +133,6 @@ export default function AdminPanelDetailsPage() {
                         {phase.round_name}
                     </TabButton>
                 ))}
-            </div>
-
-            <div className="flex flex-row gap-2 justify-end">
-                <p>Birta ráslista</p>
-                <Toggle
-                    checked={competition?.startlist_visible ?? false}
-                    onChange={() => startlistVisibleToggle()}
-                    disabled={isPending}
-                />
             </div>
             {activePhase && (
                 <div className="flex flex-col gap-4">

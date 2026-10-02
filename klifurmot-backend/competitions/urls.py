@@ -51,4 +51,9 @@ urlpatterns = [
         views.startlist_visibility,
         name="startlist_visiblity",
     ),
+    path(
+        "<int:competition_id>/results/visible/",
+        views.results_visibility,
+        name="results_visiblity",
+    ),
 ]

@@ -327,4 +327,13 @@ export const competitionsApi = {
         );
         return response.data;
     },
+
+    resultsVisibleToggle: async (
+        competitionId: number,
+    ): Promise<ApiSuccessResponse<boolean>> => {
+        const response = await api.post<ApiSuccessResponse<boolean>>(
+            `/competitions/${competitionId}/results/visible/`,
+        );
+        return response.data;
+    },
 };

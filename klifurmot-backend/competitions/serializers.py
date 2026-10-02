@@ -88,6 +88,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
     visible = serializers.BooleanField(required=False)
     allow_self_registration = serializers.BooleanField(required=False)
     startlist_visible = serializers.BooleanField(required=False, default=False)
+    results_visible = serializers.BooleanField(required=False, default=False)
     remove_image = serializers.BooleanField(required=False, default=False)
 
     def validate_image(self, value):
@@ -130,6 +131,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "allow_self_registration",
             "is_registered",
             "startlist_visible",
+            "results_visible",
             "has_selfscore_round",
             "created_at",
             "created_by",

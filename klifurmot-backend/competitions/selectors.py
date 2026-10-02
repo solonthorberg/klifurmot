@@ -286,6 +286,9 @@ def get_competition_results(competition_id: int) -> list[types.CompetitionResult
     if not Competition.objects.filter(id=competition_id, deleted=False).exists():
         raise ValueError(f"Competition with id {competition_id} not found")
 
+    if Competition.objects.filter(id=competition_id, results_visible=False).exists():
+        return []
+
     categories = (
         CompetitionCategory.objects.filter(
             competition_id=competition_id,

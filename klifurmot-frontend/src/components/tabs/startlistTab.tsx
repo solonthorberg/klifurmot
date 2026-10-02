@@ -80,7 +80,7 @@ export default function StartlistTab({
                                         key={round.round_name}
                                     >
                                         <div className="flex justify-between items-end p-4">
-                                            <div className="flex flex-wrap gap-4">
+                                            <div className="flex flex-wrap gap-2">
                                                 <h2 className="text-lg font-semibold">
                                                     {c.category}
                                                 </h2>

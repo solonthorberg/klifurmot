@@ -37,7 +37,7 @@ export default function Toggle({
                     {label && (
                         <label
                             htmlFor={id}
-                            className={`text-sm font-medium ${isDisabled ? 'opacity-50' : 'cursor-pointer'}`}
+                            className={`text-gray-700 ${isDisabled ? 'opacity-50' : 'cursor-pointer'}`}
                         >
                             {label}
                         </label>
