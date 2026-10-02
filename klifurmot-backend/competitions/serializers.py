@@ -113,6 +113,7 @@ class UpdateCompetitionSerializer(serializers.Serializer):
 class CompetitionSerializer(serializers.ModelSerializer):
     created_by = serializers.CharField(source="created_by.username", read_only=True)
     is_registered = serializers.SerializerMethodField()
+    has_selfscore_round = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = models.Competition
@@ -130,6 +131,7 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "allow_self_registration",
             "is_registered",
             "startlist_visible",
+            "has_selfscore_round",
             "created_at",
             "created_by",
             "last_modified_at",
