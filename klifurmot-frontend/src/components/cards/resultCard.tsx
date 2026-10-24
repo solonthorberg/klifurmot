@@ -6,7 +6,7 @@ import type { ResultEntry } from '@/types';
 export default function ResultCard({ athlete }: { athlete: ResultEntry }) {
     return (
         <tr className="border-b border-outline last:border-0 h-25">
-            <td className="font-bold text-xl pl-4 max-w-5 min-w-5">
+            <td className="font-bold text-xxl pl-4 max-w-5 min-w-5">
                 {athlete.rank}
             </td>
             <td className="font-bold text-xxl pl-4 max-w-35">
