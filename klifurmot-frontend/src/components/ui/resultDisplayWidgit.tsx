@@ -24,12 +24,12 @@ export default function ResultDisplayWidget({
                 )}
                 <div className="relative flex flex-col items-center h-full">
                     <span
-                        className={`text-md font-bold w-full h-full flex items-center justify-center ${isTop ? 'text-white' : 'text-gray-800'}`}
+                        className={`text-sm font-bold w-full h-full flex items-center justify-center ${isTop ? 'text-white' : 'text-gray-800'}`}
                     >
                         {isTop ? boulderScore.attempts_top : ''}
                     </span>
                     <span
-                        className={`text-md font-bold w-full h-full flex items-center justify-center ${isTop || isZone ? 'text-white' : 'text-gray-800'}`}
+                        className={`text-sm font-bold w-full h-full flex items-center justify-center ${isTop || isZone ? 'text-white' : 'text-gray-800'}`}
                     >
                         {isZone ? boulderScore.attempts_zone : ''}
                     </span>
