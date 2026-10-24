@@ -29,13 +29,13 @@ export default function ResultDisplayWidget({
                         {isTop ? boulderScore.attempts_top : ''}
                     </span>
                     <span
-                        className={`text-xs font-bold w-full h-full flex items-center justify-center ${isTop || isZone ? 'text-white' : 'text-gray-800'}`}
+                        className={`text-md font-bold w-full h-full flex items-center justify-center ${isTop || isZone ? 'text-white' : 'text-gray-800'}`}
                     >
                         {isZone ? boulderScore.attempts_zone : ''}
                     </span>
                 </div>
             </div>
-            <span className="font-bold text-xs text-gray-500">
+            <span className="font-bold text-md text-gray-500">
                 {boulderScore.route_number}
             </span>
         </div>
