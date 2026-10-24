@@ -35,7 +35,7 @@ export default function ResultDisplayWidget({
                     </span>
                 </div>
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="font-bold text-xs text-gray-500">
                 {boulderScore.route_number}
             </span>
         </div>
