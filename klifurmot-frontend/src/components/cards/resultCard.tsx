@@ -7,7 +7,7 @@ export default function ResultCard({ athlete }: { athlete: ResultEntry }) {
     return (
         <tr className="border-b border-outline last:border-0 h-25">
             <td className="pl-4 max-w-5 min-w-5">{athlete.rank}</td>
-            <td className="pl-4 max-w-35">
+            <td className="font-bold pl-4 max-w-35">
                 <DisplayAthleteName Name={athlete.full_name} />
             </td>
             <td className="pl-4 pt-2">
