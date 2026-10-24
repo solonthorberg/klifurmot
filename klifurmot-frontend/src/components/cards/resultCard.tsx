@@ -6,8 +6,10 @@ import type { ResultEntry } from '@/types';
 export default function ResultCard({ athlete }: { athlete: ResultEntry }) {
     return (
         <tr className="border-b border-outline last:border-0 h-25">
-            <td className="font-bold pl-4 max-w-5 min-w-5">{athlete.rank}</td>
-            <td className="font-bold pl-4 max-w-35">
+            <td className="font-bold text-lg pl-4 max-w-5 min-w-5">
+                {athlete.rank}
+            </td>
+            <td className="font-bold text-lg pl-4 max-w-35">
                 <DisplayAthleteName Name={athlete.full_name} />
             </td>
             <td className="pl-4 pt-2">
@@ -20,7 +22,7 @@ export default function ResultCard({ athlete }: { athlete: ResultEntry }) {
                     ))}
                 </div>
             </td>
-            <td className="font-bold px-4 text-right w-10">
+            <td className="font-bold text-lg px-4 text-right w-10">
                 {athlete.total_score}
             </td>
         </tr>
