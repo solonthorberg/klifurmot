@@ -93,6 +93,7 @@ export default function SelfscorePage() {
             <h2 className="text-2xl font-semibold text-center">
                 {competition?.title}
             </h2>
+
             {!selectedRound && (
                 <>
                     <p className="text-center">
