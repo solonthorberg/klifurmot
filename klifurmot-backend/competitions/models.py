@@ -17,6 +17,7 @@ class Competition(AuditedSoftDeleteModel):
     visible = models.BooleanField(default=True)
     allow_self_registration = models.BooleanField(default=False)
     startlist_visible = models.BooleanField(default=False)
+    results_visible = models.BooleanField(default=False)
     discipline = models.CharField(
         max_length=10,
         choices=DISCIPLINE_CHOICES,

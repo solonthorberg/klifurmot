@@ -29,7 +29,7 @@ export default function RequestPasswordResetPage() {
                 </h3>
                 {passwordResetSuccess ? (
                     <p className="text-center text-gray-500">
-                        Ef aðgangur er skráður með þessu netfangi muntu fá
+                        Ef aðgangur er skráður með þessu netfangi munt þú fá
                         tölvupóst með leiðbeiningum.
                     </p>
                 ) : (

@@ -98,7 +98,7 @@ export default function ResultsTab({
                                         key={round.round_name}
                                     >
                                         <div className="p-4">
-                                            <div className="flex flex-row gap-4">
+                                            <div className="flex flex-row gap-2">
                                                 <h2 className="text-lg font-semibold">
                                                     {label}
                                                 </h2>

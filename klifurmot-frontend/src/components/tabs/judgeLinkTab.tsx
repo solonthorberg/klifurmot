@@ -166,18 +166,18 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
 
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex gap-2 border-b border-outline">
+            <div className="flex gap-2 border-b border-outline w-full overflow-x-auto">
                 <TabButton
                     active={tab === 'existing'}
                     onClick={() => setTab('existing')}
-                    className="flex-1"
+                    className="w-full sm:w-fit"
                 >
                     Velja Dómara
                 </TabButton>
                 <TabButton
                     active={tab === 'invitation'}
                     onClick={() => setTab('invitation')}
-                    className="flex-1"
+                    className="w-full sm:w-fit"
                 >
                     Nýr Dómari
                 </TabButton>
@@ -319,7 +319,6 @@ export default function JudgeLinkTab({ competitionId }: JudgeLinkTabProps) {
 
                 <MainButton
                     className="sm:w-fit w-full self-center sm:self-end"
-                    variant="outline"
                     disabled={isSendingBulkEmail || allEntries.length === 0}
                     onClick={() => sendJudgeBulkEmail(competitionId)}
                 >

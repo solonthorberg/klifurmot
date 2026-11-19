@@ -16,6 +16,7 @@ export interface Competition {
     allow_self_registration: boolean;
     is_registered: boolean;
     startlist_visible: boolean;
+    results_visible: boolean;
     status: 'not_started' | 'ongoing' | 'finished';
     created_at: string;
     created_by: string;
