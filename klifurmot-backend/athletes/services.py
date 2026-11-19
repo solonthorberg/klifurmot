@@ -316,9 +316,10 @@ def create_self_registation(
     if not profile.date_of_birth:
         raise ValueError("Date of birth is required to register")
 
-    if not category.category_group.contains_birth_year(
-        profile.date_of_birth.year, competition.start_date.year
-    ):
-        raise ValueError("Age does not match this category")
+    # Works but young athletes cannot register to open category
+    # if not category.category_group.contains_birth_year(
+    #     profile.date_of_birth.year, competition.start_date.year
+    # ):
+    #     raise ValueError("Age does not match this category")
 
     return _register_climber(user, climber, competition, category)
