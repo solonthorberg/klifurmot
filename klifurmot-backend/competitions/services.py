@@ -8,6 +8,7 @@ from django.db.models.functions import Round
 from accounts.authorization import require_competition_admin
 from accounts.models import CompetitionRole
 from athletes.models import CompetitionRegistration
+from competitions.views import results_visibility
 from core.email import send_email_via_resend
 from core.images import compress_image
 from django.contrib.auth.models import User
@@ -61,6 +62,8 @@ def create_competition(
                 allow_self_registration=allow_self_registration,
                 created_by=created_by,
                 last_modified_by=created_by,
+                startlist_visibility=True,
+                results_visibility=True,
             )
             return competition
 
