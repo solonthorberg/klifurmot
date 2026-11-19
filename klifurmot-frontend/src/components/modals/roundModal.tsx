@@ -8,6 +8,7 @@ import Select from '@/components/ui/select';
 import Input from '@/components/ui/input';
 import MainButton from '@/components/ui/mainButton';
 import Modal from './modal';
+import Toggle from '../ui/toggle';
 
 const RoundModalSchema = CreateRoundSchema.omit({ round_order: true });
 type RoundModalFormData = z.infer<typeof RoundModalSchema>;
@@ -113,14 +114,17 @@ export default function RoundModal({
                         {error && (
                             <p className="text-red-500 text-sm">{error}</p>
                         )}
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                {...register('is_self_scoring')}
-                                type="checkbox"
-                                className="w-4 h-4 accent-primary"
-                            />
-                            <span className="text-sm">Sjálfstigagjöf?</span>
-                        </label>
+                        <Controller
+                            name="is_self_scoring"
+                            control={control}
+                            render={({ field }) => (
+                                <Toggle
+                                    label="Sjálfstigagjöf?"
+                                    checked={field.value ?? false}
+                                    onChange={field.onChange}
+                                />
+                            )}
+                        />
                         <div className="flex gap-2 mt-2">
                             <MainButton
                                 className="w-full"

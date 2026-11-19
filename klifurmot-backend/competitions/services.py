@@ -656,3 +656,18 @@ def toggle_startlist_visibility(competition_id: int, user) -> bool:
         competition.save(update_fields=["startlist_visible"])
 
     return competition.startlist_visible
+
+
+def toggle_results_visibility(competition_id: int, user) -> bool:
+    with transaction.atomic():
+        try:
+            competition = Competition.objects.get(id=competition_id)
+        except Competition.DoesNotExist:
+            raise ValueError("Competition not found")
+
+        require_competition_admin(user, competition.pk)
+
+        competition.results_visible = not competition.results_visible
+        competition.save(update_fields=["results_visible"])
+
+    return competition.results_visible

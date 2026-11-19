@@ -51,7 +51,7 @@ export default function RoundItem({ round, onEdit, onDelete }: RoundItemProps) {
                         {round.climbers_advance
                             ? ` - ${round.climbers_advance} keppendur`
                             : ''}
-                        {round.is_self_scoring ? ' - Self scoring' : ''}
+                        {round.is_self_scoring ? ' - Sjálfstigagjöf' : ''}
                     </span>
                 </div>
             </div>

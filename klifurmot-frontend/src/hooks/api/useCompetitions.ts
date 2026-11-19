@@ -387,3 +387,17 @@ export function useStartlistVisibleToggle(competitionId: number) {
         },
     });
 }
+
+export function useResultsVisibleToggle(competitionId: number) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: () => competitionsApi.resultsVisibleToggle(competitionId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ['competitions', competitionId],
+            });
+            queryClient.invalidateQueries({ queryKey: ['results'] });
+        },
+    });
+}
