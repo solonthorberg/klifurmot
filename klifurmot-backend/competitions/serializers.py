@@ -128,6 +128,8 @@ class CompetitionSerializer(serializers.ModelSerializer):
             "status",
             "allow_self_registration",
             "is_registered",
+            "startlist_visible",
+            "results_visible",
             "has_selfscore_round",
             "created_at",
             "created_by",
