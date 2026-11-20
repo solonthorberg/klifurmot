@@ -61,8 +61,8 @@ def create_competition(
                 allow_self_registration=allow_self_registration,
                 created_by=created_by,
                 last_modified_by=created_by,
-                startlist_visibility=True,
-                results_visibility=True,
+                startlist_visible=True,
+                results_visible=True,
             )
             return competition
 
