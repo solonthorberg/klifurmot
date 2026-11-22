@@ -120,6 +120,7 @@ export default function JudgeDashboardPage() {
 
     const roundId = searchParams.get('round');
     const athleteParam = searchParams.get('athlete');
+    const routeParam = searchParams.get('route');
     const phaseIndex = Number(searchParams.get('phase') ?? 0);
 
     const selectedRound =
@@ -127,6 +128,7 @@ export default function JudgeDashboardPage() {
         null;
     const selectedAthleteIndex =
         athleteParam !== null ? Number(athleteParam) : null;
+    const selectedRouteIndex = routeParam !== null ? Number(routeParam) : 0;
 
     const { data: startlistData } = useStartlist(selectedRound?.id ?? 0);
     const athletes = startlistData?.data ?? [];
@@ -140,8 +142,12 @@ export default function JudgeDashboardPage() {
                     className={`justify-self-start ${!selectedRound ? 'invisible' : ''}`}
                     onClick={() =>
                         setSearchParams((prev) => {
-                            if (prev.has('athlete')) prev.delete('athlete');
-                            else prev.delete('round');
+                            if (prev.has('athlete')) {
+                                prev.delete('athlete');
+                            } else {
+                                prev.delete('round');
+                                prev.delete('route');
+                            }
                             return prev;
                         })
                     }
@@ -191,9 +197,16 @@ export default function JudgeDashboardPage() {
                         round={selectedRound}
                         athletes={athletes}
                         athleteIndex={selectedAthleteIndex}
+                        routeIndex={selectedRouteIndex}
                         onSelectAthlete={(index) =>
                             setSearchParams((prev) => {
                                 prev.set('athlete', String(index));
+                                return prev;
+                            })
+                        }
+                        onSelectRoute={(index) =>
+                            setSearchParams((prev) => {
+                                prev.set('route', String(index));
                                 return prev;
                             })
                         }
