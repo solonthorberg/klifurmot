@@ -9,6 +9,7 @@ import { useStartlist } from '@/hooks/api/useScoring';
 import type { Round, Phase } from '@/types';
 import JudgeScoringTab from '@/components/tabs/judgeScoringTab';
 import { useAuthStore } from '@/stores';
+import BackButton from '@/components/ui/backButton';
 
 export function RoundSelectionView({
     phases,
@@ -68,7 +69,8 @@ export function AthleteListView({
     return (
         <div className="flex flex-col gap-4 w-full">
             <h3 className="font-medium text-lg text-center">
-                {round.category_group_name} {round.gender}
+                {round.category_group_name} {round.gender} -{' '}
+                {round.round_group_name}
             </h3>
             {isLoading ? (
                 <LoadingSpinner />
@@ -118,6 +120,7 @@ export default function JudgeDashboardPage() {
 
     const roundId = searchParams.get('round');
     const athleteParam = searchParams.get('athlete');
+    const routeParam = searchParams.get('route');
     const phaseIndex = Number(searchParams.get('phase') ?? 0);
 
     const selectedRound =
@@ -125,6 +128,7 @@ export default function JudgeDashboardPage() {
         null;
     const selectedAthleteIndex =
         athleteParam !== null ? Number(athleteParam) : null;
+    const selectedRouteIndex = routeParam !== null ? Number(routeParam) : 0;
 
     const { data: startlistData } = useStartlist(selectedRound?.id ?? 0);
     const athletes = startlistData?.data ?? [];
@@ -133,9 +137,25 @@ export default function JudgeDashboardPage() {
 
     return (
         <Container variant="primary" className="gap-4 max-w-lg mx-auto">
-            <h2 className="text-2xl font-semibold text-center">
-                {competition?.title}
-            </h2>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+                <BackButton
+                    className={`justify-self-start ${!selectedRound ? 'invisible' : ''}`}
+                    onClick={() =>
+                        setSearchParams((prev) => {
+                            if (prev.has('athlete')) {
+                                prev.delete('athlete');
+                            } else {
+                                prev.delete('round');
+                                prev.delete('route');
+                            }
+                            return prev;
+                        })
+                    }
+                />
+                <h2 className="text-2xl font-semibold text-center">
+                    {competition?.title}
+                </h2>
+            </div>
 
             {!selectedRound && (
                 <>
@@ -149,9 +169,9 @@ export default function JudgeDashboardPage() {
                             setSearchParams({ phase: String(index) })
                         }
                         onSelectRound={(round) =>
-                            setSearchParams({
-                                phase: String(phaseIndex),
-                                round: String(round.id),
+                            setSearchParams((prev) => {
+                                prev.set('round', String(round.id));
+                                return prev;
                             })
                         }
                     />
@@ -162,9 +182,9 @@ export default function JudgeDashboardPage() {
                 <AthleteListView
                     round={selectedRound}
                     onSelectAthlete={(index) =>
-                        setSearchParams({
-                            round: String(selectedRound.id),
-                            athlete: String(index),
+                        setSearchParams((prev) => {
+                            prev.set('athlete', String(index));
+                            return prev;
                         })
                     }
                 />
@@ -176,7 +196,20 @@ export default function JudgeDashboardPage() {
                     <JudgeScoringTab
                         round={selectedRound}
                         athletes={athletes}
-                        initialIndex={selectedAthleteIndex}
+                        athleteIndex={selectedAthleteIndex}
+                        routeIndex={selectedRouteIndex}
+                        onSelectAthlete={(index) =>
+                            setSearchParams((prev) => {
+                                prev.set('athlete', String(index));
+                                return prev;
+                            })
+                        }
+                        onSelectRoute={(index) =>
+                            setSearchParams((prev) => {
+                                prev.set('route', String(index));
+                                return prev;
+                            })
+                        }
                     />
                 )}
         </Container>

@@ -210,16 +210,20 @@ function EditScoreModal({
 interface JudgeScoringViewProps {
     round: Round;
     athletes: StartlistEntry[];
-    initialIndex: number;
+    athleteIndex: number;
+    routeIndex: number;
+    onSelectAthlete: (index: number) => void;
+    onSelectRoute: (index: number) => void;
 }
 
 export default function JudgeScoringView({
     round,
     athletes,
-    initialIndex,
+    athleteIndex,
+    routeIndex,
+    onSelectAthlete,
+    onSelectRoute,
 }: JudgeScoringViewProps) {
-    const [athleteIndex, setAthleteIndex] = useState(initialIndex);
-    const [boulderIndex, setBoulderIndex] = useState(0);
     const [editingScore, setEditingScore] = useState<BoulderScore | null>(null);
     const [localScore, setLocalScore] = useState<BoulderScore | null>(null);
 
@@ -237,7 +241,7 @@ export default function JudgeScoringView({
 
     const boulders: Route[] = bouldersData?.data ?? [];
     const climbs = climbsData?.data ?? [];
-    const currentBoulder = boulders[boulderIndex];
+    const currentBoulder = boulders[routeIndex];
 
     const getScoreForBoulder = (boulderId: number): BoulderScore => {
         const climb = climbs.find((c) => c.route_id === boulderId);
@@ -261,7 +265,7 @@ export default function JudgeScoringView({
 
     useEffect(() => {
         setLocalScore(null);
-    }, [boulderIndex, athleteIndex]);
+    }, [routeIndex, athleteIndex]);
 
     const currentScore =
         localScore ??
@@ -305,7 +309,7 @@ export default function JudgeScoringView({
     };
 
     const goToAthlete = (index: number) => {
-        setAthleteIndex(index);
+        onSelectAthlete(index);
     };
 
     if (bouldersLoading || !athlete) return <LoadingSpinner />;
@@ -321,8 +325,10 @@ export default function JudgeScoringView({
                 ({athlete.start_order}) {athlete.climber_name}
             </span>
             <Select
-                value={String(boulderIndex)}
-                onChange={(val) => setBoulderIndex(Number(val))}
+                value={String(routeIndex)}
+                onChange={(val) => {
+                    onSelectRoute(Number(val));
+                }}
                 options={boulderOptions}
             />
 
