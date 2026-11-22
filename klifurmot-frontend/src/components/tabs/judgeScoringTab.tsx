@@ -210,15 +210,16 @@ function EditScoreModal({
 interface JudgeScoringViewProps {
     round: Round;
     athletes: StartlistEntry[];
-    initialIndex: number;
+    athleteIndex: number;
+    onSelectAthlete: (index: number) => void;
 }
 
 export default function JudgeScoringView({
     round,
     athletes,
-    initialIndex,
+    athleteIndex,
+    onSelectAthlete,
 }: JudgeScoringViewProps) {
-    const [athleteIndex, setAthleteIndex] = useState(initialIndex);
     const [boulderIndex, setBoulderIndex] = useState(0);
     const [editingScore, setEditingScore] = useState<BoulderScore | null>(null);
     const [localScore, setLocalScore] = useState<BoulderScore | null>(null);
@@ -305,7 +306,7 @@ export default function JudgeScoringView({
     };
 
     const goToAthlete = (index: number) => {
-        setAthleteIndex(index);
+        onSelectAthlete(index);
     };
 
     if (bouldersLoading || !athlete) return <LoadingSpinner />;
